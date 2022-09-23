@@ -26,17 +26,16 @@ func mainfunc() {
 
 	fmt.Printf("___ Implementation of ENS20 ___\n\n")
 
-// DISCLAIMER 
+// DISCLAIMER: Sep 23  SC
 /*
- 	- The loop over m1 is not ready. When reading the code consider len(m1) = 1
- 	- Some of the sum are not going over m1 for sake of readability (e.g., AtGamma_b1)
- 	- The sigma automorphism is not yet implemneted so we only work with k=1 for now
+	- The sigma automorphism is not yet implemneted so we only work with k=1 for now
  	- The shift 1/k*X^u is not implemented. It can be achieved with a Shift in lattigo 
  	- The inverse 1/k in Zq not implemented -- for now 1
+ 	- The Abort and bound check in infinity norm are not implemented yet 
 
  	Note:
- 	- All operations are in the NTT domain (slot-wise) contrary to the ENS20 paper
- 	- Beaware of the changes in the protocol e.g., the NTT/iNTT operations
+ 	- All values are in the Poly domain (except Atgammak)
+ 	- Beaware of the changes in the protocol e.g., the NTT/iNTT operations -- They could be factored to speed up the code
 */
 
 
@@ -45,9 +44,11 @@ func mainfunc() {
 	N := uint64(params.N()) // dimension of Rq
 	n   := 1  // dimension for MSIS
 	m1  := 1  // dimension of the input in Rq
-	m2  := 1  // dimension of the input in Rq
+	m2  := 1 // dimension of the input in Rq
 	lbd := 1  // dimension for MLWE
 	sizeB := n+lbd+2 // dimension of bi
+	size_t := n+m1+1   // dimension of the commitment
+	size_bVec := size_t-n // dimension of bVec vector of {bi}
 	k   := 1  // repeat rate in ENS20
 	d1 := 16  // delta1 bound on the mask // Change for appropriate value
 
@@ -87,11 +88,10 @@ func mainfunc() {
 		for j:=0; j<m1; j++{
 			A[i][j] = ringQP.NewPoly()
 			uniformSampler.Read(A[i][j])
+			// v DEBUG v -- Set the combination matrix A
+			//A[i][j].Zero()
 		}
 	}  
-	// v DEBUG v -- Set the combination matrix A
-		//A[0][0].Zero()
-		//fmt.Printf("A00 = %v \n", A[0][0].Coeffs[0][0:10])
 
 	var u = make([]*ring.Poly, m2)
 	for i:=0; i<m2; i++{
@@ -100,7 +100,6 @@ func mainfunc() {
 			ringQP.MulCoeffsAndAdd(A[i][j], m[j], u[i])
 		}
 	}
-	//fmt.Printf("u0 = %v \n", u[0].Coeffs[0][0:10])
 
 
 	// Sample the public elements B in Rq^(n x (n+lbd+2)) in Poly
@@ -112,25 +111,31 @@ func mainfunc() {
 			uniformSampler.Read(B[i][j])  
 		}
 	}
-	//fmt.Printf("B[i][j]: %v\n", B[0][3].Coeffs[0][0:10])
 
 
-	// Sample the public elements b1 in Rq^(n+lbd+2) in Poly
+	// Sample the public elements bVec in Rq^(n+lbd+2)xsizebVec in Poly
+	var bVec = make([][]*ring.Poly, size_bVec)
+	for i:=0; i<size_bVec; i++{
+		bVec[i] = make([]*ring.Poly, sizeB)
+		for j:=0; j<sizeB; j++{
+			bVec[i][j] = ringQP.NewPoly()
+			uniformSampler.Read(bVec[i][j]) 
+		}
+	}
+
 	var b1 = make([]*ring.Poly, sizeB)
 	for i:=0; i<sizeB; i++{
-		b1[i] = ringQP.NewPoly()
-		uniformSampler.Read(b1[i]) 
+		b1[i] = bVec[0][i]
+		//uniformSampler.Read(b1[i]) 
 	}
-	//fmt.Printf("b1[i]: %v\n", b1[0].Coeffs[0][0:10])
 
 
 	// Sample the public elements b2 in Rq^(n+lbd+2) in Poly
 	var b2 = make([]*ring.Poly, sizeB)
 	for i:=0; i<sizeB; i++{
-		b2[i] = ringQP.NewPoly()
-		uniformSampler.Read(b2[i])
+		b2[i] = bVec[1][i]
+		//uniformSampler.Read(b2[i])
 	}
-	//fmt.Printf("b2[i]: %v\n", b2[0].Coeffs[0][0:10])
 
 
 // Prover samples
@@ -154,12 +159,7 @@ func mainfunc() {
 
 
 // Create the commitments in Poly form 
-	var t = make([]*ring.Poly, m1+2)
-
-	// make sure the dimensions are correct
-	if m1+2<n+m1{
-		panic("size mismatch: n+m too big")
-	} 
+	var t = make([]*ring.Poly, size_t)
 
 	// t0 = Br
 	for i:=0; i<n; i++{
@@ -173,37 +173,36 @@ func mainfunc() {
 		}
 		ringQP.InvNTT(t[i], t[i])
 	}
-	//fmt.Printf("t0: %v\n", t[0].Coeffs[0][0:10])
 
 
-	// t1 = <b1, r> + m^  with m^ the invNTT transform of m 
-		t[n] = ringQP.NewPoly()
+	// t1[k] = <b1[k], r> + m^[k]  with m^ the invNTT transform of m
+	for i:=0; i<m1; i++{
+		t[n+i] = ringQP.NewPoly()
 		// create the inner product <b1, r> 
-		for i:=0; i<sizeB; i++{ 
-			ringQP.NTT(b1[i], b1[i])
-			ringQP.NTT(r[i], r[i])
-				ringQP.MulCoeffsAndAdd(b1[i], r[i] , t[n]) // coefficient-wise mult and accum in t1
-			ringQP.InvNTT(b1[i], b1[i])
-			ringQP.InvNTT(r[i], r[i])
+		for j:=0; j<sizeB; j++{ 
+			ringQP.NTT(bVec[i][j], bVec[i][j])
+			ringQP.NTT(r[j], r[j])
+				ringQP.MulCoeffsAndAdd(bVec[i][j], r[j] , t[n+i]) // coefficient-wise mult and accum in t1
+			ringQP.InvNTT(bVec[i][j], bVec[i][j])
+			ringQP.InvNTT(r[j], r[j])
 		}
-		ringQP.InvNTT(t[n], t[n])
-		ringQP.Add(t[n], mHat[0], t[n]) //
-		//fmt.Printf("t1: %v\n", t[n].Coeffs[0][0:10])
+		ringQP.InvNTT(t[n+i], t[n+i])
+		ringQP.Add(t[n+i], mHat[i], t[n+i]) //
+	} 
 
 
 	// t2 = <b2, r> + g  
-		t[n+1] = ringQP.NewPoly()
+		t[n+m1] = ringQP.NewPoly()
 		// create the inner product <b1, r>  in Poly form 
 		for i:=0; i<sizeB; i++{ 
-			ringQP.NTT(b2[i], b2[i])
+			ringQP.NTT(bVec[m1][i], bVec[m1][i])
 			ringQP.NTT(r[i], r[i])
-				ringQP.MulCoeffsAndAdd(b2[i], r[i] , t[n+1]) // coefficient-wise mult and accum in t1
-			ringQP.InvNTT(b2[i], b2[i])
+				ringQP.MulCoeffsAndAdd(bVec[m1][i], r[i] , t[n+m1]) // coefficient-wise mult and accum in t1
+			ringQP.InvNTT(bVec[m1][i], bVec[m1][i])
 			ringQP.InvNTT(r[i], r[i])
 		}
-		ringQP.InvNTT(t[n+1], t[n+1])
-		ringQP.Add(t[n+1], g, t[n+1])
-		//fmt.Printf("t2: %v\n", t[n+1].Coeffs[0][0:10])
+		ringQP.InvNTT(t[n+m1], t[n+m1])
+		ringQP.Add(t[n+m1], g, t[n+m1])
 
 
 
@@ -219,7 +218,6 @@ func mainfunc() {
 			// v DEBUG v -- Set yi to zero
 			//y[i][j].Zero()  // TODO rmv
 		}
-		//fmt.Printf("y[k][sizeB]: %v\n", y[i][0].Coeffs[0][0:10])
 
 		for j:=0; j<n; j++{
 			w[i][j] = ringQP.NewPoly()
@@ -232,7 +230,6 @@ func mainfunc() {
 			}
 			ringQP.InvNTT(w[i][j], w[i][j])
 		}
-		//fmt.Printf("w[k][n]: %v\n", w[i][n-1].Coeffs[0][0:10])
 	}	
 
 
@@ -283,10 +280,9 @@ func mainfunc() {
 		ringQP.Neg(cste[i], cste[i])
 		ringQP.Reduce(cste[i], cste[i])
 	}
-	//fmt.Printf("<u,   gamma>: %v\n", cste[0].Coeffs[0][0:10])
 	
 
-	// Create  iNTT(N.Atgamma ° m) = iNTT(N.Atgamma)* m^ -- in Poly form
+	// Create  iNTT(N.Atgamma ° m[j]) = iNTT(N.Atgamma)* m^[j] -- in Poly form
 	prodk := make([][]*ring.Poly, k)
 	for i:=0; i<k; i++{
 		prodk[i] = make([]*ring.Poly, m1)
@@ -297,8 +293,6 @@ func mainfunc() {
 			ringQP.InvNTT(prodk[i][j], prodk[i][j])
 		}
 	}
-	//fmt.Printf("prodk[0][0]  : %v\n", prodk[0][0].Coeffs[0][0:10])
-
 
 	// Sum_v=0^m1 [iNTT(N.Atgamma ° m_v)] - <u, gamma> -- In Poly form
 	for i:=0; i<k; i++{
@@ -307,19 +301,15 @@ func mainfunc() {
 		}
 		ringQP.Add(prodk[i][0], cste[i], prodk[i][0])
 	}
-		// v DEBUG v -- Print the L_\mu(gamma_\mu) polynomials 
-		for i:=0; i<k; i++{
-			fmt.Printf("prodk[%v][0]  : %v\n",i, prodk[i][0].Coeffs[0][0:10])	
-		}
+
 
 
 	// Create the target value T = Sum_v=0^k-1 \sig_v[ prod_k ] -- In Poly form
 	sumSig := make([]*ring.Poly, k)
 	for i:=0; i<k; i++{
 		sumSig[i] = ringQP.NewPoly()
-		//ringQP.Shift  // TODO sig is not a rotation!!!
+		// TODO sig is not a rotation!!!
 		ringQP.Add(sumSig[i], prodk[i][0], sumSig[i])
-		//fmt.Printf("target[%v]: %v\n",i, sumSig[i].Coeffs[0][0:10])
 	}
 
 
@@ -336,33 +326,68 @@ func mainfunc() {
 	//fmt.Printf("h: %v\n", h.Coeffs[0][0:10])
 
 
+
+
 	// Create v_i 
-		// Create the value Atgamma_b1[j] = iNTT(N.Atgamma ° b1[j]) for j in sizeB  -- TODO: m1>1; k>1 -- in Poly form
-		Atgamma_b1 := make([][]*ring.Poly, k)
+		// Create the value Atgamma_b1m[i][j][jj] = iNTT(N.Atgamma[i][j] ° b1[jj]) for jj in sizeB  -- k>1 -- in Poly form
+		Atgamma_b1m := make([][][]*ring.Poly, k)
 		for i:=0; i<k; i++{
-			Atgamma_b1[i] = make([]*ring.Poly, sizeB)
-			for j:=0; j<sizeB; j++{
-				Atgamma_b1[i][j] = ringQP.NewPoly()
-				ringQP.NTT(b1[j], b1[j])
-					ringQP.MulCoeffs(Atgammak[i][0], b1[j], Atgamma_b1[i][j]) // TODO: m1>1; k>1 TODO: loop over m1 -> have considered m1=1 
-					ringQP.MulScalar(Atgamma_b1[i][j], N, Atgamma_b1[i][j])
-				ringQP.InvNTT(b1[j], b1[j])
-				ringQP.InvNTT(Atgamma_b1[i][j], Atgamma_b1[i][j])
+			Atgamma_b1m[i] = make([][]*ring.Poly, m1)
+			for j:=0; j<m1; j++{
+				Atgamma_b1m[i][j] = make([]*ring.Poly, sizeB)
+				for jj:=0; jj<sizeB; jj++{
+					Atgamma_b1m[i][j][jj] = ringQP.NewPoly()
+					ringQP.NTT(bVec[j][jj], bVec[j][jj])
+						ringQP.MulCoeffs(Atgammak[i][j], bVec[j][jj], Atgamma_b1m[i][j][jj]) // TODO: m1>1; k>1 TODO: loop over m1 -> have considered m1=1 
+						ringQP.MulScalar(Atgamma_b1m[i][j][jj], N, Atgamma_b1m[i][j][jj])
+					ringQP.InvNTT(bVec[j][jj], bVec[j][jj])
+					ringQP.InvNTT(Atgamma_b1m[i][j][jj], Atgamma_b1m[i][j][jj])
+				}
 			}
 		}
 
-		// Create the scalar product scalarProdV = <Atgamma_b1[0], y1> TODO: m1>1; k>1
+
+
+		// Create the scalar product scalarProdVm = <Atgamma_b1m[0], y1> TODO: m1>1; k>1
+		scalarProdVm := make([][][][]*ring.Poly, k)
+		for i:=0; i<k; i++{
+			scalarProdVm[i] = make([][][]*ring.Poly, k)
+			for mu:=0; mu<k; mu++{
+				scalarProdVm[i][mu] = make([][]*ring.Poly, k)
+				for nu:=0; nu<k; nu++{
+					scalarProdVm[i][mu][nu] = make([]*ring.Poly, m1)
+					for j:=0; j<m1; j++{
+						scalarProdVm[i][mu][nu][j] = ringQP.NewPoly()
+						for jj:=0; jj<sizeB; jj++{
+							ringQP.NTT(Atgamma_b1m[mu][j][jj], Atgamma_b1m[mu][j][jj])
+							ringQP.NTT(y[(k+i-nu)%k][jj], y[(k+i-nu)%k][jj])
+								ringQP.MulCoeffsAndAdd(Atgamma_b1m[mu][j][jj], y[(k+i-nu)%k][jj], scalarProdVm[i][mu][nu][j])
+							ringQP.InvNTT(Atgamma_b1m[mu][j][jj], Atgamma_b1m[mu][j][jj])
+							ringQP.InvNTT(y[(k+i-nu)%k][jj], y[(k+i-nu)%k][jj])
+						}
+						ringQP.InvNTT(scalarProdVm[i][mu][nu][j], scalarProdVm[i][mu][nu][j])	
+					}
+				}
+			}
+		}
+
+		// Sum the sum_mu sum_nu sum_j scalarProdVm[i][mu][nu][j]
 		scalarProdV := make([]*ring.Poly, k)
 		for i:=0; i<k; i++{
 			scalarProdV[i] = ringQP.NewPoly()
-			for j:=0; j<sizeB; j++{
-				ringQP.NTT(Atgamma_b1[i][j], Atgamma_b1[i][j])
-				ringQP.NTT(y[i][j], y[i][j])
-					ringQP.MulCoeffsAndAdd(Atgamma_b1[i][j], y[i][j], scalarProdV[i])
-				ringQP.InvNTT(Atgamma_b1[i][j], Atgamma_b1[i][j])
-				ringQP.InvNTT(y[i][j], y[i][j])
+
+			for mu:=0; mu<k; mu++{
+				for nu:=0; nu<k; nu++{
+					for j:=0; j<m1; j++{
+
+						// TODO 1/k.X^mu
+
+						// TODO sig^nu
+						
+						ringQP.Add(scalarProdV[i], scalarProdVm[i][mu][nu][j], scalarProdV[i])
+					}
+				}
 			}
-			ringQP.InvNTT(scalarProdV[i], scalarProdV[i])
 		}
 
 
@@ -371,10 +396,10 @@ func mainfunc() {
 		for i:=0; i<k; i++{
 			scalarProd_b2y[i] = ringQP.NewPoly()
 			for j:=0; j<sizeB; j++{
-				ringQP.NTT(b2[j], b2[j])
+				ringQP.NTT(bVec[m1][j], bVec[m1][j])
 				ringQP.NTT(y[i][j], y[i][j])
-					ringQP.MulCoeffsAndAdd(b2[j], y[i][j], scalarProd_b2y[i])
-				ringQP.InvNTT(b2[j], b2[j])
+					ringQP.MulCoeffsAndAdd(bVec[m1][j], y[i][j], scalarProd_b2y[i])
+				ringQP.InvNTT(bVec[m1][j], bVec[m1][j])
 				ringQP.InvNTT(y[i][j], y[i][j])
 			}
 			ringQP.InvNTT(scalarProd_b2y[i], scalarProd_b2y[i])
@@ -432,7 +457,7 @@ func mainfunc() {
 	// B.z =?= w + sigma(c)t0
 	var t0_check = make([][]*ring.Poly, k)
 	for i:=0; i<k; i++{
-		t0_check[i] = make([]*ring.Poly, m1)
+		t0_check[i] = make([]*ring.Poly, n)
 
 		tmpC := ringQP.NewPoly()
 		//ringQP.Shift(c, i, tmpC) // TODO sigma and not shift
@@ -509,33 +534,63 @@ func mainfunc() {
 
 		// Create the target value T = Sum_v=0^k-1 \sig_v[ prod_k ]
 		v_sumSig := make([]*ring.Poly, k)
-		v_sumSig[0] = v_prodk[0][0].CopyNew()
 		for i:=0; i<k; i++{
+			v_sumSig[i] = ringQP.NewPoly()
 			// TODO sig is not a rotation!!!
+			ringQP.Add(v_sumSig[i], v_prodk[i][0], v_sumSig[i])
 		}
 
 
 		// Create the value tau = Sum_v X^v T_v
 		tau := ringQP.NewPoly()
-		tau = v_sumSig[0]
+		tau = v_sumSig[0].CopyNew()
 		for i:=0; i<k; i++{
-			//TODO
+			// TODO k>1
 		} 
-
+	
 
 	// Check tau equation
-		// get v_scalarProdV = <Atgamma_b1[0], z1> // TODO k>1, m1>1
-		v_scalarProdV := ringQP.NewPoly()
+		// Create the scalar product v_scalarProdVm = <Atgamma_b1m[0], z1> TODO: m1>1; k>1
+		v_scalarProdVm := make([][][][]*ring.Poly, k)
 		for i:=0; i<k; i++{
-			for j:=0; j<sizeB; j++{
-				ringQP.NTT(Atgamma_b1[i][j], Atgamma_b1[i][j])
-				ringQP.NTT(z[i][j], z[i][j])
-					ringQP.MulCoeffsAndAdd(Atgamma_b1[i][j], z[i][j], v_scalarProdV)
-				ringQP.InvNTT(Atgamma_b1[i][j], Atgamma_b1[i][j])
-				ringQP.InvNTT(z[i][j], z[i][j])
+			v_scalarProdVm[i] = make([][][]*ring.Poly, k)
+			for mu:=0; mu<k; mu++{
+				v_scalarProdVm[i][mu] = make([][]*ring.Poly, k)
+				for nu:=0; nu<k; nu++{
+					v_scalarProdVm[i][mu][nu] = make([]*ring.Poly, m1)
+					for j:=0; j<m1; j++{
+						v_scalarProdVm[i][mu][nu][j] = ringQP.NewPoly()
+						for jj:=0; jj<sizeB; jj++{
+							ringQP.NTT(Atgamma_b1m[mu][j][jj], Atgamma_b1m[mu][j][jj])
+							ringQP.NTT(z[(k+i-nu)%k][jj], z[(k+i-nu)%k][jj])
+								ringQP.MulCoeffsAndAdd(Atgamma_b1m[mu][j][jj], z[(k+i-nu)%k][jj], v_scalarProdVm[i][mu][nu][j])
+							ringQP.InvNTT(Atgamma_b1m[mu][j][jj], Atgamma_b1m[mu][j][jj])
+							ringQP.InvNTT(z[(k+i-nu)%k][jj], z[(k+i-nu)%k][jj])
+						}
+						ringQP.InvNTT(v_scalarProdVm[i][mu][nu][j], v_scalarProdVm[i][mu][nu][j])	
+					}
+				}
 			}
 		}
-		ringQP.InvNTT(v_scalarProdV, v_scalarProdV)
+
+		// Sum the sum_mu sum_nu sum_j v_scalarProdVm[i][mu][nu][j]
+		v_scalarProdV := make([]*ring.Poly, k)
+		for i:=0; i<k; i++{
+			v_scalarProdV[i] = ringQP.NewPoly()
+
+			for mu:=0; mu<k; mu++{
+				for nu:=0; nu<k; nu++{
+					for j:=0; j<m1; j++{
+
+						// TODO 1/k.X^mu
+
+						// TODO sig^nu
+						
+						ringQP.Add(v_scalarProdV[i], v_scalarProdVm[i][mu][nu][j], v_scalarProdV[i])
+					}
+				}
+			}
+		}
 
 
 		// Create the scalar product <b2, zi> 
@@ -543,21 +598,21 @@ func mainfunc() {
 		for i:=0; i<k; i++{
 			scalarProd_b2z[i] = ringQP.NewPoly()
 			for j:=0; j<sizeB; j++{
-				ringQP.NTT(b2[j], b2[j])
+				ringQP.NTT(bVec[m1][j], bVec[m1][j])
 				ringQP.NTT(z[i][j], z[i][j])
-					ringQP.MulCoeffsAndAdd( b2[j], z[i][j], scalarProd_b2z[i])
-				ringQP.InvNTT(b2[j], b2[j])
+					ringQP.MulCoeffsAndAdd( bVec[m1][j], z[i][j], scalarProd_b2z[i])
+				ringQP.InvNTT(bVec[m1][j], bVec[m1][j])
 				ringQP.InvNTT(z[i][j], z[i][j])
 			}
 			ringQP.InvNTT(scalarProd_b2z[i], scalarProd_b2z[i])
 		}
 
 
-		// Create v_vi = v_scalarProdV + <b2, zi> 
+		// Create v_vi = v_scalarProdV[i] + <b2, zi> 
 		v_vVector := make([]*ring.Poly, k)
 		for i:=0; i<k; i++{
 			v_vVector[i] = ringQP.NewPoly()
-			ringQP.Add(v_scalarProdV, scalarProd_b2z[i], v_vVector[i])
+			ringQP.Add(v_scalarProdV[i], scalarProd_b2z[i], v_vVector[i])
 		}
 
 
@@ -565,10 +620,13 @@ func mainfunc() {
 		v_tauEquation := make([]*ring.Poly, k)
 		for i:=0; i<k; i++{
 			v_tauEquation[i] = ringQP.NewPoly()
-			ringQP.Add(tau, t[n+1], v_tauEquation[i])
+			ringQP.Add(tau, t[n+m1], v_tauEquation[i])
 			ringQP.Sub(v_tauEquation[i], h, v_tauEquation[i])
-			//ringQP.Shift(c, i, temp) // TODO sigma not a shift 
+
+			// // TODO sig^i 
+			//ringQP.Shift(c, i, temp) 
 			temp = c.CopyNew()
+
 			ringQP.NTT(temp, temp)
 			ringQP.NTT(v_tauEquation[i], v_tauEquation[i])
 				ringQP.MulCoeffs(temp, v_tauEquation[i], v_tauEquation[i])
@@ -581,8 +639,8 @@ func mainfunc() {
 		// Check v_tauEquation == v_vi
 		for i:=0; i<k; i++{
 			if v_tauEquation[i].Equals(v_vVector[i]) == false {
-				fmt.Printf("\n v_tauEquation != v_vi  for k=%v \n", i)
-				panic("WRONG CHECK -- v_tauEquation != v_vi")
+				fmt.Printf("\n    [FAULT] v_tauEquation != v_vi  for k=%v \n", i)
+				panic("[WRONG CHECK] -- v_tauEquation != v_vi")
 			}
 		}
 		fmt.Printf("[CHECK] v_tauEquation =?= v_vi  -- OK \n")
