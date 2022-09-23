@@ -66,6 +66,7 @@ func mainfunc() {
 		// Gauddian sampler 
 		gaussianSampler := ring.NewGaussianSampler(prng, params.RingQP(), params.Sigma(), d1)
 
+
 // Inputs 
 	m := make([]*ring.Poly, m1)
 	for i:=0; i<m1; i++{
@@ -123,20 +124,6 @@ func mainfunc() {
 		}
 	}
 
-	var b1 = make([]*ring.Poly, sizeB)
-	for i:=0; i<sizeB; i++{
-		b1[i] = bVec[0][i]
-		//uniformSampler.Read(b1[i]) 
-	}
-
-
-	// Sample the public elements b2 in Rq^(n+lbd+2) in Poly
-	var b2 = make([]*ring.Poly, sizeB)
-	for i:=0; i<sizeB; i++{
-		b2[i] = bVec[1][i]
-		//uniformSampler.Read(b2[i])
-	}
-
 
 // Prover samples
 	// Sample a polynomial g s.t. g_0=...=g_(k-1)=0 
@@ -145,7 +132,6 @@ func mainfunc() {
 	for i:=0; i<k; i++{
 		g.Coeffs[0][i] = 0
 	}
-	//fmt.Printf("g: %v\n", g.Coeffs[0][0:10])
 
 	// Sample the commitment randomness r in Rq^((lbd+n+2))
 	var r = make([]*ring.Poly, sizeB)
@@ -261,7 +247,7 @@ func mainfunc() {
 	}
 
 
-	// Compute the inner product -<u, gamma>  -- A constant polynomial
+	// Compute the inner product cste[i]=-<u, gamma[i]>  -- constant Poly
 	cste := make([]*ring.Poly,k)
 	for i:=0; i<k; i++{
 		cste[i] = ringQP.NewPoly()
@@ -323,13 +309,12 @@ func mainfunc() {
 	// h = g + f  -- In Poly form 
 	h := ringQP.NewPoly()
 	ringQP.Add(g, fValue, h)
-	//fmt.Printf("h: %v\n", h.Coeffs[0][0:10])
 
 
 
 
 	// Create v_i 
-		// Create the value Atgamma_b1m[i][j][jj] = iNTT(N.Atgamma[i][j] ° b1[jj]) for jj in sizeB  -- k>1 -- in Poly form
+		// Create the value Atgamma_b1m[i][j][jj] = iNTT(N.Atgamma[i][j] ° b1[jj]) for jj in sizeB  -- in Poly form
 		Atgamma_b1m := make([][][]*ring.Poly, k)
 		for i:=0; i<k; i++{
 			Atgamma_b1m[i] = make([][]*ring.Poly, m1)
@@ -338,7 +323,7 @@ func mainfunc() {
 				for jj:=0; jj<sizeB; jj++{
 					Atgamma_b1m[i][j][jj] = ringQP.NewPoly()
 					ringQP.NTT(bVec[j][jj], bVec[j][jj])
-						ringQP.MulCoeffs(Atgammak[i][j], bVec[j][jj], Atgamma_b1m[i][j][jj]) // TODO: m1>1; k>1 TODO: loop over m1 -> have considered m1=1 
+						ringQP.MulCoeffs(Atgammak[i][j], bVec[j][jj], Atgamma_b1m[i][j][jj])
 						ringQP.MulScalar(Atgamma_b1m[i][j][jj], N, Atgamma_b1m[i][j][jj])
 					ringQP.InvNTT(bVec[j][jj], bVec[j][jj])
 					ringQP.InvNTT(Atgamma_b1m[i][j][jj], Atgamma_b1m[i][j][jj])
@@ -348,7 +333,7 @@ func mainfunc() {
 
 
 
-		// Create the scalar product scalarProdVm = <Atgamma_b1m[0], y1> TODO: m1>1; k>1
+		// Create the scalar product scalarProdVm = <Atgamma_b1m[0] 
 		scalarProdVm := make([][][][]*ring.Poly, k)
 		for i:=0; i<k; i++{
 			scalarProdVm[i] = make([][][]*ring.Poly, k)
@@ -412,7 +397,6 @@ func mainfunc() {
 			vVector[i] = ringQP.NewPoly()
 			ringQP.Add(scalarProdV[i], scalarProd_b2y[i], vVector[i])
 		}
-		//fmt.Printf("vi: %v\n", vVector[0].Coeffs[0][0:10])
 
 
 
@@ -460,10 +444,11 @@ func mainfunc() {
 		t0_check[i] = make([]*ring.Poly, n)
 
 		tmpC := ringQP.NewPoly()
-		//ringQP.Shift(c, i, tmpC) // TODO sigma and not shift
+
+		// TODO sigma^i(c)
 		tmpC = c.CopyNew()
+
 		ringQP.NTT(tmpC, tmpC)
-		//fmt.Printf("%v\n", c.Coeffs[0])
 
 		for j:=0; j<n; j++{
 			t0_check[i][j] = ringQP.NewPoly()
@@ -508,7 +493,7 @@ func mainfunc() {
 
 
 
-	// Create tau // TODO k>1, m1>1
+	// Create tau
 		// Create iNTT(N.Atgamma ° t1) -- In Poly form
 		v_prodk := make([][]*ring.Poly, k)
 		for i:=0; i<k; i++{
@@ -536,8 +521,10 @@ func mainfunc() {
 		v_sumSig := make([]*ring.Poly, k)
 		for i:=0; i<k; i++{
 			v_sumSig[i] = ringQP.NewPoly()
+
 			// TODO sig is not a rotation!!!
 			ringQP.Add(v_sumSig[i], v_prodk[i][0], v_sumSig[i])
+
 		}
 
 
@@ -624,7 +611,6 @@ func mainfunc() {
 			ringQP.Sub(v_tauEquation[i], h, v_tauEquation[i])
 
 			// // TODO sig^i 
-			//ringQP.Shift(c, i, temp) 
 			temp = c.CopyNew()
 
 			ringQP.NTT(temp, temp)
