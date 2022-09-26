@@ -63,9 +63,12 @@ func mainfunc() {
 
 	// Invert k in Rq
 	scalarBig := new(big.Int).ModInverse(new(big.Int).SetUint64(uint64(k)), ModulusAtLevel[len(ringQP.Modulus)-1])
-	ringQP.MulScalarBigint(m, scalarBig, m)
 	fmt.Printf("1/k:%v\n", scalarBig)
-	
+
+	// Check 1/k * k = 1 mod Q
+	checkScalar := new(big.Int).Mul(scalarBig, new(big.Int).SetUint64(uint64(k)))
+	checkScalarMod := new(big.Int).Mod(checkScalar, ModulusAtLevel[len(ringQP.Modulus)-1])
+	fmt.Printf("1/k * k mod Q :%v\n", checkScalarMod)
 
 	// Define the Galois Element 2N/k
 	galEl := uint64(2*N/k+1) //uint64(2*N/k+1)
@@ -149,15 +152,19 @@ func mainfunc() {
 	// Shift and sum the traces for i:=0..k-1
 	traceout.Zero()
 	ringQP.Shift(traceout1, 0, traceout1)
+	ringQP.MulScalarBigint(traceout1, scalarBig, traceout1)
 	ringQP.Add(traceout1, traceout, traceout)
 	
 	ringQP.Shift(traceout2, int(N-1), traceout2)
+	ringQP.MulScalarBigint(traceout2, scalarBig, traceout2)
 	ringQP.Add(traceout2, traceout, traceout)
 
 	ringQP.Shift(traceout3, int(N-2), traceout3)
+	ringQP.MulScalarBigint(traceout3, scalarBig, traceout3)
 	ringQP.Add(traceout3, traceout, traceout)
 
 	ringQP.Shift(traceout4, int(N-3), traceout4)
+	ringQP.MulScalarBigint(traceout4, scalarBig, traceout4)
 	ringQP.Add(traceout4, traceout, traceout)
 
 	fmt.Printf("Lu k=4 -- %v\n\n", traceout.Coeffs[0][0:10])
