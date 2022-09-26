@@ -6,6 +6,7 @@ import (
 	"github.com/ldsec/lattigo/v2/utils"
 	"github.com/ldsec/lattigo/v2/bfv"
 	"math"
+	"math/big"
 )
 
 // Implementation of ENS20 automorphisms
@@ -49,6 +50,22 @@ func mainfunc() {
 	// Define the parameters 
 	N := params.N()
 	k := 4
+
+	// Compute bigQ
+ 	ModulusAtLevel := make([]*big.Int, len(ringQP.Modulus))
+ 	ModulusAtLevel[0] = NewUint(ringQP.Modulus[0])
+	for i := 1; i < len(ringQP.Modulus); i++ {
+		val := new(big.Int).SetUint64(ringQP.Modulus[i])
+		ModulusAtLevel[i] = new(big.Int).Mul(ModulusAtLevel[i-1], val)
+	}
+	//fmt.Printf("Q %v\n", ModulusAtLevel)
+
+
+	// Invert k in Rq
+	scalarBig := new(big.Int).ModInverse(new(big.Int).SetUint64(uint64(k)), ModulusAtLevel[len(ringQP.Modulus)-1])
+	ringQP.MulScalarBigint(m, scalarBig, m)
+	fmt.Printf("1/k:%v\n", scalarBig)
+	
 
 	// Define the Galois Element 2N/k
 	galEl := uint64(2*N/k+1) //uint64(2*N/k+1)
@@ -132,9 +149,8 @@ func mainfunc() {
 	// Shift and sum the traces for i:=0..k-1
 	traceout.Zero()
 	ringQP.Shift(traceout1, 0, traceout1)
-	//ringQP.MulScalarAndAdd(traceout1, 1, traceout)
 	ringQP.Add(traceout1, traceout, traceout)
-
+	
 	ringQP.Shift(traceout2, int(N-1), traceout2)
 	ringQP.Add(traceout2, traceout, traceout)
 
@@ -150,6 +166,9 @@ func mainfunc() {
 
 }
 
+func NewUint(v uint64) *big.Int {
+	return new(big.Int).SetUint64(v)
+}
 
 func main() {
 	mainfunc()
