@@ -6,7 +6,7 @@ import "github.com/ldsec/lattigo/v2/ring"
 type MultiArray struct {
 	dims  []int
 	mults []int        // Multiplicants for each coordinate.
-	array []*ring.Poly // Linearized array.
+	Array []*ring.Poly // Linearized Array.
 }
 
 // NewMultiArray constructs a new matrix with the given dimensions.
@@ -21,7 +21,7 @@ func NewMultiArray(dims []int, baseRing *ring.Ring) MultiArray {
 		acc *= dims[i-1]
 		mults = append(mults, acc)
 	}
-	// Initialize the underlying array to empty polynomials.
+	// Initialize the underlying Array to empty polynomials.
 	array := make([]*ring.Poly, totalLength)
 	for i := 0; i < len(array); i++ {
 		array[i] = baseRing.NewPoly()
@@ -29,7 +29,21 @@ func NewMultiArray(dims []int, baseRing *ring.Ring) MultiArray {
 	return MultiArray{
 		dims:  dims,
 		mults: mults,
-		array: array,
+		Array: array,
+	}
+}
+
+// -- Vector stuff
+
+func NewVectorFromDimensions(dim int, baseRing *ring.Ring) MultiArray {
+	return NewMultiArray([]int{dim}, baseRing)
+}
+
+func NewVectorFromSlice(elements []*ring.Poly) MultiArray {
+	return MultiArray{
+		dims:  []int{len(elements)},
+		mults: []int{1},
+		Array: elements,
 	}
 }
 
@@ -37,33 +51,85 @@ func (m *MultiArray) IsVector() bool {
 	return len(m.dims) == 1
 }
 
+// -- Matrix stuff
+
+func NewMatrixFromDimensions(rows int, cols int, baseRing *ring.Ring) MultiArray {
+	return NewMultiArray([]int{cols, rows}, baseRing)
+}
+
+func NewMatrixFromSlice(array [][]*ring.Poly, baseRing *ring.Ring) MultiArray {
+	// TODO: implement!
+	return MultiArray{}
+}
+
+func (m *MultiArray) IsMatrix() bool {
+	return len(m.dims) == 2
+}
+
+func (m *MultiArray) MatrixRowSlice(row int) MultiArray {
+	indexStart := m.fromCoords([]int{0, row})
+	indexEnd := m.fromCoords([]int{0, row + 1})
+	rowArray := m.Array[indexStart:indexEnd]
+	return MultiArray{Array: rowArray, mults: []int{1}, dims: []int{len(rowArray)}}
+}
+
+func (m *MultiArray) MatrixElement(row int, col int) *ring.Poly {
+	index := m.fromCoords([]int{col, row})
+	return m.Array[index]
+}
+
+func (m *MultiArray) MatrixSetRow(row int, v MultiArray) {
+	indexStart := m.fromCoords([]int{0, row})
+	indexEnd := m.fromCoords([]int{0, row + 1})
+	for i := indexStart; i < indexEnd; i++ {
+		m.SetElementAtIndex(i, v.Array[i])
+	}
+}
+
+func (m *MultiArray) MatrixTranspose() MultiArray {
+	// TODO: implement!
+	return MultiArray{}
+}
+
+// --
+
 func (m *MultiArray) Dimensions() []int {
 	return m.dims
 }
 
 func (m *MultiArray) Length() int {
-	return len(m.array)
+	return len(m.Array)
 }
 
-func (m *MultiArray) ElementAtCoord(coords []int) *ring.Poly {
+func (m *MultiArray) ElementAtCoords(coords []int) *ring.Poly {
 	index := m.fromCoords(coords)
-	return m.array[index]
+	return m.Array[index]
 }
 
 func (m *MultiArray) ElementAtIndex(index int) *ring.Poly {
-	return m.array[index]
+	return m.Array[index]
 }
 
-func (m *MultiArray) SetElement(coords []int, newElement *ring.Poly) error {
+func (m *MultiArray) SetElementAtCoords(coords []int, newElement *ring.Poly) {
 	index := m.fromCoords(coords)
-	m.array[index] = newElement
-	return nil
+	m.Array[index] = newElement
+}
+
+func (m *MultiArray) SetElementAtIndex(index int, newElement *ring.Poly) {
+	m.Array[index] = newElement
 }
 
 func (m *MultiArray) Map(f func(*ring.Poly, []int) *ring.Poly) {
-	for i := 0; i < len(m.array); i++ {
+	for i := 0; i < len(m.Array); i++ {
 		coords := m.toCoords(i)
-		m.array[i] = f(m.array[i], coords)
+		m.Array[i] = f(m.Array[i], coords)
+	}
+}
+
+func (m *MultiArray) ForEach(f func(*ring.Poly, []int)) {
+	for i := 0; i < len(m.Array); i++ {
+		coords := m.toCoords(i)
+		f(m.Array[i], coords)
 	}
 }
 
