@@ -4,12 +4,12 @@ import (
 	"github.com/ldsec/lattigo/v2/ring"
 )
 
-// Matrix represents a matrix of row vectors.
-// Kindly use the transpose methods for working with col vectors.
+// Matrix represents a 2-dimensional matrix.
 type Matrix struct {
 	MultiArray
 }
 
+// NewMatrixFromDimensions constructs an empty matrix with the given dimensions.
 func NewMatrixFromDimensions(rows int, cols int, baseRing *ring.Ring) Matrix {
 	return Matrix{NewMultiArray([]int{cols, rows}, baseRing)}
 }
@@ -45,10 +45,21 @@ func (m *Matrix) Dimensions() (int, int) {
 
 // Row returns the vector representation of the given row.
 func (m *Matrix) Row(row int) Vector {
+	// assert row < m.Rows()
 	indexStart := m.coordMap.FromCoords([]int{0, row})
 	indexEnd := m.coordMap.FromCoords([]int{0, row + 1})
 	rowArray := m.Array[indexStart:indexEnd]
 	return NewVectorFromSlice(rowArray)
+}
+
+// Col returns the vector representation of the given col.
+func (m *Matrix) Col(col int) Vector {
+	// assert col < m.Cols()
+	colSlice := make([]*ring.Poly, m.Rows())
+	for i := 0; i < m.Rows(); i++ {
+		colSlice[i] = m.Element(i, col)
+	}
+	return NewVectorFromSlice(colSlice)
 }
 
 // Element returns the element at the given position.
@@ -62,13 +73,24 @@ func (m *Matrix) SetElement(row int, col int, newElement *ring.Poly) {
 }
 
 // SetRow updates the row with the given vector.
-// Warning: Does not copy the underlying array of the vector!
+// Warning: Does not copy the underlying array of the elements!
 func (m *Matrix) SetRow(row int, v *Vector) {
+	// assert m.Cols() == v.Length()
 	m.SetElements([]int{0, row}, []int{0, row + 1}, v.Array)
+}
+
+// SetCol updates the col with the given vector.
+// Warning: Does not copy the underlying array of the elements!
+func (m *Matrix) SetCol(col int, v *Vector) {
+	// assert m.Rows() == v.Length()
+	for i := 0; i < m.Rows(); i++ {
+		m.SetElement(i, col, v.Array[i])
+	}
 }
 
 // TransposeInPlace transposes the matrix in-place.
 func (m *Matrix) TransposeInPlace() {
+	// TODO can optimize to use swaps.
 	// Shallow copy the elements in.
 	old := make([]*ring.Poly, m.Length())
 	for i := 0; i < m.Length(); i++ {
@@ -101,22 +123,19 @@ func (m *Matrix) ForEach(f func(*ring.Poly, int, int)) {
 	})
 }
 
-// MulVec performs a matrix vector multiplication and returns the result y for Ax = y
+// MulVecTo performs a matrix vector multiplication and adds the result to the given `out` vector.
+func (m *Matrix) MulVecTo(x *Vector, mulAddOp BinaryOperator, out *Vector, baseRing *ring.Ring) {
+	outputDim := m.Rows()
+	for i := 0; i < outputDim; i++ {
+		targetRow := m.Row(i)
+		targetRow.DotProductTo(x, mulAddOp, out.ElementAtIndex(i), baseRing)
+	}
+}
+
+// MulVec performs a matrix vector multiplication and returns the result.
 func (m *Matrix) MulVec(x *Vector, mulAddOp BinaryOperator, baseRing *ring.Ring) Vector {
 	outputDim := m.Rows()
 	y := NewVectorFromDimensions(outputDim, baseRing)
-	for i := 0; i < outputDim; i++ {
-		targetRow := m.Row(i)
-		targetRow.DotProductInPlace(x, mulAddOp, y.ElementAtIndex(i), baseRing)
-	}
+	m.MulVecTo(x, mulAddOp, &y, baseRing)
 	return y
-}
-
-// MulVecInPlace performs a matrix vector multiplication and outputs the result y for Ax = y
-func (m *Matrix) MulVecInPlace(x *Vector, mulAddOp BinaryOperator, out *Vector, baseRing *ring.Ring) {
-	outputDim := m.Rows()
-	for i := 0; i < outputDim; i++ {
-		targetRow := m.Row(i)
-		targetRow.DotProductInPlace(x, mulAddOp, out.ElementAtIndex(i), baseRing)
-	}
 }

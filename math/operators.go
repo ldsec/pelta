@@ -63,17 +63,17 @@ func (_ SimpleAdd) Apply(a *ring.Poly, b *ring.Poly, out *ring.Poly, baseRing *r
 	baseRing.Add(a, b, out)
 }
 
-// ToNTT converts a polynomial to its NTT form.
-type ToNTT struct{}
+// NTT converts a polynomial to its NTT form.
+type NTT struct{}
 
-func (_ ToNTT) Apply(a *ring.Poly, out *ring.Poly, baseRing *ring.Ring) {
+func (_ NTT) Apply(a *ring.Poly, out *ring.Poly, baseRing *ring.Ring) {
 	baseRing.NTT(a, out)
 }
 
-// FromNTT converts a polynomial from its NTT form to its normal form.
-type FromNTT struct{}
+// InvNTT converts a polynomial from its NTT form to its normal form.
+type InvNTT struct{}
 
-func (_ FromNTT) Apply(a *ring.Poly, out *ring.Poly, baseRing *ring.Ring) {
+func (_ InvNTT) Apply(a *ring.Poly, out *ring.Poly, baseRing *ring.Ring) {
 	baseRing.InvNTT(a, out)
 }
 

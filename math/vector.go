@@ -35,12 +35,35 @@ func (v *Vector) ForEach(f func(*ring.Poly, int)) {
 	})
 }
 
-// Sum sums the polynomials in the vector.
-func (v *Vector) Sum(baseRing *ring.Ring) *ring.Poly {
-	out := baseRing.NewPoly()
+// SumTo sums the polynomials in the vector and adds the result into the given `out` polynomial.
+func (v *Vector) SumTo(addOp BinaryOperator, out *ring.Poly, baseRing *ring.Ring) *ring.Poly {
 	v.ForEach(func(el *ring.Poly, _ int) {
-		baseRing.Add(out, el, out)
+		addOp.Apply(out, el, out, baseRing)
 	})
+	return out
+}
+
+// AddTo adds the two given vectors w.r.t. to the given addition operator and puts the result into the given
+// `out` vector.
+func (v *Vector) AddTo(b *Vector, addOp BinaryOperator, out *Vector, baseRing *ring.Ring) {
+	// assert v.Length() == b.Length()
+	for i := 0; i < v.Length(); i++ {
+		addOp.Apply(v.Array[i], b.Array[i], out.Array[i], baseRing)
+	}
+}
+
+// DotProductTo performs a dot product between two vectors and adds the result into the given `out` polynomial.
+func (v *Vector) DotProductTo(b *Vector, mulAddOp BinaryOperator, out *ring.Poly, baseRing *ring.Ring) {
+	// assert v.Length() == b.Length()
+	for i := 0; i < v.Length(); i++ {
+		mulAddOp.Apply(v.ElementAtIndex(i), b.ElementAtIndex(i), out, baseRing)
+	}
+}
+
+// Sum sums the polynomials in the vector, returning the result.
+func (v *Vector) Sum(addOp BinaryOperator, baseRing *ring.Ring) *ring.Poly {
+	out := baseRing.NewPoly()
+	v.SumTo(addOp, out, baseRing)
 	return out
 }
 
@@ -48,33 +71,14 @@ func (v *Vector) Sum(baseRing *ring.Ring) *ring.Poly {
 func (v *Vector) Add(b *Vector, addOp BinaryOperator, baseRing *ring.Ring) Vector {
 	// assert v.Length() == b.Length()
 	out := NewVectorFromDimensions(v.Length(), baseRing)
-	for i := 0; i < out.Length(); i++ {
-		addOp.Apply(v.Array[i], b.Array[i], out.Array[i], baseRing)
-	}
+	v.AddTo(b, addOp, &out, baseRing)
 	return out
 }
 
-// AddInPlace adds the two given vectors w.r.t. to the given addition operator and adds the result
-// into the given `out` vector.
-func (v *Vector) AddInPlace(b *Vector, addOp BinaryOperator, out *Vector, baseRing *ring.Ring) {
-	// assert v.Length() == b.Length()
-	for i := 0; i < v.Length(); i++ {
-		addOp.Apply(v.Array[i], b.Array[i], out.Array[i], baseRing)
-	}
-}
-
-// DotProduct performs a dot product between two vectors.
+// DotProduct performs a dot product between two vectors and returns the result.
 func (v *Vector) DotProduct(b *Vector, mulAddOp BinaryOperator, baseRing *ring.Ring) *ring.Poly {
+	// assert v.Length() == b.Length()
 	out := baseRing.NewPoly()
-	for i := 0; i < v.Length(); i++ {
-		mulAddOp.Apply(v.ElementAtIndex(i), b.ElementAtIndex(i), out, baseRing)
-	}
+	v.DotProductTo(b, mulAddOp, out, baseRing)
 	return out
-}
-
-// DotProductInPlace performs a dot product between two vectors.
-func (v *Vector) DotProductInPlace(b *Vector, mulAddOp BinaryOperator, out *ring.Poly, baseRing *ring.Ring) {
-	for i := 0; i < v.Length(); i++ {
-		mulAddOp.Apply(v.ElementAtIndex(i), b.ElementAtIndex(i), out, baseRing)
-	}
 }

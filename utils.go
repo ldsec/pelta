@@ -11,19 +11,19 @@ type PolySampler interface {
 }
 
 // NewRandomVector constructs a vector, whose elements sampled from the given `sampler`.
-func NewRandomVector(dim int, baseRing *ring.Ring, sampler PolySampler) math.MultiArray {
-	v := math.NewMultiArray([]int{dim}, baseRing)
-	for i := 0; i < dim; i++ {
-		sampler.Read(v.ElementAtIndex(i))
-	}
+func NewRandomVector(dim int, baseRing *ring.Ring, sampler PolySampler) math.Vector {
+	v := math.NewVectorFromDimensions(dim, baseRing)
+	v.ForEach(func(el *ring.Poly, _ int) {
+		sampler.Read(el)
+	})
 	return v
 }
 
 // NewRandomMatrix constructs a 2D matrix, whose elements sampled from the given `sampler`.
-func NewRandomMatrix(rows int, cols int, baseRing *ring.Ring, sampler PolySampler) math.MultiArray {
-	A := math.NewMultiArray([]int{cols, rows}, baseRing)
-	for i := 0; i < rows*cols; i++ {
-		sampler.Read(A.ElementAtIndex(i))
-	}
+func NewRandomMatrix(rows int, cols int, baseRing *ring.Ring, sampler PolySampler) math.Matrix {
+	A := math.NewMatrixFromDimensions(rows, cols, baseRing)
+	A.ForEach(func(el *ring.Poly, _ int, _ int) {
+		sampler.Read(el)
+	})
 	return A
 }

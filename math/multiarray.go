@@ -2,17 +2,13 @@ package math
 
 import "github.com/ldsec/lattigo/v2/ring"
 
-type Copyable interface {
-	Copy() Copyable
-}
-
 // MultiArray represents a multidimensional array of polynomials.
 type MultiArray struct {
 	coordMap CoordMap
 	Array    []*ring.Poly // Linearized array.
 }
 
-// NewMultiArray constructs a new matrix with the given dimensions.
+// NewMultiArray constructs a new empty multi array with the given dimensions.
 func NewMultiArray(dims []int, baseRing *ring.Ring) MultiArray {
 	totalLength := 1
 	for i := 0; i < len(dims); i++ {
@@ -85,6 +81,14 @@ func (m *MultiArray) ForEach(f func(*ring.Poly, []int)) {
 	for i := 0; i < len(m.Array); i++ {
 		coords := m.coordMap.ToCoords(i)
 		f(m.Array[i], coords)
+	}
+}
+
+// ApplyUnaryOp applies the given unary operator to every cell in-place.
+func (m *MultiArray) ApplyUnaryOp(op UnaryOperator, baseRing *ring.Ring) {
+	for i := 0; i < len(m.Array); i++ {
+		// Update the value in-place.
+		op.Apply(m.Array[i], m.Array[i], baseRing)
 	}
 }
 
