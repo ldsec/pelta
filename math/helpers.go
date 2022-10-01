@@ -49,55 +49,55 @@ func (p Polynomial) Neg(baseRing *ring.Ring) Polynomial {
 
 // Add adds two arrays coefficient-wise in-place.
 // p, q => p += q
-func (a *MultiArray) Add(q *MultiArray, baseRing *ring.Ring) *MultiArray {
-	a.ApplyBinaryOp(SimpleAdd{}, q, a, baseRing)
+func (a *MultiArray) Add(q *MultiArray) *MultiArray {
+	a.ApplyBinaryOp(SimpleAdd{}, q, a)
 	return a
 }
 
 // Sum sums the polynomials in the array, returning the result.
-func (a *MultiArray) Sum(baseRing *ring.Ring) Polynomial {
-	out := NewPolynomial(baseRing)
-	a.ApplyReduction(SimpleAdd{}, out, baseRing)
+func (a *MultiArray) Sum() Polynomial {
+	out := NewPolynomial(a.baseRing)
+	a.ApplyReduction(SimpleAdd{}, out)
 	return out
 }
 
 // Product takes the coefficient-wise product of all the elements in the array, returning the result.
-func (a *MultiArray) Product(baseRing *ring.Ring) Polynomial {
-	out := NewPolynomial(baseRing)
-	a.ApplyReduction(NTTMul{}, out, baseRing)
+func (a *MultiArray) Product() Polynomial {
+	out := NewPolynomial(a.baseRing)
+	a.ApplyReduction(NTTMul{}, out)
 	return out
 }
 
 // NTT converts the vector into the NTT space in-place.
 // p => p := NTT(p)
-func (a *MultiArray) NTT(baseRing *ring.Ring) *MultiArray {
-	a.ApplyUnaryOp(NTT{}, a, baseRing)
+func (a *MultiArray) NTT() *MultiArray {
+	a.ApplyUnaryOp(NTT{}, a)
 	return a
 }
 
 // InvNTT converts the elements back into the poly space in-place.
 // p => p := InvNTT(p)
-func (a *MultiArray) InvNTT(baseRing *ring.Ring) *MultiArray {
-	a.ApplyUnaryOp(InvNTT{}, a, baseRing)
+func (a *MultiArray) InvNTT() *MultiArray {
+	a.ApplyUnaryOp(InvNTT{}, a)
 	return a
 }
 
 // Scale scales the coefficients of the polynomials in-place.
 // p => p := c*p
-func (a *MultiArray) Scale(factor uint64, baseRing *ring.Ring) *MultiArray {
-	a.ApplyUnaryOp(Scale{factor}, a, baseRing)
+func (a *MultiArray) Scale(factor uint64) *MultiArray {
+	a.ApplyUnaryOp(Scale{factor}, a)
 	return a
 }
 
 // Mul multiplies the elements coefficient-wise in-place.
 // p, q => p *= q
-func (a *MultiArray) Mul(q *MultiArray, baseRing *ring.Ring) *MultiArray {
-	a.ApplyBinaryOp(NTTMul{}, q, a, baseRing)
+func (a *MultiArray) Mul(q *MultiArray) *MultiArray {
+	a.ApplyBinaryOp(NTTMul{}, q, a)
 	return a
 }
 
 // Neg negates the polynomial in-place.
-func (a *MultiArray) Neg(baseRing *ring.Ring) *MultiArray {
+func (a *MultiArray) Neg() *MultiArray {
 	// TODO implement.
 	return a
 }
@@ -105,10 +105,10 @@ func (a *MultiArray) Neg(baseRing *ring.Ring) *MultiArray {
 // -- Vector helpers
 
 // DotProduct performs a coefficient-wise dot product of the vectors and returns the result.
-func (v Vector) DotProduct(b Vector, baseRing *ring.Ring) Polynomial {
-	out := NewPolynomial(baseRing)
+func (v Vector) DotProduct(b Vector) Polynomial {
+	out := NewPolynomial(v.baseRing)
 	v.ForEach(func(el Polynomial, i int) {
-		el.ApplyBinaryOp(NTTMulAdd{}, b.ElementAtIndex(i), out, baseRing)
+		el.ApplyBinaryOp(NTTMulAdd{}, b.ElementAtIndex(i), out, v.baseRing)
 	})
 	return out
 }
@@ -116,10 +116,10 @@ func (v Vector) DotProduct(b Vector, baseRing *ring.Ring) Polynomial {
 // -- Matrix helpers
 
 // MulVecTo performs a matrix vector multiplication and returns the result.
-func (m Matrix) MulVec(x Vector, mulAddOp BinaryOperator, baseRing *ring.Ring) Vector {
-	out := NewVectorFromSize(m.Rows(), baseRing)
+func (m Matrix) MulVec(x Vector) Vector {
+	out := NewVectorFromSize(m.Rows(), m.baseRing)
 	m.ForEachRow(func(row Vector, i int) {
-		out.SetElementAtIndex(i, row.DotProduct(x, baseRing))
+		out.SetElementAtIndex(i, row.DotProduct(x))
 	})
 	return out
 }

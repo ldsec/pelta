@@ -50,7 +50,7 @@ func (m Matrix) Row(row int) Vector {
 	indexStart := m.coordMap.FromCoords([]int{0, row})
 	indexEnd := m.coordMap.FromCoords([]int{0, row + 1})
 	rowArray := m.Array[indexStart:indexEnd]
-	return NewVectorFromSlice(rowArray)
+	return NewVectorFromSlice(rowArray, m.baseRing)
 }
 
 // Col returns the vector representation of the given col.
@@ -60,7 +60,7 @@ func (m Matrix) Col(col int) Vector {
 	for i := 0; i < m.Rows(); i++ {
 		colSlice[i] = m.Element(i, col)
 	}
-	return NewVectorFromSlice(colSlice)
+	return NewVectorFromSlice(colSlice, m.baseRing)
 }
 
 // Element returns the element at the given position.
@@ -69,20 +69,20 @@ func (m Matrix) Element(row int, col int) Polynomial {
 }
 
 // SetElement updates the element at the given position.
-func (m *Matrix) SetElement(row int, col int, newElement Polynomial) {
+func (m Matrix) SetElement(row int, col int, newElement Polynomial) {
 	m.SetElementAtCoords([]int{col, row}, newElement)
 }
 
 // SetRow updates the row with the given vector.
 // Warning: Does not copy the underlying array of the elements!
-func (m *Matrix) SetRow(row int, v Vector) {
+func (m Matrix) SetRow(row int, v Vector) {
 	// assert m.Cols() == v.Length()
 	m.SetElements([]int{0, row}, []int{0, row + 1}, v.Array)
 }
 
 // SetCol updates the col with the given vector.
 // Warning: Does not copy the underlying array of the elements!
-func (m *Matrix) SetCol(col int, v Vector) {
+func (m Matrix) SetCol(col int, v Vector) {
 	// assert m.Rows() == v.Length()
 	for i := 0; i < m.Rows(); i++ {
 		m.SetElement(i, col, v.Array[i])
@@ -90,7 +90,7 @@ func (m *Matrix) SetCol(col int, v Vector) {
 }
 
 // TransposeInPlace transposes the matrix in-place.
-func (m *Matrix) TransposeInPlace() {
+func (m Matrix) TransposeInPlace() Matrix {
 	// TODO can optimize to use swaps.
 	// Shallow copy the elements in.
 	old := make([]Polynomial, m.Length())
@@ -108,24 +108,34 @@ func (m *Matrix) TransposeInPlace() {
 			m.SetElement(i, j, old[oldIndex])
 		}
 	}
+	return m
 }
 
 // MapInPlace replaces every cell with the output of the given function in-place.
-func (m *Matrix) MapInPlace(f func(Polynomial, int, int) Polynomial) {
+func (m Matrix) MapInPlace(f func(Polynomial, int, int) Polynomial) Matrix {
 	m.MultiArray.MapInPlace(func(el Polynomial, coords []int) Polynomial {
 		return f(el, coords[1], coords[0])
 	})
+	return m
+}
+
+// MapRowsInPlace replaces every row with the output of the given function in-place.
+func (m Matrix) MapRowsInPlace(f func(Vector, int) Vector) Matrix {
+	for i := 0; i < m.Rows(); i++ {
+		m.SetRow(i, f(m.Row(i), i))
+	}
+	return m
 }
 
 // ForEach calls the given function with the contents of each cell.
-func (m *Matrix) ForEach(f func(Polynomial, int, int)) {
+func (m Matrix) ForEach(f func(Polynomial, int, int)) {
 	m.MultiArray.ForEach(func(el Polynomial, coords []int) {
 		f(el, coords[1], coords[0])
 	})
 }
 
 // ForEachRow calls the given function for each row vector.
-func (m *Matrix) ForEachRow(f func(Vector, int)) {
+func (m Matrix) ForEachRow(f func(Vector, int)) {
 	for i := 0; i < m.Rows(); i++ {
 		targetRow := m.Row(i)
 		f(targetRow, i)
@@ -133,7 +143,7 @@ func (m *Matrix) ForEachRow(f func(Vector, int)) {
 }
 
 // ForEachCol calls the given function for each col vector.
-func (m *Matrix) ForEachCol(f func(Vector, int)) {
+func (m Matrix) ForEachCol(f func(Vector, int)) {
 	for i := 0; i < m.Cols(); i++ {
 		targetCol := m.Col(i)
 		f(targetCol, i)

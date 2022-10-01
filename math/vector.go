@@ -16,10 +16,11 @@ func NewVectorFromSize(dim int, baseRing *ring.Ring) Vector {
 
 // NewVectorFromSlice constructs a new vector from the given slice.
 // Warning: Does not copy the underlying elements.
-func NewVectorFromSlice(elements []Polynomial) Vector {
+func NewVectorFromSlice(elements []Polynomial, baseRing *ring.Ring) Vector {
 	a := MultiArray{
 		coordMap: NewCoordMap([]int{len(elements)}),
 		Array:    elements,
+		baseRing: baseRing,
 	}
 	return Vector{&a}
 }

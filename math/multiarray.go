@@ -6,6 +6,7 @@ import "github.com/ldsec/lattigo/v2/ring"
 type MultiArray struct {
 	coordMap CoordMap
 	Array    []Polynomial // Linearized array.
+	baseRing *ring.Ring
 }
 
 // NewMultiArray constructs a new empty multi array with the given dimensions.
@@ -22,6 +23,7 @@ func NewMultiArray(dims []int, baseRing *ring.Ring) MultiArray {
 	return MultiArray{
 		coordMap: NewCoordMap(dims),
 		Array:    array,
+		baseRing: baseRing,
 	}
 }
 
@@ -85,47 +87,51 @@ func (m *MultiArray) ForEach(f func(Polynomial, []int)) {
 }
 
 // ApplyUnaryOp applies the given unary operator to every cell.
-func (m *MultiArray) ApplyUnaryOp(op UnaryOperator, out *MultiArray, baseRing *ring.Ring) {
+func (m *MultiArray) ApplyUnaryOp(op UnaryOperator, out *MultiArray) {
 	// assert m.Length() == out.Length()
 	for i := 0; i < m.Length(); i++ {
-		m.Array[i].ApplyUnaryOp(op, out.Array[i], baseRing)
+		m.Array[i].ApplyUnaryOp(op, out.Array[i], m.baseRing)
 	}
 }
 
 // ApplyBinaryOp applies the given binary operator to this matrix with the elements of `r`, element-wise.
-func (m *MultiArray) ApplyBinaryOp(op BinaryOperator, r *MultiArray, out *MultiArray, baseRing *ring.Ring) {
+func (m *MultiArray) ApplyBinaryOp(op BinaryOperator, r *MultiArray, out *MultiArray) {
 	// assert r.Length() == m.Length() == out.Length()
 	for i := 0; i < m.Length(); i++ {
-		m.Array[i].ApplyBinaryOp(op, r.Array[i], out.Array[i], baseRing)
+		m.Array[i].ApplyBinaryOp(op, r.Array[i], out.Array[i], m.baseRing)
 	}
 }
 
 // ApplyReduction reduces the elements into a single one by repeatedly applying the given operator.
 // Warning: Does not clear the `out` polynomial.
-func (m *MultiArray) ApplyReduction(op BinaryOperator, out Polynomial, baseRing *ring.Ring) {
+func (m *MultiArray) ApplyReduction(op BinaryOperator, out Polynomial) {
 	// assert m.Length() == out.Length()
 	for i := 0; i < m.Length(); i++ {
-		out.ApplyBinaryOp(op, m.Array[i], out, baseRing)
+		out.ApplyBinaryOp(op, m.Array[i], out, m.baseRing)
 	}
 }
 
 // DeepCopy returns a deep copy of the multi array, where each element is also copied.
-func (m *MultiArray) DeepCopy() MultiArray {
+func (m *MultiArray) DeepCopy() *MultiArray {
 	// Create an exact copy of the contents.
 	array := make([]Polynomial, m.Length())
 	for i := 0; i < len(array); i++ {
 		array[i] = m.Array[i].DeepCopy()
 	}
-	return MultiArray{
+	new := MultiArray{
 		coordMap: m.coordMap.Copied(),
 		Array:    array,
+		baseRing: m.baseRing,
 	}
+	return &new
 }
 
 // ShallowCopy returns a shallow copy of the multi array.
-func (m *MultiArray) ShallowCopy() MultiArray {
-	return MultiArray{
+func (m *MultiArray) ShallowCopy() *MultiArray {
+	new := MultiArray{
 		coordMap: m.coordMap.Copied(),
 		Array:    m.Array,
+		baseRing: m.baseRing,
 	}
+	return &new
 }
