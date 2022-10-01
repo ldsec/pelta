@@ -32,11 +32,11 @@ func (v Vector) Populate(f func(int) Polynomial) Vector {
 	return v
 }
 
-// MapInPlace replaces every cell with the output of the given function in-place.
-func (v Vector) MapInPlace(f func(Polynomial, int) Polynomial) {
-	v.MultiArray.MapInPlace(func(el Polynomial, coords []int) Polynomial {
+// Map replaces every cell with the output of the given function in-place.
+func (v Vector) Map(f func(Polynomial, int) Polynomial) Vector {
+	return v.MultiArray.Map(func(el Polynomial, coords []int) Polynomial {
 		return f(el, coords[0])
-	})
+	}).AsVector()
 }
 
 // ForEach calls the given function with the contents of each cell.

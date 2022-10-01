@@ -39,7 +39,7 @@ func (m *MultiArray) Populate(f func([]int) Polynomial) *MultiArray {
 
 // Dimensions returns the dimensions of this multi array.
 func (m *MultiArray) Dimensions() []int {
-	return m.coordMap.dims
+	return m.coordMap.Dims
 }
 
 // Length returns the total number of cells in this multi array.
@@ -79,13 +79,14 @@ func (m *MultiArray) SetElements(startCoords []int, endCoords []int, replacement
 	}
 }
 
-// MapInPlace maps every cell with as the output given function in-place.
-func (m *MultiArray) MapInPlace(f func(Polynomial, []int) Polynomial) {
+// Map maps every cell with as the output given function in-place.
+func (m *MultiArray) Map(f func(Polynomial, []int) Polynomial) *MultiArray {
 	for i := 0; i < m.Length(); i++ {
 		coords := m.coordMap.ToCoords(i)
 		// Update the value in-place.
 		m.Array[i] = f(m.Array[i], coords)
 	}
+	return m
 }
 
 // ForEach calls the given function with the contents of each cell.

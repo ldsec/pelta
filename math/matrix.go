@@ -46,16 +46,16 @@ func (m Matrix) PopulateCols(f func(int) Vector) Matrix {
 
 // Rows returns the number of rows this matrix has.
 func (m Matrix) Rows() int {
-	return m.coordMap.dims[1]
+	return m.coordMap.Dims[1]
 }
 
 // Cols returns the number of cols this matrix has.
 func (m Matrix) Cols() int {
-	return m.coordMap.dims[0]
+	return m.coordMap.Dims[0]
 }
 
 // Dimensions returns the dimensions of this matrix as a row, col pair.
-func (m *Matrix) Dimensions() (int, int) {
+func (m Matrix) Dimensions() (int, int) {
 	return m.Rows(), m.Cols()
 }
 
@@ -104,8 +104,8 @@ func (m Matrix) SetCol(col int, v Vector) {
 	}
 }
 
-// TransposeInPlace transposes the matrix in-place.
-func (m Matrix) TransposeInPlace() Matrix {
+// Transpose transposes the matrix in-place.
+func (m Matrix) Transpose() Matrix {
 	// TODO can optimize to use swaps.
 	// Shallow copy the elements in.
 	old := make([]Polynomial, m.Length())
@@ -126,16 +126,15 @@ func (m Matrix) TransposeInPlace() Matrix {
 	return m
 }
 
-// MapInPlace replaces every cell with the output of the given function in-place.
-func (m Matrix) MapInPlace(f func(Polynomial, int, int) Polynomial) Matrix {
-	m.MultiArray.MapInPlace(func(el Polynomial, coords []int) Polynomial {
+// Map replaces every cell with the output of the given function in-place.
+func (m Matrix) Map(f func(Polynomial, int, int) Polynomial) Matrix {
+	return m.MultiArray.Map(func(el Polynomial, coords []int) Polynomial {
 		return f(el, coords[1], coords[0])
-	})
-	return m
+	}).AsMatrix()
 }
 
-// MapRowsInPlace replaces every row with the output of the given function in-place.
-func (m Matrix) MapRowsInPlace(f func(Vector, int) Vector) Matrix {
+// MapRows replaces every row with the output of the given function in-place.
+func (m Matrix) MapRows(f func(Vector, int) Vector) Matrix {
 	for i := 0; i < m.Rows(); i++ {
 		m.SetRow(i, f(m.Row(i), i))
 	}

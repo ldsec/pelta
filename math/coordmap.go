@@ -2,8 +2,8 @@ package math
 
 // CoordMap represents a mapping from a linear space to a multidimensional coordinate space.
 type CoordMap struct {
-	dims  []int
-	mults []int
+	Dims  []int
+	Mults []int
 }
 
 func NewCoordMap(dims []int) CoordMap {
@@ -21,18 +21,18 @@ func NewCoordMap(dims []int) CoordMap {
 
 func (m *CoordMap) FromCoords(coords []int) int {
 	acc := 0
-	for i := 0; i < len(m.dims); i++ {
-		acc += coords[i] * m.mults[i]
+	for i := 0; i < len(m.Dims); i++ {
+		acc += coords[i] * m.Mults[i]
 	}
 	return acc
 }
 
 func (m *CoordMap) ToCoords(linearIndex int) []int {
 	acc := linearIndex
-	coords := make([]int, len(m.dims))
-	for i := len(m.mults) - 1; i >= 0; i-- {
-		qtd := acc / m.mults[i]
-		rem := acc % m.mults[i]
+	coords := make([]int, len(m.Dims))
+	for i := len(m.Mults) - 1; i >= 0; i-- {
+		qtd := acc / m.Mults[i]
+		rem := acc % m.Mults[i]
 		coords[i] = qtd
 		acc = rem
 	}
@@ -42,9 +42,9 @@ func (m *CoordMap) ToCoords(linearIndex int) []int {
 // Reversed returns a new coordinate map with reversed dimensions.
 func (m *CoordMap) Reversed() CoordMap {
 	// Reverse the dimensions.
-	newDims := make([]int, len(m.dims))
+	newDims := make([]int, len(m.Dims))
 	for i := 0; i < len(newDims); i++ {
-		newDims[i] = m.dims[(len(newDims)-1)-i]
+		newDims[i] = m.Dims[(len(newDims)-1)-i]
 	}
 	return NewCoordMap(newDims)
 }
@@ -52,7 +52,7 @@ func (m *CoordMap) Reversed() CoordMap {
 // Copied returns a copy of this coordinate map.
 func (m *CoordMap) Copied() CoordMap {
 	return CoordMap{
-		dims:  append([]int{}, m.dims...),
-		mults: append([]int{}, m.mults...),
+		Dims:  append([]int{}, m.Dims...),
+		Mults: append([]int{}, m.Mults...),
 	}
 }
