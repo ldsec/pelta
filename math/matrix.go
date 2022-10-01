@@ -11,8 +11,7 @@ type Matrix struct {
 
 // NewMatrixFromDimensions constructs an empty matrix with the given dimensions.
 func NewMatrixFromDimensions(rows int, cols int, baseRing *ring.Ring) Matrix {
-	a := NewMultiArray([]int{cols, rows}, baseRing)
-	return Matrix{&a}
+	return Matrix{NewMultiArray([]int{cols, rows}, baseRing)}
 }
 
 // NewMatrixFromSlice constructs a matrix from the given slice.
@@ -25,6 +24,22 @@ func NewMatrixFromSlice(array [][]Polynomial, baseRing *ring.Ring) Matrix {
 		for j := 0; j < cols; j++ {
 			m.SetElement(i, j, array[i][j])
 		}
+	}
+	return m
+}
+
+// PopulateRows initializes the rows of this multi array using a given function.
+func (m Matrix) PopulateRows(f func(int) Vector) Matrix {
+	for i := 0; i < m.Rows(); i++ {
+		m.SetRow(i, f(i))
+	}
+	return m
+}
+
+// PopulateCols initializes the cols of this multi array using a given function.
+func (m Matrix) PopulateCols(f func(int) Vector) Matrix {
+	for i := 0; i < m.Cols(); i++ {
+		m.SetCol(i, f(i))
 	}
 	return m
 }
@@ -85,7 +100,7 @@ func (m Matrix) SetRow(row int, v Vector) {
 func (m Matrix) SetCol(col int, v Vector) {
 	// assert m.Rows() == v.Length()
 	for i := 0; i < m.Rows(); i++ {
-		m.SetElement(i, col, v.Array[i])
+		m.SetElement(i, col, v.ElementAtIndex(i))
 	}
 }
 

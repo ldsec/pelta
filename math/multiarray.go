@@ -10,7 +10,7 @@ type MultiArray struct {
 }
 
 // NewMultiArray constructs a new empty multi array with the given dimensions.
-func NewMultiArray(dims []int, baseRing *ring.Ring) MultiArray {
+func NewMultiArray(dims []int, baseRing *ring.Ring) *MultiArray {
 	totalLength := 1
 	for i := 0; i < len(dims); i++ {
 		totalLength *= dims[i]
@@ -20,11 +20,21 @@ func NewMultiArray(dims []int, baseRing *ring.Ring) MultiArray {
 	for i := 0; i < len(array); i++ {
 		array[i] = Polynomial{baseRing.NewPoly()}
 	}
-	return MultiArray{
+	a := MultiArray{
 		coordMap: NewCoordMap(dims),
 		Array:    array,
 		baseRing: baseRing,
 	}
+	return &a
+}
+
+// Populate initializes the cells of this multi array using a given function.
+func (m *MultiArray) Populate(f func([]int) Polynomial) *MultiArray {
+	for i := 0; i < m.Length(); i++ {
+		coords := m.coordMap.ToCoords(i)
+		m.Array[i] = f(coords)
+	}
+	return m
 }
 
 // Dimensions returns the dimensions of this multi array.

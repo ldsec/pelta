@@ -10,8 +10,7 @@ type Vector struct {
 
 // NewVectorFromSize constructs a new empty vector with the given size.
 func NewVectorFromSize(dim int, baseRing *ring.Ring) Vector {
-	a := NewMultiArray([]int{dim}, baseRing)
-	return Vector{&a}
+	return Vector{NewMultiArray([]int{dim}, baseRing)}
 }
 
 // NewVectorFromSlice constructs a new vector from the given slice.
@@ -23,6 +22,14 @@ func NewVectorFromSlice(elements []Polynomial, baseRing *ring.Ring) Vector {
 		baseRing: baseRing,
 	}
 	return Vector{&a}
+}
+
+// Populate initializes the items of this vector using a given function.
+func (v Vector) Populate(f func(int) Polynomial) Vector {
+	for i := 0; i < v.Length(); i++ {
+		v.SetElementAtIndex(i, f(i))
+	}
+	return v
 }
 
 // MapInPlace replaces every cell with the output of the given function in-place.
