@@ -12,9 +12,9 @@ type PolySampler interface {
 
 // NewRandomVector constructs a vector, whose elements sampled from the given `sampler`.
 func NewRandomVector(dim int, baseRing *ring.Ring, sampler PolySampler) math.Vector {
-	v := math.NewVectorFromDimensions(dim, baseRing)
-	v.ForEach(func(el *ring.Poly, _ int) {
-		sampler.Read(el)
+	v := math.NewVectorFromSize(dim, baseRing)
+	v.ForEach(func(el math.Polynomial, _ int) {
+		sampler.Read(el.Ref)
 	})
 	return v
 }
@@ -22,8 +22,8 @@ func NewRandomVector(dim int, baseRing *ring.Ring, sampler PolySampler) math.Vec
 // NewRandomMatrix constructs a 2D matrix, whose elements sampled from the given `sampler`.
 func NewRandomMatrix(rows int, cols int, baseRing *ring.Ring, sampler PolySampler) math.Matrix {
 	A := math.NewMatrixFromDimensions(rows, cols, baseRing)
-	A.ForEach(func(el *ring.Poly, _ int, _ int) {
-		sampler.Read(el)
+	A.ForEach(func(el math.Polynomial, _ int, _ int) {
+		sampler.Read(el.Ref)
 	})
 	return A
 }

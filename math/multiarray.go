@@ -5,7 +5,7 @@ import "github.com/ldsec/lattigo/v2/ring"
 // MultiArray represents a multidimensional array of polynomials.
 type MultiArray struct {
 	coordMap CoordMap
-	Array    []*ring.Poly // Linearized array.
+	Array    []Polynomial // Linearized array.
 }
 
 // NewMultiArray constructs a new empty multi array with the given dimensions.
@@ -15,9 +15,9 @@ func NewMultiArray(dims []int, baseRing *ring.Ring) MultiArray {
 		totalLength *= dims[i]
 	}
 	// Initialize the underlying Array to empty polynomials.
-	array := make([]*ring.Poly, totalLength)
+	array := make([]Polynomial, totalLength)
 	for i := 0; i < len(array); i++ {
-		array[i] = baseRing.NewPoly()
+		array[i] = Polynomial{baseRing.NewPoly()}
 	}
 	return MultiArray{
 		coordMap: NewCoordMap(dims),
@@ -36,29 +36,29 @@ func (m *MultiArray) Length() int {
 }
 
 // ElementAtCoords returns the element at the given coordinates.
-func (m *MultiArray) ElementAtCoords(coords []int) *ring.Poly {
+func (m *MultiArray) ElementAtCoords(coords []int) Polynomial {
 	index := m.coordMap.FromCoords(coords)
 	return m.Array[index]
 }
 
 // ElementAtIndex returns the element at the given linear index.
-func (m *MultiArray) ElementAtIndex(index int) *ring.Poly {
+func (m *MultiArray) ElementAtIndex(index int) Polynomial {
 	return m.Array[index]
 }
 
 // SetElementAtCoords updates the element at the given coordinates.
-func (m *MultiArray) SetElementAtCoords(coords []int, newElement *ring.Poly) {
+func (m *MultiArray) SetElementAtCoords(coords []int, newElement Polynomial) {
 	index := m.coordMap.FromCoords(coords)
 	m.Array[index] = newElement
 }
 
 // SetElementAtIndex updates the element at the given linear index.
-func (m *MultiArray) SetElementAtIndex(index int, newElement *ring.Poly) {
+func (m *MultiArray) SetElementAtIndex(index int, newElement Polynomial) {
 	m.Array[index] = newElement
 }
 
 // SetElements updates the array within the given coordinates.
-func (m *MultiArray) SetElements(startCoords []int, endCoords []int, replacement []*ring.Poly) {
+func (m *MultiArray) SetElements(startCoords []int, endCoords []int, replacement []Polynomial) {
 	startIndex := m.coordMap.FromCoords(startCoords)
 	endIndex := m.coordMap.FromCoords(endCoords)
 	// assert |endIndex - startIndex| == len(replacement)
@@ -68,8 +68,8 @@ func (m *MultiArray) SetElements(startCoords []int, endCoords []int, replacement
 }
 
 // MapInPlace maps every cell with as the output given function in-place.
-func (m *MultiArray) MapInPlace(f func(*ring.Poly, []int) *ring.Poly) {
-	for i := 0; i < len(m.Array); i++ {
+func (m *MultiArray) MapInPlace(f func(Polynomial, []int) Polynomial) {
+	for i := 0; i < m.Length(); i++ {
 		coords := m.coordMap.ToCoords(i)
 		// Update the value in-place.
 		m.Array[i] = f(m.Array[i], coords)
@@ -77,27 +77,44 @@ func (m *MultiArray) MapInPlace(f func(*ring.Poly, []int) *ring.Poly) {
 }
 
 // ForEach calls the given function with the contents of each cell.
-func (m *MultiArray) ForEach(f func(*ring.Poly, []int)) {
-	for i := 0; i < len(m.Array); i++ {
+func (m *MultiArray) ForEach(f func(Polynomial, []int)) {
+	for i := 0; i < m.Length(); i++ {
 		coords := m.coordMap.ToCoords(i)
 		f(m.Array[i], coords)
 	}
 }
 
-// ApplyUnaryOp applies the given unary operator to every cell in-place.
-func (m *MultiArray) ApplyUnaryOp(op UnaryOperator, baseRing *ring.Ring) {
-	for i := 0; i < len(m.Array); i++ {
-		// Update the value in-place.
-		op.Apply(m.Array[i], m.Array[i], baseRing)
+// ApplyUnaryOp applies the given unary operator to every cell.
+func (m *MultiArray) ApplyUnaryOp(op UnaryOperator, out *MultiArray, baseRing *ring.Ring) {
+	// assert m.Length() == out.Length()
+	for i := 0; i < m.Length(); i++ {
+		m.Array[i].ApplyUnaryOp(op, out.Array[i], baseRing)
+	}
+}
+
+// ApplyBinaryOp applies the given binary operator to this matrix with the elements of `r`, element-wise.
+func (m *MultiArray) ApplyBinaryOp(op BinaryOperator, r *MultiArray, out *MultiArray, baseRing *ring.Ring) {
+	// assert r.Length() == m.Length() == out.Length()
+	for i := 0; i < m.Length(); i++ {
+		m.Array[i].ApplyBinaryOp(op, r.Array[i], out.Array[i], baseRing)
+	}
+}
+
+// ApplyReduction reduces the elements into a single one by repeatedly applying the given operator.
+// Warning: Does not clear the `out` polynomial.
+func (m *MultiArray) ApplyReduction(op BinaryOperator, out Polynomial, baseRing *ring.Ring) {
+	// assert m.Length() == out.Length()
+	for i := 0; i < m.Length(); i++ {
+		out.ApplyBinaryOp(op, m.Array[i], out, baseRing)
 	}
 }
 
 // DeepCopy returns a deep copy of the multi array, where each element is also copied.
 func (m *MultiArray) DeepCopy() MultiArray {
 	// Create an exact copy of the contents.
-	array := make([]*ring.Poly, m.Length())
+	array := make([]Polynomial, m.Length())
 	for i := 0; i < len(array); i++ {
-		array[i] = m.Array[i].CopyNew()
+		array[i] = m.Array[i].DeepCopy()
 	}
 	return MultiArray{
 		coordMap: m.coordMap.Copied(),

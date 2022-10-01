@@ -6,17 +6,18 @@ import (
 
 // Matrix represents a 2-dimensional matrix.
 type Matrix struct {
-	MultiArray
+	*MultiArray
 }
 
 // NewMatrixFromDimensions constructs an empty matrix with the given dimensions.
 func NewMatrixFromDimensions(rows int, cols int, baseRing *ring.Ring) Matrix {
-	return Matrix{NewMultiArray([]int{cols, rows}, baseRing)}
+	a := NewMultiArray([]int{cols, rows}, baseRing)
+	return Matrix{&a}
 }
 
 // NewMatrixFromSlice constructs a matrix from the given slice.
 // The slice is assumed to be a list of row vectors.
-func NewMatrixFromSlice(array [][]*ring.Poly, baseRing *ring.Ring) Matrix {
+func NewMatrixFromSlice(array [][]Polynomial, baseRing *ring.Ring) Matrix {
 	// Create an empty matrix.
 	rows, cols := len(array), len(array[0])
 	m := NewMatrixFromDimensions(rows, cols, baseRing)
@@ -29,12 +30,12 @@ func NewMatrixFromSlice(array [][]*ring.Poly, baseRing *ring.Ring) Matrix {
 }
 
 // Rows returns the number of rows this matrix has.
-func (m *Matrix) Rows() int {
+func (m Matrix) Rows() int {
 	return m.coordMap.dims[1]
 }
 
 // Cols returns the number of cols this matrix has.
-func (m *Matrix) Cols() int {
+func (m Matrix) Cols() int {
 	return m.coordMap.dims[0]
 }
 
@@ -44,7 +45,7 @@ func (m *Matrix) Dimensions() (int, int) {
 }
 
 // Row returns the vector representation of the given row.
-func (m *Matrix) Row(row int) Vector {
+func (m Matrix) Row(row int) Vector {
 	// assert row < m.Rows()
 	indexStart := m.coordMap.FromCoords([]int{0, row})
 	indexEnd := m.coordMap.FromCoords([]int{0, row + 1})
@@ -53,9 +54,9 @@ func (m *Matrix) Row(row int) Vector {
 }
 
 // Col returns the vector representation of the given col.
-func (m *Matrix) Col(col int) Vector {
+func (m Matrix) Col(col int) Vector {
 	// assert col < m.Cols()
-	colSlice := make([]*ring.Poly, m.Rows())
+	colSlice := make([]Polynomial, m.Rows())
 	for i := 0; i < m.Rows(); i++ {
 		colSlice[i] = m.Element(i, col)
 	}
@@ -63,25 +64,25 @@ func (m *Matrix) Col(col int) Vector {
 }
 
 // Element returns the element at the given position.
-func (m *Matrix) Element(row int, col int) *ring.Poly {
+func (m Matrix) Element(row int, col int) Polynomial {
 	return m.ElementAtCoords([]int{col, row})
 }
 
 // SetElement updates the element at the given position.
-func (m *Matrix) SetElement(row int, col int, newElement *ring.Poly) {
+func (m *Matrix) SetElement(row int, col int, newElement Polynomial) {
 	m.SetElementAtCoords([]int{col, row}, newElement)
 }
 
 // SetRow updates the row with the given vector.
 // Warning: Does not copy the underlying array of the elements!
-func (m *Matrix) SetRow(row int, v *Vector) {
+func (m *Matrix) SetRow(row int, v Vector) {
 	// assert m.Cols() == v.Length()
 	m.SetElements([]int{0, row}, []int{0, row + 1}, v.Array)
 }
 
 // SetCol updates the col with the given vector.
 // Warning: Does not copy the underlying array of the elements!
-func (m *Matrix) SetCol(col int, v *Vector) {
+func (m *Matrix) SetCol(col int, v Vector) {
 	// assert m.Rows() == v.Length()
 	for i := 0; i < m.Rows(); i++ {
 		m.SetElement(i, col, v.Array[i])
@@ -92,7 +93,7 @@ func (m *Matrix) SetCol(col int, v *Vector) {
 func (m *Matrix) TransposeInPlace() {
 	// TODO can optimize to use swaps.
 	// Shallow copy the elements in.
-	old := make([]*ring.Poly, m.Length())
+	old := make([]Polynomial, m.Length())
 	for i := 0; i < m.Length(); i++ {
 		old[i] = m.Array[i]
 	}
@@ -110,32 +111,31 @@ func (m *Matrix) TransposeInPlace() {
 }
 
 // MapInPlace replaces every cell with the output of the given function in-place.
-func (m *Matrix) MapInPlace(f func(*ring.Poly, int, int) *ring.Poly) {
-	m.MultiArray.MapInPlace(func(el *ring.Poly, coords []int) *ring.Poly {
+func (m *Matrix) MapInPlace(f func(Polynomial, int, int) Polynomial) {
+	m.MultiArray.MapInPlace(func(el Polynomial, coords []int) Polynomial {
 		return f(el, coords[1], coords[0])
 	})
 }
 
 // ForEach calls the given function with the contents of each cell.
-func (m *Matrix) ForEach(f func(*ring.Poly, int, int)) {
-	m.MultiArray.ForEach(func(el *ring.Poly, coords []int) {
+func (m *Matrix) ForEach(f func(Polynomial, int, int)) {
+	m.MultiArray.ForEach(func(el Polynomial, coords []int) {
 		f(el, coords[1], coords[0])
 	})
 }
 
-// MulVecTo performs a matrix vector multiplication and adds the result to the given `out` vector.
-func (m *Matrix) MulVecTo(x *Vector, mulAddOp BinaryOperator, out *Vector, baseRing *ring.Ring) {
-	outputDim := m.Rows()
-	for i := 0; i < outputDim; i++ {
+// ForEachRow calls the given function for each row vector.
+func (m *Matrix) ForEachRow(f func(Vector, int)) {
+	for i := 0; i < m.Rows(); i++ {
 		targetRow := m.Row(i)
-		targetRow.DotProductTo(x, mulAddOp, out.ElementAtIndex(i), baseRing)
+		f(targetRow, i)
 	}
 }
 
-// MulVec performs a matrix vector multiplication and returns the result.
-func (m *Matrix) MulVec(x *Vector, mulAddOp BinaryOperator, baseRing *ring.Ring) Vector {
-	outputDim := m.Rows()
-	y := NewVectorFromDimensions(outputDim, baseRing)
-	m.MulVecTo(x, mulAddOp, &y, baseRing)
-	return y
+// ForEachCol calls the given function for each col vector.
+func (m *Matrix) ForEachCol(f func(Vector, int)) {
+	for i := 0; i < m.Cols(); i++ {
+		targetCol := m.Col(i)
+		f(targetCol, i)
+	}
 }
