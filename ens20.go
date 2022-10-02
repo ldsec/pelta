@@ -27,10 +27,10 @@ type Protocol struct {
 
 type PublicParams struct {
 	N         int // dimension of Rq
-	n         int // dimension for MSIS
+	n         int // dimension for M-SIS
 	m1        int // dimension of the input in Rq
 	m2        int // dimension of the input in Rq
-	lbd       int // dimension for MLWE
+	lbd       int // dimension for M-LWE
 	sizeB     int // dimension of bi
 	size_t    int // dimension of the commitment
 	size_bVec int // dimension of bVec vector of {bi}
@@ -38,8 +38,44 @@ type PublicParams struct {
 	d1        int // delta1 bound on the mask // Change for appropriate value
 }
 
-func Execute2(msg math.Vector, publicParams PublicParams) (*Protocol, error) {
+type PublicParams2 struct {
+	d      int // deg(X^d + 1), a power of two
+	q      int // Rational prime mod
+	m      int // # rows
+	n      int // # cols
+	k      int // Repetition rate
+	delta1 int // Width of the uniform distribution
+	lambda int // M-LWE dimension
+	kappa  int // M-SIS dimension
+}
 
+func Execute2(s math.Vector, params PublicParams2) (*Protocol, error) {
+
+	// Initialize the ring parameters.
+	ringParamDef := bfv.PN13QP218
+	ringParamDef.T = 0x3ee0001
+	ringParams, err := bfv.NewParametersFromLiteral(ringParamDef)
+	if err != nil {
+		return nil, fmt.Errorf("could not initialize the ring parameters: %s", err)
+	}
+
+	// Initialize the ring.
+	baseRing := ringParams.RingQP()
+	// Create the samplers.
+	prng, err := utils.NewPRNG()
+	if err != nil {
+		return nil, fmt.Errorf("could not initialize the prng: %s", err)
+	}
+	uniformSampler := ring.NewUniformSampler(prng, baseRing)
+	ternarySampler := ring.NewTernarySampler(prng, baseRing, 1.0/3.0, false)
+	gaussianSampler := ring.NewGaussianSampler(prng, baseRing, ringParams.Sigma(), params.delta1)
+
+	// Inputs
+	A := NewRandomMatrix(params.m, params.n, baseRing, uniformSampler)
+	u := A.DeepCopy().AsMatrix().MulVec(s)
+	B0 := NewRandomMatrix(params.kappa, params.lambda+params.kappa+params.n/params.d+3, baseRing, uniformSampler)
+
+	return nil, nil
 }
 
 func Execute(msg math.Vector, publicParams PublicParams) (*Protocol, error) {

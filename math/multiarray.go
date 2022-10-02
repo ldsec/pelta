@@ -2,10 +2,21 @@ package math
 
 import "github.com/ldsec/lattigo/v2/ring"
 
-// MultiArray represents a multidimensional array of polynomials.
+// RingElement represents an element of a ring.
+type RingElement interface {
+	Add(q RingElement) RingElement                     // p = p + q
+	Mul(q RingElement) RingElement                     // p = p * q
+	MulAdd(q RingElement, out RingElement) RingElement // out += p * q
+	Neg() RingElement                                  // p = -p
+	Zero() RingElement                                 // Converts into additive identity
+	One() RingElement                                  // Converts into multiplicative identity
+	Copy() RingElement                                 // Returns a copy of the element
+}
+
+// MultiArray represents a multidimensional array of elements.
 type MultiArray struct {
 	coordMap CoordMap
-	Array    []Polynomial // Linearized array.
+	Array    []RingElement // Linearized array.
 	baseRing *ring.Ring
 }
 
@@ -15,10 +26,10 @@ func NewMultiArray(dims []int, baseRing *ring.Ring) *MultiArray {
 	for i := 0; i < len(dims); i++ {
 		totalLength *= dims[i]
 	}
-	// Initialize the underlying Array to empty polynomials.
-	array := make([]Polynomial, totalLength)
+	// Initialize the underlying Array to nil values.
+	array := make([]RingElement, totalLength)
 	for i := 0; i < len(array); i++ {
-		array[i] = Polynomial{baseRing.NewPoly()}
+		array[i] = nil
 	}
 	a := MultiArray{
 		coordMap: NewCoordMap(dims),
@@ -29,7 +40,7 @@ func NewMultiArray(dims []int, baseRing *ring.Ring) *MultiArray {
 }
 
 // Populate initializes the cells of this multi array using a given function.
-func (m *MultiArray) Populate(f func([]int) Polynomial) *MultiArray {
+func (m *MultiArray) Populate(f func([]int) RingElement) *MultiArray {
 	for i := 0; i < m.Length(); i++ {
 		coords := m.coordMap.ToCoords(i)
 		m.Array[i] = f(coords)
@@ -48,29 +59,29 @@ func (m *MultiArray) Length() int {
 }
 
 // ElementAtCoords returns the element at the given coordinates.
-func (m *MultiArray) ElementAtCoords(coords []int) Polynomial {
+func (m *MultiArray) ElementAtCoords(coords []int) RingElement {
 	index := m.coordMap.FromCoords(coords)
 	return m.Array[index]
 }
 
 // ElementAtIndex returns the element at the given linear index.
-func (m *MultiArray) ElementAtIndex(index int) Polynomial {
+func (m *MultiArray) ElementAtIndex(index int) RingElement {
 	return m.Array[index]
 }
 
 // SetElementAtCoords updates the element at the given coordinates.
-func (m *MultiArray) SetElementAtCoords(coords []int, newElement Polynomial) {
+func (m *MultiArray) SetElementAtCoords(coords []int, newElement RingElement) {
 	index := m.coordMap.FromCoords(coords)
 	m.Array[index] = newElement
 }
 
 // SetElementAtIndex updates the element at the given linear index.
-func (m *MultiArray) SetElementAtIndex(index int, newElement Polynomial) {
+func (m *MultiArray) SetElementAtIndex(index int, newElement RingElement) {
 	m.Array[index] = newElement
 }
 
 // SetElements updates the array within the given coordinates.
-func (m *MultiArray) SetElements(startCoords []int, endCoords []int, replacement []Polynomial) {
+func (m *MultiArray) SetElements(startCoords []int, endCoords []int, replacement []RingElement) {
 	startIndex := m.coordMap.FromCoords(startCoords)
 	endIndex := m.coordMap.FromCoords(endCoords)
 	// assert |endIndex - startIndex| == len(replacement)
@@ -80,7 +91,7 @@ func (m *MultiArray) SetElements(startCoords []int, endCoords []int, replacement
 }
 
 // Map maps every cell with as the output given function in-place.
-func (m *MultiArray) Map(f func(Polynomial, []int) Polynomial) *MultiArray {
+func (m *MultiArray) Map(f func(RingElement, []int) RingElement) *MultiArray {
 	for i := 0; i < m.Length(); i++ {
 		coords := m.coordMap.ToCoords(i)
 		// Update the value in-place.
@@ -90,44 +101,19 @@ func (m *MultiArray) Map(f func(Polynomial, []int) Polynomial) *MultiArray {
 }
 
 // ForEach calls the given function with the contents of each cell.
-func (m *MultiArray) ForEach(f func(Polynomial, []int)) {
+func (m *MultiArray) ForEach(f func(RingElement, []int)) {
 	for i := 0; i < m.Length(); i++ {
 		coords := m.coordMap.ToCoords(i)
 		f(m.Array[i], coords)
 	}
 }
 
-// ApplyUnaryOp applies the given unary operator to every cell.
-func (m *MultiArray) ApplyUnaryOp(op UnaryOperator, out *MultiArray) {
-	// assert m.Length() == out.Length()
-	for i := 0; i < m.Length(); i++ {
-		m.Array[i].ApplyUnaryOp(op, out.Array[i], m.baseRing)
-	}
-}
-
-// ApplyBinaryOp applies the given binary operator to this matrix with the elements of `r`, element-wise.
-func (m *MultiArray) ApplyBinaryOp(op BinaryOperator, r *MultiArray, out *MultiArray) {
-	// assert r.Length() == m.Length() == out.Length()
-	for i := 0; i < m.Length(); i++ {
-		m.Array[i].ApplyBinaryOp(op, r.Array[i], out.Array[i], m.baseRing)
-	}
-}
-
-// ApplyReduction reduces the elements into a single one by repeatedly applying the given operator.
-// Warning: Does not clear the `out` polynomial.
-func (m *MultiArray) ApplyReduction(op BinaryOperator, out Polynomial) {
-	// assert m.Length() == out.Length()
-	for i := 0; i < m.Length(); i++ {
-		out.ApplyBinaryOp(op, m.Array[i], out, m.baseRing)
-	}
-}
-
 // DeepCopy returns a deep copy of the multi array, where each element is also copied.
 func (m *MultiArray) DeepCopy() *MultiArray {
 	// Create an exact copy of the contents.
-	array := make([]Polynomial, m.Length())
+	array := make([]RingElement, m.Length())
 	for i := 0; i < len(array); i++ {
-		array[i] = m.Array[i].DeepCopy()
+		array[i] = m.Array[i].Copy()
 	}
 	new := MultiArray{
 		coordMap: m.coordMap.Copied(),
@@ -145,4 +131,49 @@ func (m *MultiArray) ShallowCopy() *MultiArray {
 		baseRing: m.baseRing,
 	}
 	return &new
+}
+
+// Add adds two arrays coefficient-wise in-place.
+// p, q => p += q
+func (m *MultiArray) Add(q *MultiArray) *MultiArray {
+	for i := 0; i < m.Length(); i++ {
+		m.ElementAtIndex(i).Add(q.ElementAtIndex(i))
+	}
+	return m
+}
+
+// Mul multiplies the elements coefficient-wise in-place.
+// p, q => p *= q
+func (m *MultiArray) Mul(q *MultiArray) *MultiArray {
+	for i := 0; i < m.Length(); i++ {
+		m.ElementAtIndex(i).Mul(q.ElementAtIndex(i))
+	}
+	return m
+}
+
+// Neg negates the elements in-place.
+// p_i => -p_i
+func (m *MultiArray) Neg() *MultiArray {
+	m.ForEach(func(el RingElement, _ []int) {
+		el.Neg()
+	})
+	return m
+}
+
+// Sum sums the polynomials in the array, returning the result.
+func (m *MultiArray) Sum() RingElement {
+	out := m.Array[0].Copy().Zero()
+	m.ForEach(func(el RingElement, _ []int) {
+		out.Add(el)
+	})
+	return out
+}
+
+// Product takes the coefficient wise product of all the elements in the array, returning the result.
+func (m *MultiArray) Product() RingElement {
+	out := m.Array[0].Copy().One()
+	m.ForEach(func(el RingElement, _ []int) {
+		out.Mul(el)
+	})
+	return out
 }
