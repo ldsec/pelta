@@ -38,6 +38,10 @@ type PublicParams struct {
 	d1        int // delta1 bound on the mask // Change for appropriate value
 }
 
+func Execute2(msg math.Vector, publicParams PublicParams) (*Protocol, error) {
+
+}
+
 func Execute(msg math.Vector, publicParams PublicParams) (*Protocol, error) {
 	// Initialize the ring parameters.
 	ringParamDef := bfv.PN13QP218
@@ -78,28 +82,30 @@ func Execute(msg math.Vector, publicParams PublicParams) (*Protocol, error) {
 	// t_0 = Br.
 	t_0 := B.MulVec(r)
 	// t_1[i] = <b1[k], r> + mHat[k]  where mHat is the invNTT transform of msg
-	t_1 := math.NewVectorFromSize(mHat.Length(), baseRing)
-	t_1.MapInPlace(func(_ math.Polynomial, i int) math.Polynomial {
-		return bVecs.Row(i).DeepCopy().NTT().AsVector().DotProduct(r).InvNTT(baseRing).Add(mHat.ElementAtIndex(i), baseRing)
-	})
+	t_1 := math.NewVectorFromSize(mHat.Length(), baseRing).Populate(
+		func(i int) math.Polynomial {
+			return bVecs.Row(i).DeepCopy().
+				NTT().AsVector().
+				DotProduct(r).
+				InvNTT(baseRing).
+				Add(mHat.ElementAtIndex(i), baseRing)
+		})
 	// t2 = <b2, r> + g
 	t_2 := bVecs.Row(publicParams.m1).DeepCopy().AsVector().DotProduct(r).Add(g, baseRing)
 	// t = t0 || t1 || t2
 	t := math.NewVectorFromSlice(append(t_0.Array, append(t_1.Array, t_2)...), baseRing)
 	// Create the masks y, w
 	y := NewRandomMatrix(publicParams.k, publicParams.sizeB, baseRing, gaussianSampler)
-	w := math.NewMatrixFromDimensions(publicParams.k, publicParams.n, baseRing).
-		MapRowsInPlace(func(row math.Vector, i int) math.Vector {
-			return B.MulVec(row)
-		})
+	w := math.NewMatrixFromDimensions(publicParams.k, publicParams.n, baseRing).PopulateRows(func(i int) math.Vector {
+		return B.MulVec(y.Row(i))
+	})
 	// Create the gamma challenges.
 	gamma := NewRandomMatrix(publicParams.k, publicParams.m2, baseRing, uniformSampler)
 	// Create h, the masked g
-	At := A.DeepCopy().AsMatrix().TransposeInPlace()
+	At := A.DeepCopy().AsMatrix().Transpose()
 	// Create the target value (At*gamma_k) in NTT form
-	Atgammak_NTT := math.NewMatrixFromDimensions(publicParams.k, publicParams.m1, baseRing)
-	Atgammak_NTT.MapRowsInPlace(func(_ math.Vector, i int) math.Vector {
-		return At.MulVec(gamma.Row(i))
+	Atgammak_NTT := math.NewMatrixFromDimensions(publicParams.k, publicParams.m1, baseRing).PopulateRows(func(i int) math.Vector {
+		return At.DeepCopy().AsMatrix().MulVec(gamma.Row(i))
 	})
 	// Compute the inner product cste[i]=-<u, gamma[i]>  -- constant Poly
 	temp := baseRing.NewPoly()
@@ -121,9 +127,8 @@ func Execute(msg math.Vector, publicParams PublicParams) (*Protocol, error) {
 		el.Ref.Copy(dt.Ref)
 	})
 	// Create  iNTT(N.Atgamma ° m[j]) = iNTT(N.Atgamma)* m^[j] -- in Poly form
-	prodk := math.NewMatrixFromDimensions(publicParams.k, publicParams.k, baseRing)
-	prodk.MapRowsInPlace(func(_ math.Vector, i int) math.Vector {
-		return Atgammak_NTT.MulVec(msg).Scale(uint64(publicParams.N)).InvNTT().AsVector()
+	prodk := math.NewMatrixFromDimensions(publicParams.k, publicParams.k, baseRing).PopulateRows(func(i int) math.Vector {
+		return Atgammak_NTT.DeepCopy().AsMatrix().MulVec(msg).Scale(uint64(publicParams.N)).InvNTT().AsVector()
 	})
 	// Sum_v=0^m1 [iNTT(N.Atgamma ° m_v)] - <u, gamma> -- In Poly form
 	for i := 0; i < publicParams.k; i++ {
@@ -139,11 +144,11 @@ func Execute(msg math.Vector, publicParams PublicParams) (*Protocol, error) {
 	}
 	h := g.DeepCopy().Add(fValue, baseRing)
 	// Create v_i
-	// Create the value Atgamma_b1m[i][j][k] = iNTT(N.Atgamma[i][j] ° b1[k]) for k in sizeB  -- in Poly form
-	Atgamma_b1m := math.NewMultiArray([]int{publicParams.k, publicParams.m1, publicParams.sizeB}, baseRing)
 	// Convert bVecs into NTT form.
 	bVecs = bVecs.NTT().AsMatrix()
-	Atgamma_b1m.MapInPlace(func(el math.Polynomial, coords []int) math.Polynomial {
+	// Create the value Atgamma_b1m[i][j][k] = iNTT(N.Atgamma[i][j] ° b1[k]) for k in sizeB  -- in Poly form
+	Atgamma_b1m := math.NewMultiArray([]int{publicParams.k, publicParams.m1, publicParams.sizeB}, baseRing)
+	Atgamma_b1m.Map(func(el math.Polynomial, coords []int) math.Polynomial {
 		i, j, k := coords[0], coords[1], coords[2]
 		return Atgammak_NTT.Element(i, j).DeepCopy().Mul(bVecs.Element(j, k), baseRing).Scale(uint64(publicParams.N), baseRing).InvNTT(baseRing)
 	})
@@ -173,8 +178,7 @@ func Execute(msg math.Vector, publicParams PublicParams) (*Protocol, error) {
 	})
 
 	// Create the scalar product <b2, yi>
-	scalarProd_b2y := math.NewVectorFromSize(publicParams.k, baseRing)
-	scalarProd_b2y.MapInPlace(func(_ math.Polynomial, i int) math.Polynomial {
+	scalarProd_b2y := math.NewVectorFromSize(publicParams.k, baseRing).Populate(func(i int) math.Polynomial {
 		return bVecs.Row(publicParams.m1).DeepCopy().AsVector().DotProduct(y.Row(i))
 	})
 	// Create vi = scalarProdV + <b2, yi>
@@ -194,11 +198,11 @@ func Execute(msg math.Vector, publicParams PublicParams) (*Protocol, error) {
 			factor := baseRing.NewPoly()
 			//baseRing.Shift // TODO sigma not a shift
 			factor = c.CopyNew()
-			baseRing.NTT(r[j], r[j])
+			baseRing.NTT(r.Array[j].Ref, r.Array[j].Ref)
 			baseRing.NTT(factor, factor)
-			baseRing.MulCoeffs(factor, r[j], z[i][j])
+			baseRing.MulCoeffs(factor, r.Array[j].Ref, z[i][j])
 			baseRing.InvNTT(factor, factor)
-			baseRing.InvNTT(r[j], r[j])
+			baseRing.InvNTT(r.Array[j].Ref, r.Array[j].Ref)
 			baseRing.InvNTT(z[i][j], z[i][j])
 
 			baseRing.Add(z[i][j], y[i][j], z[i][j])
