@@ -10,8 +10,8 @@ type Matrix struct {
 }
 
 // NewMatrixFromDimensions constructs an empty matrix with the given dimensions.
-func NewMatrixFromDimensions(rows int, cols int, baseRing *ring.Ring) Matrix {
-	return Matrix{NewMultiArray([]int{cols, rows}, baseRing)}
+func NewMatrixFromDimensions(rows int, cols int) Matrix {
+	return Matrix{NewMultiArray([]int{cols, rows})}
 }
 
 // NewMatrixFromSlice constructs a matrix from the given slice.
@@ -19,12 +19,21 @@ func NewMatrixFromDimensions(rows int, cols int, baseRing *ring.Ring) Matrix {
 func NewMatrixFromSlice(array [][]RingElement, baseRing *ring.Ring) Matrix {
 	// Create an empty matrix.
 	rows, cols := len(array), len(array[0])
-	m := NewMatrixFromDimensions(rows, cols, baseRing)
+	m := NewMatrixFromDimensions(rows, cols)
 	for i := 0; i < rows; i++ {
 		for j := 0; j < cols; j++ {
 			m.SetElement(i, j, array[i][j])
 		}
 	}
+	return m
+}
+
+// Populate initializes the elements of this multi array using a given function.
+func (m Matrix) Populate(f func(int, int) RingElement) Matrix {
+	m.MultiArray.Populate(func(coords []int) RingElement {
+		col, row := coords[0], coords[1]
+		return f(row, col)
+	})
 	return m
 }
 
@@ -65,7 +74,7 @@ func (m Matrix) Row(row int) Vector {
 	indexStart := m.coordMap.FromCoords([]int{0, row})
 	indexEnd := m.coordMap.FromCoords([]int{0, row + 1})
 	rowArray := m.Array[indexStart:indexEnd]
-	return NewVectorFromSlice(rowArray, m.baseRing)
+	return NewVectorFromSlice(rowArray)
 }
 
 // Col returns the vector representation of the given col.
@@ -75,7 +84,7 @@ func (m Matrix) Col(col int) Vector {
 	for i := 0; i < m.Rows(); i++ {
 		colSlice[i] = m.Element(i, col)
 	}
-	return NewVectorFromSlice(colSlice, m.baseRing)
+	return NewVectorFromSlice(colSlice)
 }
 
 // Element returns the element at the given position.
@@ -166,7 +175,7 @@ func (m Matrix) ForEachCol(f func(Vector, int)) {
 
 // MulVec performs a matrix vector multiplication and returns the result.
 func (m Matrix) MulVec(x Vector) Vector {
-	out := NewVectorFromSize(m.Rows(), m.baseRing)
+	out := NewVectorFromSize(m.Rows())
 	m.ForEachRow(func(row Vector, i int) {
 		out.SetElementAtIndex(i, row.DotProduct(x))
 	})

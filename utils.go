@@ -10,20 +10,40 @@ type PolySampler interface {
 	Read(pol *ring.Poly)
 }
 
-// NewRandomVector constructs a vector, whose elements sampled from the given `sampler`.
-func NewRandomVector(dim int, baseRing *ring.Ring, sampler PolySampler) math.Vector {
-	v := math.NewVectorFromSize(dim, baseRing)
-	v.ForEach(func(el math.RingElement, _ int) {
-		sampler.Read(el.(math.Polynomial).Ref)
+// NewRandomPolynomialVector constructs a vector, whose elements sampled from the given `sampler`.
+func NewRandomPolynomialVector(dim int, baseRing *ring.Ring, sampler PolySampler) math.Vector {
+	v := math.NewVectorFromSize(dim).Populate(func(_ int) math.RingElement {
+		tmp := math.NewPolynomial(baseRing)
+		sampler.Read(tmp.Ref)
+		return tmp
 	})
 	return v
 }
 
-// NewRandomMatrix constructs a 2D matrix, whose elements sampled from the given `sampler`.
-func NewRandomMatrix(rows int, cols int, baseRing *ring.Ring, sampler PolySampler) math.Matrix {
-	A := math.NewMatrixFromDimensions(rows, cols, baseRing)
-	A.ForEach(func(el math.RingElement, _ int, _ int) {
-		sampler.Read(el.(math.Polynomial).Ref)
+// NewRandomPolynomialMatrix constructs a 2D matrix, whose elements sampled from the given `sampler`.
+func NewRandomPolynomialMatrix(rows int, cols int, baseRing *ring.Ring, sampler PolySampler) math.Matrix {
+	A := math.NewMatrixFromDimensions(rows, cols).Populate(func(_, _ int) math.RingElement {
+		tmp := math.NewPolynomial(baseRing)
+		sampler.Read(tmp.Ref)
+		return tmp
+	})
+	return A
+}
+
+// NewRandomIntegerVector constructs a random 2D vector of integers.
+func NewRandomIntegerVector(dim int, mod int) math.Vector {
+	v := math.NewVectorFromSize(dim).Populate(func(_ int) math.RingElement {
+		// TODO fix
+		return math.NewModInt(1, mod)
+	})
+	return v
+}
+
+// NewRandomIntegerMatrix constructs a random 2D matrix of integers.
+func NewRandomIntegerMatrix(rows int, cols int, mod int) math.Matrix {
+	A := math.NewMatrixFromDimensions(rows, cols).Populate(func(_, _ int) math.RingElement {
+		// TODO fix
+		return math.NewModInt(1, mod)
 	})
 	return A
 }

@@ -7,8 +7,9 @@ type ModInt struct {
 	Modulus int
 }
 
-func NewModInt(value int, mod int) ModInt {
-	return ModInt{value, mod}
+func NewModInt(value int, mod int) *ModInt {
+	i := ModInt{value % mod, mod}
+	return &i
 }
 
 func (m *ModInt) Add(q RingElement) RingElement {

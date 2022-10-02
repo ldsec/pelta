@@ -1,7 +1,5 @@
 package math
 
-import "github.com/ldsec/lattigo/v2/ring"
-
 // RingElement represents an element of a ring.
 type RingElement interface {
 	Add(q RingElement) RingElement                     // p = p + q
@@ -17,11 +15,10 @@ type RingElement interface {
 type MultiArray struct {
 	coordMap CoordMap
 	Array    []RingElement // Linearized array.
-	baseRing *ring.Ring
 }
 
 // NewMultiArray constructs a new empty multi array with the given dimensions.
-func NewMultiArray(dims []int, baseRing *ring.Ring) *MultiArray {
+func NewMultiArray(dims []int) *MultiArray {
 	totalLength := 1
 	for i := 0; i < len(dims); i++ {
 		totalLength *= dims[i]
@@ -34,7 +31,6 @@ func NewMultiArray(dims []int, baseRing *ring.Ring) *MultiArray {
 	a := MultiArray{
 		coordMap: NewCoordMap(dims),
 		Array:    array,
-		baseRing: baseRing,
 	}
 	return &a
 }
@@ -118,7 +114,6 @@ func (m *MultiArray) DeepCopy() *MultiArray {
 	new := MultiArray{
 		coordMap: m.coordMap.Copied(),
 		Array:    array,
-		baseRing: m.baseRing,
 	}
 	return &new
 }
@@ -128,7 +123,6 @@ func (m *MultiArray) ShallowCopy() *MultiArray {
 	new := MultiArray{
 		coordMap: m.coordMap.Copied(),
 		Array:    m.Array,
-		baseRing: m.baseRing,
 	}
 	return &new
 }

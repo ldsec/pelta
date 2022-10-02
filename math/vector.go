@@ -1,25 +1,20 @@
 package math
 
-import (
-	"github.com/ldsec/lattigo/v2/ring"
-)
-
 type Vector struct {
 	*MultiArray
 }
 
 // NewVectorFromSize constructs a new empty vector with the given size.
-func NewVectorFromSize(dim int, baseRing *ring.Ring) Vector {
-	return Vector{NewMultiArray([]int{dim}, baseRing)}
+func NewVectorFromSize(dim int) Vector {
+	return Vector{NewMultiArray([]int{dim})}
 }
 
 // NewVectorFromSlice constructs a new vector from the given slice.
 // Warning: Does not copy the underlying elements.
-func NewVectorFromSlice(elements []RingElement, baseRing *ring.Ring) Vector {
+func NewVectorFromSlice(elements []RingElement) Vector {
 	a := MultiArray{
 		coordMap: NewCoordMap([]int{len(elements)}),
 		Array:    elements,
-		baseRing: baseRing,
 	}
 	return Vector{&a}
 }
@@ -47,8 +42,8 @@ func (v Vector) ForEach(f func(RingElement, int)) {
 }
 
 // DotProduct performs a dot product of the vectors and returns the result.
-func (v Vector) DotProduct(b Vector) Polynomial {
-	out := NewPolynomial(v.baseRing)
+func (v Vector) DotProduct(b Vector) RingElement {
+	out := v.ElementAtIndex(0).Zero()
 	v.ForEach(func(el RingElement, i int) {
 		el.MulAdd(b.ElementAtIndex(i), out)
 	})
