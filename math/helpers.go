@@ -1,12 +1,14 @@
 package math
 
-// -- Polynomial helpers
+// Helpers for specialized polynomial constructs
 
-// -- Multiarray of poly helpers
+type PolyArray struct {
+	*MultiArray
+}
 
 // NTT converts the vector of polynomials into the NTT space in-place.
 // p_i => NTT(p_i)
-func (m *MultiArray) NTT() *MultiArray {
+func (m PolyArray) NTT() PolyArray {
 	m.ForEach(func(el RingElement, _ []int) {
 		el.(Polynomial).NTT()
 	})
@@ -15,7 +17,7 @@ func (m *MultiArray) NTT() *MultiArray {
 
 // InvNTT converts the vector of NTT polynomials back into the poly space in-place.
 // p_i => InvNTT(p_i)
-func (m *MultiArray) InvNTT() *MultiArray {
+func (m PolyArray) InvNTT() PolyArray {
 	m.ForEach(func(el RingElement, _ []int) {
 		el.(Polynomial).InvNTT()
 	})
@@ -24,7 +26,7 @@ func (m *MultiArray) InvNTT() *MultiArray {
 
 // Scale scales the coefficients of the polynomials in-place.
 // p_i => c*p_i
-func (m *MultiArray) Scale(factor uint64) *MultiArray {
+func (m PolyArray) Scale(factor uint64) PolyArray {
 	m.ForEach(func(el RingElement, _ []int) {
 		el.(Polynomial).Scale(factor)
 	})
@@ -33,12 +35,21 @@ func (m *MultiArray) Scale(factor uint64) *MultiArray {
 
 // -- Conversion helpers
 
+// AsMatrix converts the representation to a matrix.
 func (m *MultiArray) AsMatrix() Matrix {
 	// assert len(a.Dimensions()) == 2
 	return Matrix{m}
 }
 
+// AsVector converts the representation to a vector.
 func (m *MultiArray) AsVector() Vector {
 	// assert len(a.Dimensions()) == 1
 	return Vector{m}
+}
+
+// AsPolyArray converts the representation of a multi array of polynomials.
+// Allows calling specialized methods.
+func (m *MultiArray) AsPolyArray() PolyArray {
+	// assert type
+	return PolyArray{m}
 }

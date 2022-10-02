@@ -97,7 +97,7 @@ func Execute(msg math.Vector, publicParams PublicParams) (*Protocol, error) {
 	ternarySampler := ring.NewTernarySampler(prng, baseRing, 1.0/3.0, false)
 	gaussianSampler := ring.NewGaussianSampler(prng, baseRing, ringParams.Sigma(), publicParams.d1)
 	// Split the message over the polynomial space.
-	mHat := math.NewVectorFromSize(publicParams.m1, baseRing).InvNTT()
+	mHat := math.NewVectorFromSize(publicParams.m1).AsPolyArray().InvNTT().AsVector()
 	// Construct the public matrix A
 	// TODO: provide from the outside
 	A := NewRandomPolynomialMatrix(publicParams.m2, publicParams.m1, baseRing, uniformSampler)
@@ -120,7 +120,7 @@ func Execute(msg math.Vector, publicParams PublicParams) (*Protocol, error) {
 	// t_1[i] = <b1[k], r> + mHat[k]  where mHat is the invNTT transform of msg
 	t_1 := math.NewVectorFromSize(mHat.Length()).Populate(
 		func(i int) math.RingElement {
-			return bVecs.Row(i).DeepCopy().
+			return bVecs.Row(i).DeepCopy().AsPolyArray().
 				NTT().AsVector().
 				DotProduct(r).(math.Polynomial).
 				InvNTT().
@@ -164,7 +164,7 @@ func Execute(msg math.Vector, publicParams PublicParams) (*Protocol, error) {
 	})
 	// Create  iNTT(N.Atgamma ° m[j]) = iNTT(N.Atgamma)* m^[j] -- in Poly form
 	prodk := math.NewMatrixFromDimensions(publicParams.k, publicParams.k).PopulateRows(func(i int) math.Vector {
-		return Atgammak_NTT.DeepCopy().AsMatrix().MulVec(msg).Scale(uint64(publicParams.N)).InvNTT().AsVector()
+		return Atgammak_NTT.DeepCopy().AsMatrix().MulVec(msg).AsPolyArray().Scale(uint64(publicParams.N)).InvNTT().AsVector()
 	})
 	// Sum_v=0^m1 [iNTT(N.Atgamma ° m_v)] - <u, gamma> -- In Poly form
 	for i := 0; i < publicParams.k; i++ {
@@ -181,7 +181,7 @@ func Execute(msg math.Vector, publicParams PublicParams) (*Protocol, error) {
 	h := g.Copy().Add(fValue)
 	// Create v_i
 	// Convert bVecs into NTT form.
-	bVecs = bVecs.NTT().AsMatrix()
+	bVecs = bVecs.AsPolyArray().NTT().AsMatrix()
 	// Create the value Atgamma_b1m[i][j][k] = iNTT(N.Atgamma[i][j] ° b1[k]) for k in sizeB  -- in Poly form
 	Atgamma_b1m := math.NewMultiArray([]int{publicParams.k, publicParams.m1, publicParams.sizeB})
 	Atgamma_b1m.Map(func(el math.Polynomial, coords []int) math.Polynomial {
@@ -189,7 +189,7 @@ func Execute(msg math.Vector, publicParams PublicParams) (*Protocol, error) {
 		return Atgammak_NTT.Element(i, j).Mul(bVecs.Element(j, k)).(math.Polynomial).Scale(uint64(publicParams.N)).InvNTT()
 	})
 	// Convert bVecs back into poly form.
-	bVecs = bVecs.InvNTT().AsMatrix()
+	bVecs = bVecs.AsPolyArray().InvNTT().AsMatrix()
 	// Create the scalar product scalarProdVm = <Atgamma_b1m[0]
 	scalarProdVm := math.NewMultiArray([]int{publicParams.k, publicParams.k, publicParams.k, publicParams.m1})
 	scalarProdVm.ForEach(func(el math.RingElement, coords []int) {
