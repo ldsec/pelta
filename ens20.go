@@ -35,7 +35,7 @@ type PublicParams struct {
 	size_t    int // dimension of the commitment
 	size_bVec int // dimension of bVec vector of {bi}
 	k         int // repeat rate in ENS20
-	d1        int // delta1 bound on the mask // Change for appropriate value
+	d1        int // delta1 bound on the mask // TODO: Change for appropriate value
 }
 
 type PublicParams2 struct {
@@ -67,7 +67,7 @@ func Execute2(s math.Vector, params PublicParams2) (*Protocol, error) {
 		return nil, fmt.Errorf("could not initialize the prng: %s", err)
 	}
 	uniformSampler := ring.NewUniformSampler(prng, baseRing)
-	ternarySampler := ring.NewTernarySampler(prng, baseRing, 1.0/3.0, false)
+	ternarySampler := ring.NewTernarySampler(prng, baseRing, 1.0/3.0, false) // TODO: update the ternary distribution
 	gaussianSampler := ring.NewGaussianSampler(prng, baseRing, ringParams.Sigma(), params.delta1)
 
 	// Inputs
@@ -94,7 +94,7 @@ func Execute(msg math.Vector, publicParams PublicParams) (*Protocol, error) {
 		return nil, fmt.Errorf("could not initialize the prng: %s", err)
 	}
 	uniformSampler := ring.NewUniformSampler(prng, baseRing)
-	ternarySampler := ring.NewTernarySampler(prng, baseRing, 1.0/3.0, false)
+	ternarySampler := ring.NewTernarySampler(prng, baseRing, 1.0/3.0, false) // TODO: update the ternary distribution
 	gaussianSampler := ring.NewGaussianSampler(prng, baseRing, ringParams.Sigma(), publicParams.d1)
 	// Split the message over the polynomial space.
 	mHat := math.NewVectorFromSize(publicParams.m1).AsPolyArray().InvNTT().AsVector()
