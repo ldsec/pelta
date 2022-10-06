@@ -2,13 +2,13 @@ package math
 
 // RingElement represents an element of a ring.
 type RingElement interface {
-	Add(q RingElement) RingElement                     // p = p + q
-	Mul(q RingElement) RingElement                     // p = p * q
-	MulAdd(q RingElement, out RingElement) RingElement // out += p * q
-	Neg() RingElement                                  // p = -p
-	Zero() RingElement                                 // Converts into additive identity
-	One() RingElement                                  // Converts into multiplicative identity
-	Copy() RingElement                                 // Returns a copy of the element
+	Add(q RingElement) RingElement         // p = p + q
+	Mul(q RingElement) RingElement         // p = p * q
+	MulAdd(q RingElement, out RingElement) // out += p * q
+	Neg() RingElement                      // p = -p
+	Zero() RingElement                     // Converts into additive identity
+	One() RingElement                      // Converts into multiplicative identity
+	Copy() RingElement                     // Returns a copy of the element
 }
 
 // MultiArray represents a multidimensional array of elements.
@@ -76,11 +76,12 @@ func (m *MultiArray) SetElementAtIndex(index int, newElement RingElement) {
 	m.Array[index] = newElement
 }
 
-// SetElements updates the array within the given coordinates.
+// SetElements updates the array within the given coordinates. End exclusive.
 func (m *MultiArray) SetElements(startCoords []int, endCoords []int, replacement []RingElement) {
+	// assert startCoords < endCoords
 	startIndex := m.coordMap.FromCoords(startCoords)
 	endIndex := m.coordMap.FromCoords(endCoords)
-	// assert |endIndex - startIndex| == len(replacement)
+	// assert abs(endIndex - startIndex) == len(replacement)
 	for i := 0; i < m.abs(endIndex-startIndex); i++ {
 		m.Array[m.min(startIndex, endIndex)+i] = replacement[i]
 	}

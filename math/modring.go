@@ -1,54 +1,57 @@
 package math
 
+import (
+	"math/big"
+)
+
 // ModInt represents an integer in the ring Z_q
 // TODO utilize lattigo under the hood.
 type ModInt struct {
-	Value   int
-	Modulus int
+	Value   big.Int
+	Modulus big.Int
 }
 
-func NewModInt(value int, mod int) *ModInt {
-	i := ModInt{value % mod, mod}
+func NewModInt(value *big.Int, mod *big.Int) *ModInt {
+	newValue, newMod := big.Int{}, big.Int{}
+	newValue.Set(value)
+	newMod.Set(mod)
+	newValue.Mod(&newValue, &newMod)
+	i := ModInt{newValue, newMod}
 	return &i
 }
 
 func (m *ModInt) Add(q RingElement) RingElement {
-	m.Value += q.(*ModInt).Value % m.Modulus
-	m.Value = m.Value % m.Modulus
+	m.Value.Add(&m.Value, &q.(*ModInt).Value).Mod(&m.Value, &m.Modulus)
 	return m
 }
 
 func (m *ModInt) Mul(q RingElement) RingElement {
-	m.Value *= q.(*ModInt).Value
-	m.Value = m.Value % m.Modulus
+	m.Value.Mul(&m.Value, &q.(*ModInt).Value).Mod(&m.Value, &m.Modulus)
 	return m
 }
 
-func (m *ModInt) MulAdd(q RingElement, out RingElement) RingElement {
-	out.(*ModInt).Value += m.Value * q.(*ModInt).Value
-	out.(*ModInt).Value = out.(*ModInt).Value % m.Modulus
-	return m
+func (m *ModInt) MulAdd(q RingElement, out RingElement) {
+	// Keep m * q
+	tmp := m.Copy()
+	tmp.Mul(q)
+	out.Add(tmp)
 }
 
 func (m *ModInt) Neg() RingElement {
-	m.Value = -m.Value % m.Modulus
+	m.Value.Neg(&m.Value)
 	return m
 }
 
 func (m *ModInt) Zero() RingElement {
-	m.Value = 0
+	m.Value.Set(big.NewInt(0))
 	return m
 }
 
 func (m *ModInt) One() RingElement {
-	m.Value = 1
+	m.Value.Set(big.NewInt(1))
 	return m
 }
 
 func (m *ModInt) Copy() RingElement {
-	new := ModInt{
-		Value:   m.Value,
-		Modulus: m.Modulus,
-	}
-	return &new
+	return NewModInt(&m.Value, &m.Modulus)
 }

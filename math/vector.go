@@ -43,7 +43,7 @@ func (v Vector) ForEach(f func(RingElement, int)) {
 
 // DotProduct performs a dot product of the vectors and returns the result.
 func (v Vector) DotProduct(b Vector) RingElement {
-	out := v.ElementAtIndex(0).Zero()
+	out := v.ElementAtIndex(0).Copy().Zero()
 	v.ForEach(func(el RingElement, i int) {
 		el.MulAdd(b.ElementAtIndex(i), out)
 	})

@@ -26,9 +26,8 @@ func (p Polynomial) Mul(q RingElement) RingElement {
 	return p
 }
 
-func (p Polynomial) MulAdd(q RingElement, out RingElement) RingElement {
+func (p Polynomial) MulAdd(q RingElement, out RingElement) {
 	p.BaseRing.MulCoeffsAndAdd(p.Ref, q.(Polynomial).Ref, out.(Polynomial).Ref)
-	return p
 }
 
 func (p Polynomial) Neg() RingElement {
