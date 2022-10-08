@@ -177,7 +177,7 @@ func (m Matrix) ForEachCol(f func(Vector, int)) {
 func (m Matrix) MulVec(x Vector) Vector {
 	out := NewVectorFromSize(m.Rows())
 	m.ForEachRow(func(row Vector, i int) {
-		out.SetElementAtIndex(i, row.DotProduct(x))
+		out.SetElementAtIndex(i, row.Dot(x))
 	})
 	return out
 }

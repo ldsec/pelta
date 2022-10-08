@@ -6,6 +6,8 @@ type RingElement interface {
 	Mul(q RingElement) RingElement         // p = p * q
 	MulAdd(q RingElement, out RingElement) // out += p * q
 	Neg() RingElement                      // p = -p
+	Pow(exp uint64) RingElement            // p = p^exp
+	Scale(factor uint64) RingElement       // p = factor*p
 	Zero() RingElement                     // Converts into additive identity
 	One() RingElement                      // Converts into multiplicative identity
 	Copy() RingElement                     // Returns a copy of the element
@@ -128,6 +130,14 @@ func (m *MultiArray) ShallowCopy() *MultiArray {
 	return &new
 }
 
+// Scale scales every element by the given factor.
+func (m *MultiArray) Scale(factor uint64) *MultiArray {
+	for i := 0; i < m.Length(); i++ {
+		m.ElementAtIndex(i).Scale(factor)
+	}
+	return m
+}
+
 // Add adds two arrays coefficient-wise in-place.
 // p, q => p += q
 func (m *MultiArray) Add(q *MultiArray) *MultiArray {
@@ -137,11 +147,19 @@ func (m *MultiArray) Add(q *MultiArray) *MultiArray {
 	return m
 }
 
-// Mul multiplies the elements coefficient-wise in-place.
-// p, q => p *= q
-func (m *MultiArray) Mul(q *MultiArray) *MultiArray {
+// Hadamard multiplies the elements coefficient-wise in-place.
+func (m *MultiArray) Hadamard(q *MultiArray) *MultiArray {
 	for i := 0; i < m.Length(); i++ {
 		m.ElementAtIndex(i).Mul(q.ElementAtIndex(i))
+	}
+	return m
+}
+
+// Mul multiplies the elements with the given element in-place.
+// p, q => p *= q
+func (m *MultiArray) Mul(q RingElement) *MultiArray {
+	for i := 0; i < m.Length(); i++ {
+		m.ElementAtIndex(i).Mul(q)
 	}
 	return m
 }

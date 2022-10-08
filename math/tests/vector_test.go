@@ -10,14 +10,14 @@ func TestDotProduct(t *testing.T) {
 	// (1 2 3) * (1 2 3) = 14
 	v1 := math.NewVectorFromSize(3).Populate(
 		func(i int) math.RingElement {
-			return math.NewModInt(big.NewInt(int64(i+1)), big.NewInt(100))
+			return math.NewModInt(int64(i+1), big.NewInt(100))
 		})
 	v2 := math.NewVectorFromSize(3).Populate(
 		func(i int) math.RingElement {
-			return math.NewModInt(big.NewInt(int64(i+1)), big.NewInt(100))
+			return math.NewModInt(int64(i+1), big.NewInt(100))
 		})
-	res := v1.DotProduct(v2).(*math.ModInt)
+	res := v1.Dot(v2).(*math.ModInt)
 	if res.Value.Cmp(big.NewInt(14)) != 0 {
-		t.Errorf("Vector.DotProduct")
+		t.Errorf("Vector.Dot")
 	}
 }

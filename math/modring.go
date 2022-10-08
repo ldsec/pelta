@@ -11,12 +11,20 @@ type ModInt struct {
 	Modulus big.Int
 }
 
-func NewModInt(value *big.Int, mod *big.Int) *ModInt {
-	newValue, newMod := big.Int{}, big.Int{}
-	newValue.Set(value)
-	newMod.Set(mod)
-	newValue.Mod(&newValue, &newMod)
-	i := ModInt{newValue, newMod}
+func NewZeroModInt(mod *big.Int) *ModInt {
+	newValue := big.NewInt(0)
+	i := ModInt{*newValue, *mod}
+	return &i
+}
+
+func NewOneModInt(mod *big.Int) *ModInt {
+	newValue := big.NewInt(1)
+	i := ModInt{*newValue, *mod}
+	return &i
+}
+
+func NewModInt(value int64, mod *big.Int) *ModInt {
+	i := ModInt{*big.NewInt(value), *mod}
 	return &i
 }
 
@@ -53,5 +61,30 @@ func (m *ModInt) One() RingElement {
 }
 
 func (m *ModInt) Copy() RingElement {
-	return NewModInt(&m.Value, &m.Modulus)
+	return NewModInt(m.Value.Int64(), &m.Modulus)
+}
+
+func (m *ModInt) Pow(exp uint64) RingElement {
+	out := m.Copy().One().(*ModInt)
+	for i := uint64(0); i < exp; i++ {
+		out.Mul(m)
+	}
+	m.Value = out.Value
+	return m
+}
+
+func (m *ModInt) Scale(factor uint64) RingElement {
+	m.Value.Mul(&m.Value, big.NewInt(int64(factor)))
+	return m
+}
+
+// Inv sets this integer to its multiplicative inverse and returns the result.
+func (m *ModInt) Inv() *ModInt {
+	m.Value.ModInverse(&m.Value, &m.Modulus)
+	return m
+}
+
+// Uint64 returns the uint64 representation of this integer.
+func (m *ModInt) Uint64() uint64 {
+	return m.Value.Uint64()
 }

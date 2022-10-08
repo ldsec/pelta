@@ -7,8 +7,12 @@ type Polynomial struct {
 	BaseRing *ring.Ring
 }
 
-func NewPolynomial(baseRing *ring.Ring) Polynomial {
+func NewZeroPolynomial(baseRing *ring.Ring) Polynomial {
 	return Polynomial{baseRing.NewPoly(), baseRing}
+}
+
+func NewPolynomial(ref *ring.Poly, baseRing *ring.Ring) Polynomial {
+	return Polynomial{ref, baseRing}
 }
 
 // Copy copies the polynomial.
@@ -35,6 +39,22 @@ func (p Polynomial) Neg() RingElement {
 	return p
 }
 
+// Scale scales the coefficients of the polynomial in-place.
+// p => p = c*p
+func (p Polynomial) Scale(factor uint64) RingElement {
+	p.BaseRing.MulScalar(p.Ref, factor, p.Ref)
+	return p
+}
+
+func (p Polynomial) Pow(exp uint64) RingElement {
+	out := p.Copy().One()
+	for i := uint64(0); i < exp; i++ {
+		out.Mul(p)
+	}
+	p.Ref.SetCoefficients(out.(Polynomial).Ref.Coeffs)
+	return p
+}
+
 // NTT converts into the NTT space in-place.
 // p => p = NTT(p)
 func (p Polynomial) NTT() Polynomial {
@@ -49,13 +69,6 @@ func (p Polynomial) InvNTT() Polynomial {
 	return p
 }
 
-// Scale scales the coefficients of the polynomial in-place.
-// p => p = c*p
-func (p Polynomial) Scale(factor uint64) Polynomial {
-	p.BaseRing.MulScalar(p.Ref, factor, p.Ref)
-	return p
-}
-
 func (p Polynomial) Zero() RingElement {
 	p.Ref.Zero()
 	return p
@@ -65,4 +78,12 @@ func (p Polynomial) One() RingElement {
 	p.Ref.Zero()
 	p.Ref.Coeffs[0][0] = 1
 	return p
+}
+
+// SetCoefficient updates the coefficient at the given index `i` and propagates the update through the levels.
+func (p Polynomial) SetCoefficient(i int, newValue uint64) {
+	for lvl := 0; lvl <= p.Ref.Level(); lvl++ {
+		p.Ref.Coeffs[lvl][i] = newValue
+	}
+	p.BaseRing.Reduce(p.Ref, p.Ref)
 }

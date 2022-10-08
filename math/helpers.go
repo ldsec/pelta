@@ -1,9 +1,15 @@
 package math
 
+import "github.com/ldsec/lattigo/v2/ring"
+
 // Helpers for specialized polynomial constructs
 
 type PolyArray struct {
 	*MultiArray
+}
+
+type CoeffVector struct {
+	Vector
 }
 
 // NTT converts the vector of polynomials into the NTT space in-place.
@@ -24,13 +30,22 @@ func (m PolyArray) InvNTT() PolyArray {
 	return m
 }
 
-// Scale scales the coefficients of the polynomials in-place.
-// p_i => c*p_i
-func (m PolyArray) Scale(factor uint64) PolyArray {
+func (m PolyArray) MulPoly(p Polynomial) PolyArray {
 	m.ForEach(func(el RingElement, _ []int) {
-		el.(Polynomial).Scale(factor)
+		el.(Polynomial).Mul(p)
 	})
 	return m
+}
+
+// ToPoly converts a coefficient vector into a polynomial.
+// Warning: The coefficients must fit into an uint64!
+func (v CoeffVector) ToPoly(baseRing *ring.Ring) Polynomial {
+	p := NewZeroPolynomial(baseRing)
+	for i := 0; i < v.Length(); i++ {
+		c := v.Element(i).(*ModInt).Value.Uint64()
+		p.SetCoefficient(i, c)
+	}
+	return p
 }
 
 // -- Conversion helpers
@@ -41,8 +56,8 @@ func (m *MultiArray) AsMatrix() Matrix {
 	return Matrix{m}
 }
 
-// AsVector converts the representation to a vector.
-func (m *MultiArray) AsVector() Vector {
+// AsVec converts the representation to a vector.
+func (m *MultiArray) AsVec() Vector {
 	// assert len(a.Dimensions()) == 1
 	return Vector{m}
 }
@@ -52,4 +67,10 @@ func (m *MultiArray) AsVector() Vector {
 func (m *MultiArray) AsPolyArray() PolyArray {
 	// assert type
 	return PolyArray{m}
+}
+
+// AsCoeffs converts a mod int vector into a coefficient vector.
+func (v Vector) AsCoeffs() CoeffVector {
+	// assert type
+	return CoeffVector{v}
 }

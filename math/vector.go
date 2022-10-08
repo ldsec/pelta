@@ -27,11 +27,16 @@ func (v Vector) Populate(f func(int) RingElement) Vector {
 	return v
 }
 
+// Element returns the ith element of this vector.
+func (v Vector) Element(i int) RingElement {
+	return v.ElementAtIndex(i)
+}
+
 // Map replaces every cell with the output of the given function in-place.
 func (v Vector) Map(f func(RingElement, int) RingElement) Vector {
 	return v.MultiArray.Map(func(el RingElement, coords []int) RingElement {
 		return f(el, coords[0])
-	}).AsVector()
+	}).AsVec()
 }
 
 // ForEach calls the given function with the contents of each cell.
@@ -41,11 +46,16 @@ func (v Vector) ForEach(f func(RingElement, int)) {
 	})
 }
 
-// DotProduct performs a dot product of the vectors and returns the result.
-func (v Vector) DotProduct(b Vector) RingElement {
+// Dot performs a dot product of the vectors and returns the result.
+func (v Vector) Dot(b Vector) RingElement {
 	out := v.ElementAtIndex(0).Copy().Zero()
 	v.ForEach(func(el RingElement, i int) {
 		el.MulAdd(b.ElementAtIndex(i), out)
 	})
 	return out
+}
+
+// Slice returns a view to the slice [start, end).
+func (v Vector) Slice(start int, end int) Vector {
+	return NewVectorFromSlice(v.Array[start:end])
 }

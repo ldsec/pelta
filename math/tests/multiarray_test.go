@@ -11,7 +11,7 @@ func TestPopulate(t *testing.T) {
 	m := math.NewMultiArray(cm.Dims).
 		Populate(func(dims []int) math.RingElement {
 			index := cm.FromCoords(dims)
-			return math.NewModInt(big.NewInt(int64(index)), big.NewInt(1000))
+			return math.NewModInt(int64(index), big.NewInt(1000))
 		})
 	for i := 0; i < len(m.Array); i++ {
 		if m.Array[i].(*math.ModInt).Value.Cmp(big.NewInt(int64(i))) != 0 {
@@ -25,11 +25,11 @@ func TestSetElements(t *testing.T) {
 	m := math.NewMultiArray(cm.Dims).
 		Populate(func(dims []int) math.RingElement {
 			index := cm.FromCoords(dims)
-			return math.NewModInt(big.NewInt(int64(index)), big.NewInt(1000))
+			return math.NewModInt(int64(index), big.NewInt(1000))
 		})
 	startCoords := []int{3, 4}
 	endCoords := []int{4, 5}
-	zero := math.NewModInt(big.NewInt(0), big.NewInt(1))
+	zero := math.NewModInt(0, big.NewInt(1))
 	replacement := []math.RingElement{zero, zero, zero, zero, zero, zero, zero}
 	m.SetElements(startCoords, endCoords, replacement)
 	for i := 0; i < len(m.Array); i++ {
@@ -48,12 +48,12 @@ func TestAdd(t *testing.T) {
 	m1 := math.NewMultiArray(cm.Dims).
 		Populate(func(dims []int) math.RingElement {
 			index := cm.FromCoords(dims)
-			return math.NewModInt(big.NewInt(int64(index)), big.NewInt(2000))
+			return math.NewModInt(int64(index), big.NewInt(2000))
 		})
 	m2 := math.NewMultiArray(cm.Dims).
 		Populate(func(dims []int) math.RingElement {
 			index := cm.FromCoords(dims)
-			return math.NewModInt(big.NewInt(int64(index)), big.NewInt(2000))
+			return math.NewModInt(int64(index), big.NewInt(2000))
 		})
 	m1.Add(m2)
 	for i := 0; i < len(m1.Array); i++ {
@@ -63,22 +63,22 @@ func TestAdd(t *testing.T) {
 	}
 }
 
-func TestMul(t *testing.T) {
+func TestHadamard(t *testing.T) {
 	cm := math.NewCoordMap([]int{6, 6})
 	m1 := math.NewMultiArray(cm.Dims).
 		Populate(func(dims []int) math.RingElement {
 			index := cm.FromCoords(dims)
-			return math.NewModInt(big.NewInt(int64(index)), big.NewInt(10000))
+			return math.NewModInt(int64(index), big.NewInt(10000))
 		})
 	m2 := math.NewMultiArray(cm.Dims).
 		Populate(func(dims []int) math.RingElement {
 			index := cm.FromCoords(dims)
-			return math.NewModInt(big.NewInt(int64(index)), big.NewInt(10000))
+			return math.NewModInt(int64(index), big.NewInt(10000))
 		})
-	m1.Mul(m2)
+	m1.Hadamard(m2)
 	for i := 0; i < len(m1.Array); i++ {
 		if m1.Array[i].(*math.ModInt).Value.Cmp(big.NewInt(int64(i*i))) != 0 {
-			t.Errorf("MultiArray.Mul")
+			t.Errorf("MultiArray.Hadamard")
 		}
 	}
 }
@@ -88,12 +88,12 @@ func TestNeg(t *testing.T) {
 	m := math.NewMultiArray(cm.Dims).
 		Populate(func(dims []int) math.RingElement {
 			index := cm.FromCoords(dims)
-			return math.NewModInt(big.NewInt(int64(index)), big.NewInt(1000))
+			return math.NewModInt(int64(index), big.NewInt(1000))
 		})
 	m.Neg()
 	for i := 0; i < len(m.Array); i++ {
 		if m.Array[i].(*math.ModInt).Value.Cmp(big.NewInt(int64(-i))) != 0 {
-			t.Errorf("MultiArray.Mul")
+			t.Errorf("MultiArray.Hadamard")
 		}
 	}
 }
@@ -103,7 +103,7 @@ func TestSum(t *testing.T) {
 	m := math.NewMultiArray(cm.Dims).
 		Populate(func(dims []int) math.RingElement {
 			index := cm.FromCoords(dims)
-			return math.NewModInt(big.NewInt(int64(index+1)), big.NewInt(1000))
+			return math.NewModInt(int64(index+1), big.NewInt(1000))
 		})
 	if m.Sum().(*math.ModInt).Value.Cmp(big.NewInt(10)) != 0 {
 		t.Errorf("MultiArray.Sum")
@@ -115,7 +115,7 @@ func TestProduct(t *testing.T) {
 	m := math.NewMultiArray(cm.Dims).
 		Populate(func(dims []int) math.RingElement {
 			index := cm.FromCoords(dims)
-			return math.NewModInt(big.NewInt(int64(index+1)), big.NewInt(1000))
+			return math.NewModInt(int64(index+1), big.NewInt(1000))
 		})
 	if m.Product().(*math.ModInt).Value.Cmp(big.NewInt(24)) != 0 {
 		t.Errorf("MultiArray.Product")
@@ -126,7 +126,7 @@ func TestForEach(t *testing.T) {
 	cm := math.NewCoordMap([]int{2, 2})
 	m := math.NewMultiArray(cm.Dims).Populate(func(dims []int) math.RingElement {
 		index := cm.FromCoords(dims)
-		return math.NewModInt(big.NewInt(int64(index)), big.NewInt(1000))
+		return math.NewModInt(int64(index), big.NewInt(1000))
 	})
 	m.ForEach(func(el math.RingElement, coords []int) {
 		i := cm.FromCoords(coords)
@@ -140,10 +140,10 @@ func TestMap(t *testing.T) {
 	cm := math.NewCoordMap([]int{2, 2})
 	m := math.NewMultiArray(cm.Dims).Populate(func(dims []int) math.RingElement {
 		index := cm.FromCoords(dims)
-		return math.NewModInt(big.NewInt(int64(index)), big.NewInt(1000))
+		return math.NewModInt(int64(index), big.NewInt(1000))
 	})
 	m.Map(func(el math.RingElement, _ []int) math.RingElement {
-		return el.Copy().Add(math.NewModInt(big.NewInt(1), big.NewInt(1000)))
+		return el.Copy().Add(math.NewModInt(1, big.NewInt(1000)))
 	})
 	m.ForEach(func(el math.RingElement, coords []int) {
 		i := cm.FromCoords(coords)
