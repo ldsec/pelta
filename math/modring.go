@@ -64,12 +64,20 @@ func (m *ModInt) Copy() RingElement {
 	return NewModInt(m.Value.Int64(), &m.Modulus)
 }
 
-func (m *ModInt) Pow(exp uint64) RingElement {
+func (m *ModInt) Pow(exp int64) RingElement {
 	out := m.Copy().One().(*ModInt)
-	for i := uint64(0); i < exp; i++ {
+	expAbs := exp
+	if expAbs < 0 {
+		expAbs *= -1
+	}
+	for i := int64(0); i < expAbs; i++ {
 		out.Mul(m)
 	}
 	m.Value = out.Value
+	// Try to invert if the exponent is negative.
+	if exp < 0 {
+		m.Inv()
+	}
 	return m
 }
 

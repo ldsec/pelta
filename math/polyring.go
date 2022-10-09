@@ -1,6 +1,8 @@
 package math
 
-import "github.com/ldsec/lattigo/v2/ring"
+import (
+	"github.com/ldsec/lattigo/v2/ring"
+)
 
 type Polynomial struct {
 	Ref      *ring.Poly
@@ -46,11 +48,16 @@ func (p Polynomial) Scale(factor uint64) RingElement {
 	return p
 }
 
-func (p Polynomial) Pow(exp uint64) RingElement {
+func (p Polynomial) Pow(exp int64) RingElement {
 	out := p.Copy().One()
-	for i := uint64(0); i < exp; i++ {
+	expAbs := exp
+	if expAbs < 0 {
+		expAbs *= -1
+	}
+	for i := int64(0); i < expAbs; i++ {
 		out.Mul(p)
 	}
+	// TODO Perform inversion if exp < 0
 	p.Ref.SetCoefficients(out.(Polynomial).Ref.Coeffs)
 	return p
 }
@@ -86,4 +93,31 @@ func (p Polynomial) SetCoefficient(i int, newValue uint64) {
 		p.Ref.Coeffs[lvl][i] = newValue
 	}
 	p.BaseRing.Reduce(p.Ref, p.Ref)
+}
+
+// Perm performs a permutation sig^exp(p) s.t. X^i => X^(i*(galEl^exp)) in-place.
+func (p Polynomial) Perm(galEl *ModInt, exp int64) Polynomial {
+	p.BaseRing.Permute(p.Ref, galEl.Copy().Pow(exp).(*ModInt).Uint64(), p.Ref)
+	return p
+}
+
+// Trace calculates the trace of this polynomial: sig^0(p) + sig^1(p) + ... + sig^k(p) and returns the result.
+func (p Polynomial) Trace(galEl *ModInt, k int) Polynomial {
+	return NewVectorFromSize(k).Populate(
+		func(v int) RingElement {
+			return p.Copy().(Polynomial).Perm(galEl, int64(v))
+		}).Sum().(Polynomial)
+}
+
+// LShift performs a left shift on the coefficients by the given amount in-place.
+func (p Polynomial) LShift(amount int) Polynomial {
+	p.BaseRing.Shift(p.Ref, amount, p.Ref)
+	return p
+}
+
+// RShift performs a right shift on the coefficients by the given amount in-place.
+func (p Polynomial) RShift(amount int) Polynomial {
+	leftShiftAmount := p.Ref.Degree() - amount
+	p.LShift(leftShiftAmount)
+	return p
 }

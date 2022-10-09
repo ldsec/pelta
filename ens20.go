@@ -37,8 +37,8 @@ type PublicParams struct {
 	kappa  int      // M-SIS dimension
 }
 
-// s must be a ternary vector.
-func Execute(s math.Vector, params PublicParams) (bool, error) {
+// ExecuteCubic executes the protocol for proving the knowledge of a ternary vector s as a solution to As = u.
+func ExecuteCubic(s math.Vector, params PublicParams) (bool, error) {
 	// Initialize the ring parameters.
 	ringParamDef := bfv.PN13QP218
 	ringParamDef.T = 0x3ee0001
@@ -46,6 +46,8 @@ func Execute(s math.Vector, params PublicParams) (bool, error) {
 	if err != nil {
 		return false, fmt.Errorf("could not initialize the ring parameters: %s", err)
 	}
+	// The automorphism generator.
+	galEl := math.NewModInt(int64(2*params.d/params.k+1), params.q) //uint64(2*N/k+1)
 
 	// Initialize the ring.
 	baseRing := ringParams.RingQP()
@@ -60,10 +62,7 @@ func Execute(s math.Vector, params PublicParams) (bool, error) {
 	// Inputs
 	numSplits := params.n / params.d
 	// Split the message into polynomial space.
-	sHat := math.NewVectorFromSize(numSplits).Populate(func(i int) math.RingElement {
-		// Length of a split.
-		return s.Slice(i*params.d, (i+1)*params.d).DeepCopy().AsVec().AsCoeffs().ToPoly(baseRing).InvNTT()
-	})
+	sHat := SplitInvNTT(s, numSplits, params.d, baseRing)
 	A := NewRandomIntegerMatrix(params.m, params.n, params.q)
 	// As = u
 	u := A.DeepCopy().AsMatrix().MulVec(s)
@@ -106,25 +105,28 @@ func Execute(s math.Vector, params PublicParams) (bool, error) {
 	// Prover further set up.
 	sum1 := math.NewMatrixFromDimensions(params.k, numSplits).
 		Populate(func(i int, j int) math.RingElement {
-			tmp := Sig(-1,
-				sHat.Element(j).Copy().(math.Polynomial).
-					Scale(uint64(3)).
-					Mul(b.Row(j).Dot(y.Row(i)).Pow(2)).(math.Polynomial))
+			tmp := sHat.Element(j).Copy().(math.Polynomial).
+				Scale(uint64(3)).
+				Mul(b.Row(j).Dot(y.Row(i)).Pow(2)).(math.Polynomial).
+				Perm(galEl, -1)
 			return alpha.Element(i*numSplits + j).Copy().Mul(tmp)
 		}).Sum().Neg()
 	sum2 := math.NewMatrixFromDimensions(params.k, numSplits).
 		Populate(func(i int, j int) math.RingElement {
-			tmp := Sig(-1,
-				sHat.Element(j).Copy().(math.Polynomial).
-					Pow(2).(math.Polynomial).
-					Scale(3).
-					Add(math.NewZeroPolynomial(baseRing).One().Neg()).
-					Mul(b.Row(j).Dot(y.Row(i)).Pow(2)).(math.Polynomial))
+			tmp := sHat.Element(j).Copy().(math.Polynomial).
+				Pow(2).(math.Polynomial).
+				Scale(3).
+				Add(math.NewZeroPolynomial(baseRing).One().Neg()).
+				Mul(b.Row(j).Dot(y.Row(i)).Pow(2)).(math.Polynomial).
+				Perm(galEl, -1)
 			return alpha.Element(i*numSplits + j).Copy().Mul(tmp)
 		}).Sum()
 	sum3 := math.NewMatrixFromDimensions(params.k, numSplits).
 		Populate(func(i int, j int) math.RingElement {
-			tmp := Sig(-1, b.Row(j).Dot(y.Row(i)).Pow(3).(math.Polynomial))
+			tmp := b.Row(j).
+				Dot(y.Row(i)).
+				Pow(3).(math.Polynomial).
+				Perm(galEl, -1)
 			return alpha.Element(i*numSplits + j).Copy().Mul(tmp)
 		}).Sum()
 	t.SetElementAtIndex(numSplits+1, b.Row(numSplits+1).DeepCopy().AsVec().Dot(r).Add(b.Row(numSplits+2).DeepCopy().AsVec().Dot(y.Row(0))).Add(sum1))
@@ -134,10 +136,7 @@ func Execute(s math.Vector, params PublicParams) (bool, error) {
 	psi := math.NewMatrixFromDimensions(params.k, numSplits).PopulateRows(
 		func(mu int) math.Vector {
 			tmp := At.DeepCopy().AsMatrix().MulVec(gamma.Row(mu))
-			return math.NewVectorFromSize(numSplits).Populate(
-				func(i int) math.RingElement {
-					return tmp.Slice(i*params.d, (i+1)*params.d).DeepCopy().AsVec().AsCoeffs().ToPoly(baseRing).InvNTT()
-				})
+			return SplitInvNTT(tmp, numSplits, params.d, baseRing)
 		})
 
 	// Precompute the 1/k*(X^mu) values.
@@ -145,7 +144,7 @@ func Execute(s math.Vector, params PublicParams) (bool, error) {
 		func(mu int) math.RingElement {
 			X := math.NewZeroPolynomial(baseRing)
 			X.SetCoefficient(1, 1)
-			return X.Pow(uint64(mu))
+			return X.Pow(int64(mu))
 		})
 	invk := math.NewModInt(int64(params.k), params.q).Inv()
 	Xmu.AsPolyArray().Scale(invk.Uint64())
@@ -154,13 +153,13 @@ func Execute(s math.Vector, params PublicParams) (bool, error) {
 			tmp := math.NewVectorFromSize(params.k).Populate(
 				func(v int) math.RingElement {
 					dec := math.NewZeroPolynomial(baseRing).One().(math.Polynomial).Scale(u.DeepCopy().AsVec().Dot(gamma.Row(mu)).(*math.ModInt).Uint64())
-					tmp2 := math.NewVectorFromSize(numSplits).Populate(
+					return math.NewVectorFromSize(numSplits).Populate(
 						func(j int) math.RingElement {
 							return psi.Element(mu, j).Copy().Mul(sHat.Element(j)).(math.Polynomial).Scale(uint64(params.d))
 						}).
 						Sum().
-						Add(dec.Neg()).(math.Polynomial)
-					return Sig(v, tmp2)
+						Add(dec.Neg()).(math.Polynomial).
+						Perm(galEl, int64(v))
 				}).Sum()
 			return Xmu.Element(mu).Copy().Mul(tmp)
 		}).Sum()
@@ -171,8 +170,11 @@ func Execute(s math.Vector, params PublicParams) (bool, error) {
 				func(mu int) math.RingElement {
 					tmp2 := math.NewMatrixFromDimensions(params.k, numSplits).Populate(
 						func(v, j int) math.RingElement {
-							tmp3 := b.Row(j).Mul(psi.Element(mu, j)).Scale(uint64(params.d)).AsVec().Dot(y.Row(i - v))
-							return Sig(v, tmp3.(math.Polynomial))
+							return b.Row(j).
+								Mul(psi.Element(mu, j)).
+								Scale(uint64(params.d)).AsVec().
+								Dot(y.Row(i-v)).(math.Polynomial).
+								Perm(galEl, int64(v))
 						}).Sum()
 					return Xmu.Element(mu).Copy().Mul(tmp2)
 				}).
@@ -185,13 +187,20 @@ func Execute(s math.Vector, params PublicParams) (bool, error) {
 
 	// Masked openings.
 	z := math.NewMatrixFromDimensions(params.k, r.Length()).PopulateRows(func(i int) math.Vector {
-		tmp := Sig(i, c)
-		return y.Row(i).DeepCopy().Add(r.Mul(tmp)).AsVec()
+		return y.Row(i).DeepCopy().Add(r.Mul(c.Copy().(math.Polynomial).Perm(galEl, int64(i)))).AsVec()
 	})
 
-	return Verify(t0, t, alpha, vp, w, psi, z, h.(math.Polynomial), v.(math.Polynomial), c), nil
+	return VerifyCubic(params, numSplits, t0, t, alpha, vp, w, psi, z, h.(math.Polynomial), v.(math.Polynomial), c), nil
 }
 
-func Verify(t0, t, alpha, vp math.Vector, w, psi, z math.Matrix, h, v, c math.Polynomial) bool {
+func VerifyCubic(params PublicParams, numSplits int, t0, t, alpha, vp math.Vector, w, psi, z math.Matrix, h, v, c math.Polynomial) bool {
+	z.ForEachRow(func(zi math.Vector, i int) {
+
+	})
+	f := math.NewMatrixFromDimensions(params.k, numSplits).Populate(
+		func(i int, j int) math.RingElement {
+			return nil
+		})
+	// TODO complete verification
 	return false
 }

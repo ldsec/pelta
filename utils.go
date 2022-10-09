@@ -37,7 +37,7 @@ func NewRandomPolynomialMatrix(rows int, cols int, baseRing *ring.Ring, sampler 
 // NewRandomIntegerVector constructs a random 2D vector of integers.
 func NewRandomIntegerVector(dim int, mod *big.Int) math.Vector {
 	v := math.NewVectorFromSize(dim).Populate(func(_ int) math.RingElement {
-		return math.NewModInt(ring.RandInt(mod), mod)
+		return math.NewModInt(ring.RandInt(mod).Int64(), mod)
 	})
 	return v
 }
@@ -45,12 +45,23 @@ func NewRandomIntegerVector(dim int, mod *big.Int) math.Vector {
 // NewRandomIntegerMatrix constructs a random 2D matrix of integers.
 func NewRandomIntegerMatrix(rows int, cols int, mod *big.Int) math.Matrix {
 	A := math.NewMatrixFromDimensions(rows, cols).Populate(func(_, _ int) math.RingElement {
-		return math.NewModInt(ring.RandInt(mod), mod)
+		return math.NewModInt(ring.RandInt(mod).Int64(), mod)
 	})
 	return A
 }
 
-func Sig(exp int, p math.Polynomial) math.Polynomial {
-	// TODO complete
-	return p
+// SplitInvNTT returns the x that satisfies lhs = NTT(x_1) || NTT(x_2) || ... || NTT(x_numSplits)
+func SplitInvNTT(lhs math.Vector, numSplits, d int, baseRing *ring.Ring) math.Vector {
+	return math.NewVectorFromSize(numSplits).Populate(
+		func(i int) math.RingElement {
+			return lhs.Slice(i*d, (i+1)*d).DeepCopy().AsVec().AsCoeffs().ToPoly(baseRing).InvNTT()
+		})
+}
+
+// Lmu computes the value of the function Lmu(L) = 1/k * X^mu * Tr(L)
+func Lmu(mu, k int, L math.Polynomial, galEl, invk *math.ModInt) math.Polynomial {
+	return L.Copy().(math.Polynomial).
+		Trace(galEl, k).
+		RShift(mu).
+		Scale(invk.Uint64()).(math.Polynomial)
 }

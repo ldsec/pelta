@@ -6,7 +6,7 @@ type RingElement interface {
 	Mul(q RingElement) RingElement         // p = p * q
 	MulAdd(q RingElement, out RingElement) // out += p * q
 	Neg() RingElement                      // p = -p
-	Pow(exp uint64) RingElement            // p = p^exp
+	Pow(exp int64) RingElement             // p = p^exp
 	Scale(factor uint64) RingElement       // p = factor*p
 	Zero() RingElement                     // Converts into additive identity
 	One() RingElement                      // Converts into multiplicative identity
