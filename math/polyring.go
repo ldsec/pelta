@@ -1,7 +1,7 @@
 package math
 
 import (
-	"github.com/ldsec/lattigo/v2/ring"
+	"github.com/tuneinsight/lattigo/v4/ring"
 )
 
 type Polynomial struct {
@@ -58,7 +58,7 @@ func (p Polynomial) Pow(exp int64) RingElement {
 		out.Mul(p)
 	}
 	// TODO Perform inversion if exp < 0
-	p.Ref.SetCoefficients(out.(Polynomial).Ref.Coeffs)
+	p.Ref.CopyValues(out.(Polynomial).Ref)
 	return p
 }
 
@@ -117,7 +117,7 @@ func (p Polynomial) LShift(amount int) Polynomial {
 
 // RShift performs a right shift on the coefficients by the given amount in-place.
 func (p Polynomial) RShift(amount int) Polynomial {
-	leftShiftAmount := p.Ref.Degree() - amount
+	leftShiftAmount := p.Ref.N() - amount
 	p.LShift(leftShiftAmount)
 	return p
 }

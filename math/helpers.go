@@ -1,6 +1,6 @@
 package math
 
-import "github.com/ldsec/lattigo/v2/ring"
+import "github.com/tuneinsight/lattigo/v4/ring"
 
 // Helpers for specialized polynomial constructs
 

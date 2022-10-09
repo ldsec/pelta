@@ -2,7 +2,7 @@ package main
 
 import (
 	"github.com/ldsec/codeBase/commitment/math"
-	"github.com/ldsec/lattigo/v2/ring"
+	"github.com/tuneinsight/lattigo/v4/ring"
 	"math/big"
 )
 

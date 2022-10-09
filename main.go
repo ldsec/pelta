@@ -2,10 +2,10 @@ package main
 
 import (
 	"fmt"
+	"github.com/tuneinsight/lattigo/v4/bfv"
 	//"github.com/ldsec/lattigo/v2/rlwe"
-	"github.com/ldsec/lattigo/v2/bfv"
-	"github.com/ldsec/lattigo/v2/ring"
-	"github.com/ldsec/lattigo/v2/utils"
+	"github.com/tuneinsight/lattigo/v4/ring"
+	"github.com/tuneinsight/lattigo/v4/utils"
 )
 
 // Implementation of ENS20 commitments

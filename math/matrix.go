@@ -1,9 +1,5 @@
 package math
 
-import (
-	"github.com/ldsec/lattigo/v2/ring"
-)
-
 // Matrix represents a 2-dimensional matrix.
 type Matrix struct {
 	*MultiArray
@@ -16,7 +12,7 @@ func NewMatrixFromDimensions(rows int, cols int) Matrix {
 
 // NewMatrixFromSlice constructs a matrix from the given slice.
 // The slice is assumed to be a list of row vectors.
-func NewMatrixFromSlice(array [][]RingElement, baseRing *ring.Ring) Matrix {
+func NewMatrixFromSlice(array [][]RingElement) Matrix {
 	// Create an empty matrix.
 	rows, cols := len(array), len(array[0])
 	m := NewMatrixFromDimensions(rows, cols)

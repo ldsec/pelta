@@ -5,9 +5,9 @@ import (
 	"math/big"
 
 	"github.com/ldsec/codeBase/commitment/math"
-	"github.com/ldsec/lattigo/v2/bfv"
-	"github.com/ldsec/lattigo/v2/ring"
-	"github.com/ldsec/lattigo/v2/utils"
+	"github.com/tuneinsight/lattigo/v4/bfv"
+	"github.com/tuneinsight/lattigo/v4/ring"
+	"github.com/tuneinsight/lattigo/v4/utils"
 )
 
 // Prover represents the prover party in the protocol.
@@ -50,7 +50,7 @@ func ExecuteCubic(s math.Vector, params PublicParams) (bool, error) {
 	galEl := math.NewModInt(int64(2*params.d/params.k+1), params.q) //uint64(2*N/k+1)
 
 	// Initialize the ring.
-	baseRing := ringParams.RingQP()
+	baseRing := ringParams.RingQP().RingQ
 	// Create the samplers.
 	prng, err := utils.NewPRNG()
 	if err != nil {
@@ -197,7 +197,8 @@ func VerifyCubic(params PublicParams, numSplits int, t0, t, alpha, vp math.Vecto
 	z.ForEachRow(func(zi math.Vector, i int) {
 
 	})
-	f := math.NewMatrixFromDimensions(params.k, numSplits).Populate(
+	// Constructing f
+	_ = math.NewMatrixFromDimensions(params.k, numSplits).Populate(
 		func(i int, j int) math.RingElement {
 			return nil
 		})
