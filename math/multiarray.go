@@ -190,3 +190,23 @@ func (m *MultiArray) Product() RingElement {
 	})
 	return out
 }
+
+// All returns true if all the elements return true on the given predicate.
+func (m *MultiArray) All(pred func(RingElement) bool) bool {
+	for i := 0; i < m.Length(); i++ {
+		if !pred(m.ElementAtIndex(i)) {
+			return false
+		}
+	}
+	return true
+}
+
+// Any returns true if some element returns true on the given predicate.
+func (m *MultiArray) Any(pred func(RingElement) bool) bool {
+	for i := 0; i < m.Length(); i++ {
+		if pred(m.ElementAtIndex(i)) {
+			return true
+		}
+	}
+	return false
+}
