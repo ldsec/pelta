@@ -11,6 +11,7 @@ type RingElement interface {
 	Zero() RingElement                     // Converts into additive identity
 	One() RingElement                      // Converts into multiplicative identity
 	Copy() RingElement                     // Returns a copy of the element
+	Eq(RingElement) bool                   // Returns true if the two elements are equal
 }
 
 // MultiArray represents a multidimensional array of elements.
@@ -107,8 +108,8 @@ func (m *MultiArray) ForEach(f func(RingElement, []int)) {
 	}
 }
 
-// DeepCopy returns a deep copy of the multi array, where each element is also copied.
-func (m *MultiArray) DeepCopy() *MultiArray {
+// Copy returns a deep copy of the multi array, where each element is also copied.
+func (m *MultiArray) Copy() *MultiArray {
 	// Create an exact copy of the contents.
 	array := make([]RingElement, m.Length())
 	for i := 0; i < len(array); i++ {
@@ -117,15 +118,6 @@ func (m *MultiArray) DeepCopy() *MultiArray {
 	new := MultiArray{
 		coordMap: m.coordMap.Copied(),
 		Array:    array,
-	}
-	return &new
-}
-
-// ShallowCopy returns a shallow copy of the multi array.
-func (m *MultiArray) ShallowCopy() *MultiArray {
-	new := MultiArray{
-		coordMap: m.coordMap.Copied(),
-		Array:    m.Array,
 	}
 	return &new
 }
@@ -192,9 +184,10 @@ func (m *MultiArray) Product() RingElement {
 }
 
 // All returns true if all the elements return true on the given predicate.
-func (m *MultiArray) All(pred func(RingElement) bool) bool {
+func (m *MultiArray) All(pred func(RingElement, []int) bool) bool {
 	for i := 0; i < m.Length(); i++ {
-		if !pred(m.ElementAtIndex(i)) {
+		coords := m.coordMap.ToCoords(i)
+		if !pred(m.ElementAtIndex(i), coords) {
 			return false
 		}
 	}
@@ -202,11 +195,19 @@ func (m *MultiArray) All(pred func(RingElement) bool) bool {
 }
 
 // Any returns true if some element returns true on the given predicate.
-func (m *MultiArray) Any(pred func(RingElement) bool) bool {
+func (m *MultiArray) Any(pred func(RingElement, []int) bool) bool {
 	for i := 0; i < m.Length(); i++ {
-		if pred(m.ElementAtIndex(i)) {
+		coords := m.coordMap.ToCoords(i)
+		if pred(m.ElementAtIndex(i), coords) {
 			return true
 		}
 	}
 	return false
+}
+
+// Eq returns true if all the elements are the same in the same positions.
+func (m *MultiArray) Eq(other *MultiArray) bool {
+	return m.All(func(el RingElement, coords []int) bool {
+		return other.ElementAtCoords(coords).Eq(el)
+	})
 }

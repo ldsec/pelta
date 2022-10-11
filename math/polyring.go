@@ -62,6 +62,10 @@ func (p Polynomial) Pow(exp int64) RingElement {
 	return p
 }
 
+func (p Polynomial) Eq(el RingElement) bool {
+	return p.BaseRing.Equal(p.Ref, el.(Polynomial).Ref)
+}
+
 // NTT converts into the NTT space in-place.
 // p => p = NTT(p)
 func (p Polynomial) NTT() Polynomial {
@@ -120,4 +124,9 @@ func (p Polynomial) RShift(amount int) Polynomial {
 	leftShiftAmount := p.Ref.N() - amount
 	p.LShift(leftShiftAmount)
 	return p
+}
+
+// Coeff returns the ith coefficient.
+func (p Polynomial) Coeff(i int) uint64 {
+	return p.Ref.Coeffs[0][i]
 }

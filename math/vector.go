@@ -59,3 +59,17 @@ func (v Vector) Dot(b Vector) RingElement {
 func (v Vector) Slice(start int, end int) Vector {
 	return NewVectorFromSlice(v.Array[start:end])
 }
+
+// All returns true if all the elements return true on the given predicate.
+func (v Vector) All(pred func(RingElement, int) bool) bool {
+	return v.MultiArray.All(func(el RingElement, coords []int) bool {
+		return pred(el, coords[0])
+	})
+}
+
+// Any returns true if some element returns true on the given predicate.
+func (v Vector) Any(pred func(RingElement, int) bool) bool {
+	return v.MultiArray.Any(func(el RingElement, coords []int) bool {
+		return pred(el, coords[0])
+	})
+}

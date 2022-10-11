@@ -177,3 +177,57 @@ func (m Matrix) MulVec(x Vector) Vector {
 	})
 	return out
 }
+
+// All returns true if all the elements return true on the given predicate.
+func (m Matrix) All(pred func(RingElement, int, int) bool) bool {
+	return m.MultiArray.All(func(el RingElement, coords []int) bool {
+		return pred(el, coords[1], coords[0])
+	})
+}
+
+// AllRows returns true if all the rows return true on the given predicate.
+func (m Matrix) AllRows(pred func(Vector, int) bool) bool {
+	for i := 0; i < m.Rows(); i++ {
+		if !pred(m.Row(i), i) {
+			return false
+		}
+	}
+	return true
+}
+
+// AllCols returns true if all the cols return true on the given predicate.
+func (m Matrix) AllCols(pred func(Vector, int) bool) bool {
+	for i := 0; i < m.Cols(); i++ {
+		if !pred(m.Col(i), i) {
+			return false
+		}
+	}
+	return true
+}
+
+// Any returns true if some element returns true on the given predicate.
+func (m Matrix) Any(pred func(RingElement, int, int) bool) bool {
+	return m.MultiArray.Any(func(el RingElement, coords []int) bool {
+		return pred(el, coords[1], coords[0])
+	})
+}
+
+// AnyRows returns true if some row returns true on the given predicate.
+func (m Matrix) AnyRows(pred func(Vector, int) bool) bool {
+	for i := 0; i < m.Rows(); i++ {
+		if pred(m.Row(i), i) {
+			return true
+		}
+	}
+	return false
+}
+
+// AnyCols returns true if some col returns true on the given predicate.
+func (m Matrix) AnyCols(pred func(Vector, int) bool) bool {
+	for i := 0; i < m.Cols(); i++ {
+		if pred(m.Col(i), i) {
+			return true
+		}
+	}
+	return false
+}

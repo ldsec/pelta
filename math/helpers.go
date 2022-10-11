@@ -1,6 +1,9 @@
 package math
 
-import "github.com/tuneinsight/lattigo/v4/ring"
+import (
+	"github.com/tuneinsight/lattigo/v4/ring"
+	"math"
+)
 
 // Helpers for specialized polynomial constructs
 
@@ -8,7 +11,7 @@ type PolyArray struct {
 	*MultiArray
 }
 
-type CoeffVector struct {
+type IntVector struct {
 	Vector
 }
 
@@ -39,13 +42,18 @@ func (m PolyArray) MulPoly(p Polynomial) PolyArray {
 
 // ToPoly converts a coefficient vector into a polynomial.
 // Warning: The coefficients must fit into an uint64!
-func (v CoeffVector) ToPoly(baseRing *ring.Ring) Polynomial {
+func (v IntVector) ToPoly(baseRing *ring.Ring) Polynomial {
 	p := NewZeroPolynomial(baseRing)
 	for i := 0; i < v.Length(); i++ {
 		c := v.Element(i).(*ModInt).Value.Uint64()
 		p.SetCoefficient(i, c)
 	}
 	return p
+}
+
+// L2Norm returns the L2 norm of the vector.
+func (v IntVector) L2Norm() float64 {
+	return math.Sqrt(float64(v.Dot(v.Vector).(*ModInt).Uint64()))
 }
 
 // -- Conversion helpers
@@ -70,7 +78,7 @@ func (m *MultiArray) AsPolyArray() PolyArray {
 }
 
 // AsCoeffs converts a mod int vector into a coefficient vector.
-func (v Vector) AsCoeffs() CoeffVector {
+func (v Vector) AsCoeffs() IntVector {
 	// assert type
-	return CoeffVector{v}
+	return IntVector{v}
 }

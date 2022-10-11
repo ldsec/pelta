@@ -86,6 +86,10 @@ func (m *ModInt) Scale(factor uint64) RingElement {
 	return m
 }
 
+func (m *ModInt) Eq(el RingElement) bool {
+	return el.(*ModInt).Value.Cmp(&m.Value) == 0 && el.(*ModInt).Modulus.Cmp(&m.Modulus) == 0
+}
+
 // Inv sets this integer to its multiplicative inverse and returns the result.
 func (m *ModInt) Inv() *ModInt {
 	m.Value.ModInverse(&m.Value, &m.Modulus)

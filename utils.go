@@ -54,7 +54,7 @@ func NewRandomIntegerMatrix(rows int, cols int, mod *big.Int) math.Matrix {
 func SplitInvNTT(lhs math.Vector, numSplits, d int, baseRing *ring.Ring) math.Vector {
 	return math.NewVectorFromSize(numSplits).Populate(
 		func(i int) math.RingElement {
-			return lhs.Slice(i*d, (i+1)*d).DeepCopy().AsVec().AsCoeffs().ToPoly(baseRing).InvNTT()
+			return lhs.Slice(i*d, (i+1)*d).Copy().AsVec().AsCoeffs().ToPoly(baseRing).InvNTT()
 		})
 }
 
