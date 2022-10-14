@@ -64,7 +64,7 @@ func (m *ModInt) Copy() RingElement {
 	return NewModInt(m.Value.Int64(), &m.Modulus)
 }
 
-func (m *ModInt) Pow(exp int64) RingElement {
+func (m *ModInt) Pow(exp uint64) RingElement {
 	out := m.Copy().One().(*ModInt)
 	expAbs := exp
 	if expAbs < 0 {

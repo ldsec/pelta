@@ -2,6 +2,7 @@ package math
 
 import (
 	"github.com/tuneinsight/lattigo/v4/ring"
+	"math/big"
 )
 
 type Polynomial struct {
@@ -48,16 +49,11 @@ func (p Polynomial) Scale(factor uint64) RingElement {
 	return p
 }
 
-func (p Polynomial) Pow(exp int64) RingElement {
+func (p Polynomial) Pow(exp uint64) RingElement {
 	out := p.Copy().One()
-	expAbs := exp
-	if expAbs < 0 {
-		expAbs *= -1
-	}
-	for i := int64(0); i < expAbs; i++ {
+	for i := uint64(0); i < exp; i++ {
 		out.Mul(p)
 	}
-	// TODO Perform inversion if exp < 0
 	p.Ref.CopyValues(out.(Polynomial).Ref)
 	return p
 }
@@ -99,9 +95,16 @@ func (p Polynomial) SetCoefficient(i int, newValue uint64) {
 	p.BaseRing.Reduce(p.Ref, p.Ref)
 }
 
-// Perm performs a permutation sig^exp(p) s.t. X^i => X^(i*(galEl^exp)) in-place.
+// Perm performs a permutation sig^exp(p) s.t. X^i => X^(i*(galEl*exp)) in-place.
 func (p Polynomial) Perm(galEl *ModInt, exp int64) Polynomial {
-	p.BaseRing.Permute(p.Ref, galEl.Copy().Pow(exp).(*ModInt).Uint64(), p.Ref)
+	// If exp < 0, we need the inverse automorphism s.t. exp * -exp = 1 (mod N)
+	var expAbs uint64
+	if exp < 0 {
+		expAbs = NewModInt(exp, big.NewInt(int64(p.Ref.N()))).Inv().Uint64()
+	} else {
+		expAbs = uint64(exp)
+	}
+	p.BaseRing.Permute(p.Ref, galEl.Copy().Pow(expAbs).(*ModInt).Uint64(), p.Ref)
 	return p
 }
 

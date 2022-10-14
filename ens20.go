@@ -50,7 +50,6 @@ func ExecuteCubic(s math.Vector, params PublicParams) (bool, error) {
 	}
 	// The automorphism generator.
 	galEl := math.NewModInt(int64(2*params.d/params.k+1), params.q) //uint64(2*N/k+1)
-
 	// Initialize the ring.
 	baseRing := ringParams.RingQP().RingQ
 	// Create the samplers.
@@ -71,13 +70,13 @@ func ExecuteCubic(s math.Vector, params PublicParams) (bool, error) {
 	bSize := numSplits + 3
 	B0 := NewRandomPolynomialMatrix(params.kappa, params.lambda+params.kappa+bSize, baseRing, uniformSampler)
 	b := NewRandomPolynomialMatrix(bSize, B0.Cols(), baseRing, uniformSampler)
+
 	// Sample a polynomial g s.t. g_0=...=g_(k-1)=0
 	g := math.NewZeroPolynomial(baseRing)
 	uniformSampler.Read(g.Ref)
 	for i := 0; i < params.k; i++ {
 		g.SetCoefficient(i, 0)
 	}
-
 	// Sample the randomness.
 	r := NewRandomPolynomialVector(B0.Cols()*params.d, baseRing, ternarySampler)
 	// Compute the commitments.
@@ -141,15 +140,7 @@ func ExecuteCubic(s math.Vector, params PublicParams) (bool, error) {
 			return SplitInvNTT(tmp, numSplits, params.d, baseRing)
 		})
 
-	// Precompute the 1/k*(X^mu) values.
-	Xmu := math.NewVectorFromSize(params.k).Populate(
-		func(mu int) math.RingElement {
-			X := math.NewZeroPolynomial(baseRing)
-			X.SetCoefficient(1, 1)
-			return X.Pow(int64(mu))
-		})
 	invk := math.NewModInt(int64(params.k), params.q).Inv()
-	Xmu.AsPolyArray().Scale(invk.Uint64())
 	gMask := math.NewVectorFromSize(params.k).Populate(
 		func(mu int) math.RingElement {
 			tmp := math.NewVectorFromSize(params.k).Populate(
@@ -162,8 +153,8 @@ func ExecuteCubic(s math.Vector, params PublicParams) (bool, error) {
 						Sum().
 						Add(dec.Neg()).(math.Polynomial).
 						Perm(galEl, int64(v))
-				}).Sum()
-			return Xmu.Element(mu).Copy().Mul(tmp)
+				}).Sum().(math.Polynomial)
+			return tmp.RShift(mu).Mul(invk)
 		}).Sum()
 	h := g.Add(gMask)
 	vp := math.NewVectorFromSize(params.k).Populate(
@@ -177,8 +168,8 @@ func ExecuteCubic(s math.Vector, params PublicParams) (bool, error) {
 								Scale(uint64(params.d)).AsVec().
 								Dot(y.Row(i-v)).(math.Polynomial).
 								Perm(galEl, int64(v))
-						}).Sum()
-					return Xmu.Element(mu).Copy().Mul(tmp2)
+						}).Sum().(math.Polynomial)
+					return tmp2.RShift(mu).Mul(invk)
 				}).
 				Sum().
 				Add(b.Row(numSplits).Dot(y.Row(i)))
@@ -239,7 +230,7 @@ func VerifyCubic(params PublicParams, numSplits int, t0, t, alpha, vp math.Vecto
 			tmp := At.Copy().AsMatrix().MulVec(gamma.Row(mu))
 			return SplitInvNTT(tmp, numSplits, params.d, baseRing)
 		})
-	// Reconstruct the commitment
+	// Reconstruct the commitment to f
 
 	// ...
 	// TODO complete verification
