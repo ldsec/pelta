@@ -2,15 +2,16 @@ package main
 
 import (
 	"fmt"
+
+	"github.com/ldsec/lattigo/v2/bfv"
 	"github.com/ldsec/lattigo/v2/ring"
 	"github.com/ldsec/lattigo/v2/utils"
-	"github.com/ldsec/lattigo/v2/bfv"
 )
 
 func mainfunc() {
 
 	// BFV parameters (128 bit security) with plaintext modulus 65929217
-	paramDef := bfv.PN13QP218
+	paramDef := bfv.PN12QP109 //PN13QP218
 	paramDef.T = 0x3ee0001
 
 	params, err := bfv.NewParametersFromLiteral(paramDef)
@@ -27,43 +28,39 @@ func mainfunc() {
 	// Ternary sampler  Montgomerry->False
 	ternarySampler := ring.NewTernarySampler(prng, params.RingQP(), 1.0/3.0, false)
 	_ = ternarySampler
-	
+
 	// Uniform sampler
 	uniformSampler := ring.NewUniformSampler(prng, params.RingQP())
 	_ = uniformSampler
 
-
-
-// Creating a random polynomial
-	m:=ringQP.NewPoly()
+	// Creating a random polynomial
+	m := ringQP.NewPoly()
 	uniformSampler.Read(m)
 	//m.Zero()
 	//m.Coeffs[0][0]=1
 	fmt.Printf("     m : %v\n", m.Coeffs[0][0:10])
 	//      m : [1 0 0 0 0 0 0 0 0 0]
 
-// Computing its NTT transform
+	// Computing its NTT transform
 	refPoly := ringQP.NewPoly()
 	ringQP.NTT(m, refPoly)
 	fmt.Printf("NTT(m) : %v\n", refPoly.Coeffs[0][0:10])
 	//NTT(m) : [1 1 1 1 1 1 1 1 1 1]
 
-
-// Constructing the NTT matrix !!!!!! NOTE: only consider the first level q0 !!!!!!
+	// Constructing the NTT matrix !!!!!! NOTE: only consider the first level q0 !!!!!!
 
 	w := ring.InvMForm(ringQP.NttPsi[0][ringQP.N>>1], ringQP.Modulus[0], ringQP.MredParams[0])
 
-
 	//T[i, j] = w^{j*(2*rev(i)+1)} mod q  represented as N poly corresponding to each row of T.
 	T := make([]*ring.Poly, ringQP.N)
-	mask := uint64(2*ringQP.N-1)
+	mask := uint64(2*ringQP.N - 1)
 
 	for i := 0; i < ringQP.N; i++ {
 		T[i] = ringQP.NewPoly()
 
-		twoirev := 2*utils.BitReverse64(uint64(i), uint64(params.LogN()))+1
+		twoirev := 2*utils.BitReverse64(uint64(i), uint64(params.LogN())) + 1
 
-		for j := 0; j < ringQP.N; j++{
+		for j := 0; j < ringQP.N; j++ {
 
 			gen := uint64(j) * twoirev & mask
 
@@ -71,11 +68,10 @@ func mainfunc() {
 		}
 	}
 
-
 	// Create T.vec(s)
 	u := ringQP.NewPoly()
 
-	for i:=0; i<ringQP.N; i++{
+	for i := 0; i < ringQP.N; i++ {
 		// get a temporary vector to store T[i]°s
 		tmp := ringQP.NewPoly()
 
@@ -93,24 +89,22 @@ func mainfunc() {
 		u.Coeffs[0][i] = tmp.Coeffs[0][0]
 	}
 
-fmt.Printf("  m x T: %10d\n", u.Coeffs[0][0:10])
+	fmt.Printf(" T x m : %10d\n", u.Coeffs[0][0:10])
 
-cp_u := ringQP.NewPoly()
-cp_ref := ringQP.NewPoly()
-for i:=0; i<ringQP.N; i++{
-	cp_u.Coeffs[0][i] = u.Coeffs[0][i]
-	cp_ref.Coeffs[0][i] = refPoly.Coeffs[0][i]
-} 
+	cp_u := ringQP.NewPoly()
+	cp_ref := ringQP.NewPoly()
+	for i := 0; i < ringQP.N; i++ {
+		cp_u.Coeffs[0][i] = u.Coeffs[0][i]
+		cp_ref.Coeffs[0][i] = refPoly.Coeffs[0][i]
+	}
 
-if cp_u.Equals(cp_ref) == false {
-	panic("[FAIL] NTT not verified")
-}else{
-	fmt.Printf("[PASS] NTT matrix verified\n")
+	if cp_u.Equals(cp_ref) == false {
+		panic("[FAIL] NTT not verified")
+	} else {
+		fmt.Printf("[PASS] NTT matrix verified\n")
+	}
+
 }
-
-
-}
-
 
 func main() {
 	mainfunc()
