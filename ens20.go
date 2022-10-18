@@ -184,10 +184,10 @@ func ExecuteCubic(s math.Vector, params PublicParams) (bool, error) {
 			return y.Row(i).Copy().Add(r.Mul(c.Copy().(math.Polynomial).Perm(galEl, int64(i)))).AsVec()
 		})
 
-	return VerifyCubic(params, numSplits, t0, t, alpha, vp, A, B0, b, w, gamma, z, h.(math.Polynomial), v.(math.Polynomial), c, galEl, baseRing), nil
+	return VerifyCubic(params, numSplits, t0, t, alpha, vp, u, A, B0, b, w, gamma, z, h.(math.Polynomial), v.(math.Polynomial), c, galEl, baseRing), nil
 }
 
-func VerifyCubic(params PublicParams, numSplits int, t0, t, alpha, vp math.Vector, A, B0, b, w, gamma, z math.Matrix, h, v, c math.Polynomial, galEl *math.ModInt, baseRing *ring.Ring) bool {
+func VerifyCubic(params PublicParams, numSplits int, t0, t, alpha, vp, u math.Vector, A, B0, b, w, gamma, z math.Matrix, h, v, c math.Polynomial, galEl *math.ModInt, baseRing *ring.Ring) bool {
 	maskedOpeningTest := z.AllRows(
 		func(zi math.Vector, i int) bool {
 			rhs := w.Row(i).Copy().Add(t0.Mul(c.Perm(galEl, int64(i))))
@@ -231,8 +231,49 @@ func VerifyCubic(params PublicParams, numSplits int, t0, t, alpha, vp math.Vecto
 			return SplitInvNTT(tmp, numSplits, params.d, baseRing)
 		})
 	// Reconstruct the commitment to f
-
-	// ...
-	// TODO complete verification
-	return false
+	invk := math.NewModInt(int64(params.k), params.q).Inv()
+	tao := math.NewVectorFromSize(params.k).Populate(
+		func(mu int) math.RingElement {
+			tmp := math.NewVectorFromSize(params.k).Populate(
+				func(v int) math.RingElement {
+					tmp2 := math.NewVectorFromSize(numSplits).Populate(
+						func(j int) math.RingElement {
+							dec := math.NewOnePolynomial(baseRing).
+								Scale(u.Dot(gamma.Row(mu)).(*math.ModInt).Uint64()).
+								Neg()
+							return psi.Element(mu, j).Copy().
+								Mul(t.Element(j)).
+								Scale(uint64(params.d)).
+								Add(dec)
+						}).Sum()
+					return tmp2.(math.Polynomial).Perm(galEl, int64(v))
+				}).Sum().(math.Polynomial)
+			return Lmu(mu, tmp, invk)
+		}).Sum()
+	// Verify the commitments
+	testResult := math.NewVectorFromSize(params.k).Populate(
+		func(i int) math.RingElement {
+			return math.NewVectorFromSize(params.k).Populate(
+				func(mu int) math.RingElement {
+					tmp := math.NewVectorFromSize(params.k).Populate(
+						func(v int) math.RingElement {
+							tmp2 := math.NewVectorFromSize(numSplits).Populate(
+								func(j int) math.RingElement {
+									index := (i - v) % params.k
+									return psi.Element(mu, j).Copy().
+										Scale(uint64(params.d)).
+										Mul(b.Row(j).Copy().AsVec().Dot(z.Row(index)))
+								}).Sum()
+							return tmp2.(math.Polynomial).Perm(galEl, int64(v))
+						}).Sum().(math.Polynomial)
+					return Lmu(mu, tmp, invk)
+				}).Sum().Add(b.Row(numSplits + 1).Dot(z.Row(i)))
+		}).All(
+		func(lhs math.RingElement, i int) bool {
+			rhsAdd := c.Copy().(math.Polynomial).Perm(galEl, int64(i)).Mul(
+				tao.Copy().Add(t.Element(numSplits + 1)).Copy().Add(h.Neg()))
+			rhs := vp.Element(i).Copy().Add(rhsAdd)
+			return lhs.Eq(rhs)
+		})
+	return testResult
 }

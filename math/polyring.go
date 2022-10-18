@@ -14,6 +14,12 @@ func NewZeroPolynomial(baseRing *ring.Ring) Polynomial {
 	return Polynomial{baseRing.NewPoly(), baseRing}
 }
 
+func NewOnePolynomial(baseRing *ring.Ring) Polynomial {
+	poly := Polynomial{baseRing.NewPoly(), baseRing}
+	poly.SetCoefficient(0, 1)
+	return poly
+}
+
 func NewPolynomial(ref *ring.Poly, baseRing *ring.Ring) Polynomial {
 	return Polynomial{ref, baseRing}
 }
