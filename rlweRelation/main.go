@@ -4,8 +4,6 @@ import (
 	"fmt"
 
 	"github.com/tuneinsight/lattigo/v4/bfv"
-	"github.com/tuneinsight/lattigo/v4/ring"
-	"github.com/tuneinsight/lattigo/v4/utils"
 	//"math"
 	//"math/big"
 	//"math/bits"
@@ -27,36 +25,6 @@ func mainfunc() {
 	// Define the ring
 	ringQP := params.RingQ()
 
-	fmt.Printf("___ Implementation of RLWE relations ___\n\n")
-
-	// DISCLAIMER
-	/*
-		TODO:
-		-
-
-		Note:
-		-
-	*/
-
-	// Define PRNG
-	prng, err := utils.NewPRNG()
-	if err != nil {
-		panic(err)
-	}
-
-	// Define Samplers
-	// Uniform sampler
-	uniformSampler := ring.NewUniformSampler(prng, params.RingQ())
-	_ = uniformSampler
-
-	// Ternary sampler  Montgomerry->False
-	ternarySampler := ring.NewTernarySampler(prng, params.RingQ(), 1.0/3.0, false)
-	_ = ternarySampler
-
-	// Gaussian sampler
-	gaussianSampler := ring.NewGaussianSampler(prng, params.RingQ(), params.Sigma(), 16)
-	_ = gaussianSampler
-
 	// Define kgen
 	kgen := bfv.NewKeyGenerator(params)
 
@@ -68,6 +36,7 @@ func mainfunc() {
 	// Retrieve sk in Poly form
 	ringQP.InvNTT(s_poly, s_poly)
 	ringQP.InvMForm(s_poly, s_poly)
+	fmt.Printf("s : %v\n", s_poly.Coeffs[0][0:20])
 
 	// Define pk
 	pk := kgen.GenPublicKey(sk)
@@ -75,40 +44,34 @@ func mainfunc() {
 	p1 := pk.Value[1].Q
 
 	// [a] = pk[1]
-	a := p1.CopyNew()
-	_ = a
+	p1_poly := p1.CopyNew()
+	ringQP.InvNTT(p1_poly, p1_poly)
+	ringQP.InvMForm(p1_poly, p1_poly)
 
 	// [e] = pk[0] + pk[1].s
 	e := p0.CopyNew()
-	ringQP.MulCoeffsMontgomeryAndAdd(a, s, e)
-
-	tmp := e.CopyNew()
-	ringQP.Neg(p1, a)
-	ringQP.MulCoeffsMontgomeryAndAdd(a, s, tmp)
-
-	if tmp.Equals(p0) == false {
-		fmt.Print("tmp != p0 \n")
-	} else {
-		fmt.Printf("Reconstruction of p0 ok\n ")
-	}
+	ringQP.MulCoeffsMontgomeryAndAdd(p1, s, e)
 
 	e_poly := p0.CopyNew()
 	ringQP.InvNTT(e, e_poly)
 	ringQP.InvMForm(e_poly, e_poly)
-	//fmt.Printf("e : %v\n", e_poly.Coeffs[0][0:20])
+	fmt.Printf("e : %v\n", e_poly.Coeffs[0][0:20])
 
 	// Reconstruction
 	s_ntt := ringQP.NewPoly()
-	ringQP.MForm(s_poly, s_ntt)
-	ringQP.NTT(s_ntt, s_ntt)
+	ringQP.NTT(s_poly, s_ntt)
+	ringQP.MForm(s_ntt, s_ntt)
 
 	e_ntt := ringQP.NewPoly()
-	ringQP.MForm(e_poly, e_ntt)
-	ringQP.NTT(e_ntt, e_ntt)
+	ringQP.NTT(e_poly, e_ntt)
+	ringQP.MForm(e_ntt, e_ntt)
 
 	// p0 = -p1°s + e
+	neg_a := p1.CopyNew()
+	ringQP.Neg(p1, neg_a)
+
 	new_p0 := e_ntt.CopyNew()
-	ringQP.MulCoeffsMontgomeryAndAdd(a, s_ntt, new_p0)
+	ringQP.MulCoeffsMontgomeryAndAdd(neg_a, s_ntt, new_p0)
 
 	if new_p0.Equals(p0) == false {
 		fmt.Print("[FAIL]new_p0 != p0 in NTT and MForm \n")
@@ -116,8 +79,24 @@ func mainfunc() {
 		fmt.Print("[OK] new_p0 != p0 in NTT and MForm \n")
 	}
 
-	ringQP.MForm(new_p0, new_p0)
-	if new_p0.Equals(p0) == false {
+	// Reconstruction without MForm
+	s_ntt_noM := ringQP.NewPoly()
+	ringQP.NTT(s_poly, s_ntt_noM)
+
+	e_ntt_noM := ringQP.NewPoly()
+	ringQP.NTT(e_poly, e_ntt_noM)
+
+	a_ntt_noM := ringQP.NewPoly()
+	ringQP.NTT(p1_poly, a_ntt_noM)
+
+	ringQP.Neg(a_ntt_noM, a_ntt_noM)
+
+	new_p0_noM := e_ntt_noM.CopyNew()
+	ringQP.MulCoeffsAndAdd(a_ntt_noM, s_ntt_noM, new_p0_noM)
+
+	ringQP.MForm(new_p0_noM, new_p0_noM)
+
+	if new_p0_noM.Equals(p0) == false {
 		fmt.Print("[FAIL] MForm(new_p0) != p0 in NTT and MForm \n")
 	} else {
 		fmt.Print("[OK] MForm(new_p0) != p0 in NTT and MForm \n")
