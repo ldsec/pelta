@@ -137,7 +137,7 @@ func TestPermInv(t *testing.T) {
 	sig := math.NewAutomorphism(int64(baseRing.N), int64(k))
 	// Create a polynomial with coefficients 0, 1, 2, ..., N-1
 	p0 := newTestPolynomial(baseRing)
-	for exp := 1; exp < 1000; exp++ {
+	for exp := 1; exp < 10000; exp++ {
 		p := sig.Permute(-int64(exp), sig.Permute(int64(exp), p0))
 		// Check that p = p0
 		for i := 0; i < p.Ref.N(); i++ {
@@ -149,5 +149,5 @@ func TestPermInv(t *testing.T) {
 }
 
 func TestTrace(t *testing.T) {
-
+	// TODO
 }
