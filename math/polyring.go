@@ -2,7 +2,6 @@ package math
 
 import (
 	"github.com/tuneinsight/lattigo/v4/ring"
-	"math/big"
 )
 
 type Polynomial struct {
@@ -82,11 +81,13 @@ func (p Polynomial) InvNTT() Polynomial {
 	return p
 }
 
+// Zero sets all the coefficients of this polynomial to zero.
 func (p Polynomial) Zero() RingElement {
 	p.Ref.Zero()
 	return p
 }
 
+// One sets the first coefficient of this polynomial to one and the remaining to zero.
 func (p Polynomial) One() RingElement {
 	p.Ref.Zero()
 	p.Ref.Coeffs[0][0] = 1
@@ -101,41 +102,62 @@ func (p Polynomial) SetCoefficient(i int, newValue uint64) {
 	p.BaseRing.Reduce(p.Ref, p.Ref)
 }
 
-// Perm performs a permutation sig^exp(p) s.t. X^i => X^(i*(galEl*exp)) in-place.
-func (p Polynomial) Perm(galEl *ModInt, exp int64) Polynomial {
-	// If exp < 0, we need the inverse automorphism s.t. exp * -exp = 1 (mod N)
-	var expAbs uint64
-	if exp < 0 {
-		expAbs = NewModInt(exp, big.NewInt(int64(p.Ref.N()))).Inv().Uint64()
-	} else {
-		expAbs = uint64(exp)
-	}
-	p.BaseRing.Permute(p.Ref, galEl.Copy().Pow(expAbs).(*ModInt).Uint64(), p.Ref)
-	return p
-}
-
 // Trace calculates the trace of this polynomial: sig^0(p) + sig^1(p) + ... + sig^k(p) and returns the result.
-func (p Polynomial) Trace(galEl *ModInt, k int) Polynomial {
-	return NewVectorFromSize(k).Populate(
-		func(v int) RingElement {
-			return p.Copy().(Polynomial).Perm(galEl, int64(v))
-		}).Sum().(Polynomial)
-}
+//func (p Polynomial) Trace(galEl *ModInt, k int) Polynomial {
+//	return NewVectorFromSize(k).Populate(
+//		func(v int) RingElement {
+//			return p.Copy().(Polynomial).Permuted(galEl, int64(v))
+//		}).Sum().(Polynomial)
+//}
 
-// LShift performs a left shift on the coefficients by the given amount in-place.
-func (p Polynomial) LShift(amount int) Polynomial {
+// LRot performs a left rotation on the coefficients by the given positive amount in-place.
+func (p Polynomial) LRot(amount int) Polynomial {
 	p.BaseRing.Shift(p.Ref, amount, p.Ref)
 	return p
 }
 
-// RShift performs a right shift on the coefficients by the given amount in-place.
-func (p Polynomial) RShift(amount int) Polynomial {
+// RRot performs a right rotation on the coefficients by the given positive amount in-place.
+func (p Polynomial) RRot(amount int) Polynomial {
 	leftShiftAmount := p.Ref.N() - amount
-	p.LShift(leftShiftAmount)
+	p.LRot(leftShiftAmount)
 	return p
 }
 
 // Coeff returns the ith coefficient.
 func (p Polynomial) Coeff(i int) uint64 {
 	return p.Ref.Coeffs[0][i]
+}
+
+// Automorphism represents a Galois automorphism over polynomial rings.
+type Automorphism struct {
+	galEl int64
+	d     int64
+}
+
+func NewAutomorphism(d, k int64) Automorphism {
+	return Automorphism{2*d/k + 1, d}
+}
+
+// Permute returns the permutation (sig^exp)(p) s.t. X^i => X^(i*(galEl^exp)) where galEl = (2N/k + 1)
+func (aut Automorphism) Permute(exp int64, p Polynomial) Polynomial {
+	var gen uint64
+	if exp >= 0 {
+		gen = aut.Exponent(uint64(exp))
+	} else {
+		// Get the inverse of galEl^exp under mod d
+		gen = aut.Exponent(uint64(aut.d + exp))
+	}
+	// Write the permuted result on out
+	out := NewZeroPolynomial(p.BaseRing)
+	p.BaseRing.Permute(p.Ref, gen, out.Ref)
+	return out
+}
+
+// Exponent computes the exponent multiplier galEl^exp
+func (aut Automorphism) Exponent(exp uint64) uint64 {
+	gen := uint64(1)
+	for i := uint64(0); i < exp; i++ {
+		gen *= uint64(aut.galEl)
+	}
+	return gen
 }

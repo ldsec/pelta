@@ -61,6 +61,6 @@ func SplitInvNTT(lhs math.Vector, numSplits, d int, baseRing *ring.Ring) math.Ve
 // Lmu computes the value of the function Lmu(L) = 1/k * X^mu * TrL
 func Lmu(mu int, TrL math.Polynomial, invk *math.ModInt) math.Polynomial {
 	return TrL.Copy().(math.Polynomial).
-		RShift(mu).
+		RRot(mu).
 		Scale(invk.Uint64()).(math.Polynomial)
 }

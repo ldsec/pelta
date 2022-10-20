@@ -63,6 +63,21 @@ func TestAdd(t *testing.T) {
 	}
 }
 
+func TestMul(t *testing.T) {
+	cm := math.NewCoordMap([]int{6, 6})
+	m1 := math.NewMultiArray(cm.Dims).
+		Populate(func(dims []int) math.RingElement {
+			index := cm.FromCoords(dims)
+			return math.NewModInt(int64(index), big.NewInt(10000))
+		})
+	m1.Mul(math.NewModInt(10, big.NewInt(10000)))
+	for i := 0; i < len(m1.Array); i++ {
+		if !m1.Array[i].(*math.ModInt).Eq(math.NewModInt(int64(i*10), big.NewInt(10000))) {
+			t.Errorf("MultiArray.Hadamard")
+		}
+	}
+}
+
 func TestHadamard(t *testing.T) {
 	cm := math.NewCoordMap([]int{6, 6})
 	m1 := math.NewMultiArray(cm.Dims).
