@@ -85,8 +85,8 @@ func (m *MultiArray) SetElements(startCoords []int, endCoords []int, replacement
 	startIndex := m.coordMap.FromCoords(startCoords)
 	endIndex := m.coordMap.FromCoords(endCoords)
 	// assert abs(endIndex - startIndex) == len(replacement)
-	for i := 0; i < m.abs(endIndex-startIndex); i++ {
-		m.Array[m.min(startIndex, endIndex)+i] = replacement[i]
+	for i := 0; i < abs(endIndex-startIndex); i++ {
+		m.Array[min(startIndex, endIndex)+i] = replacement[i]
 	}
 }
 

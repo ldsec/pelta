@@ -1,4 +1,4 @@
-package main
+package ens20
 
 import (
 	"github.com/ldsec/codeBase/commitment/math"
