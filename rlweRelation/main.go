@@ -102,6 +102,43 @@ func mainfunc() {
 		fmt.Print("[OK] MForm(new_p0) != p0 in NTT and MForm \n")
 	}
 
+	/////////////////////////////////////////////////////////////////////////
+	// Reconstruction with sk in (0,1,2)
+	s_poly2 := s_poly.CopyNew()
+	for i := 0; i < params.N(); i++ {
+		s_poly2.Coeffs[0][i] += 1
+	}
+	ringQP.Reduce(s_poly2, s_poly2)
+	fmt.Printf("s : %v\n", s_poly2.Coeffs[0][0:20])
+
+	ones := ringQP.NewPoly()
+	for i := 0; i < params.N(); i++ {
+		ones.Coeffs[0][i] = 1
+	}
+
+	// Encyption of ones without MForm
+	ringQP.NTT(ones, ones)
+	onesEnc := ringQP.NewPoly()
+	ringQP.MulCoeffs(a_ntt_noM, ones, onesEnc)
+
+	// Encryption of sk in (012)
+	s_ntt_012 := ringQP.NewPoly()
+	ringQP.NTT(s_poly2, s_ntt_012)
+
+	p0_012 := e_ntt_noM.CopyNew()
+	ringQP.MulCoeffsAndAdd(a_ntt_noM, s_ntt_012, p0_012)
+
+	// Sub p0_012-oneEnc
+	ringQP.Sub(p0_012, onesEnc, p0_012)
+
+	// MForm
+	ringQP.MForm(p0_012, p0_012)
+	if p0_012.Equals(p0) == false {
+		fmt.Print("[FAIL] MForm(p0_012) != p0 in NTT and MForm \n")
+	} else {
+		fmt.Print("[OK] MForm(p0_012) != p0 in NTT and MForm \n")
+	}
+
 }
 
 func main() {
