@@ -39,14 +39,7 @@ func (m PolyArray) InvNTT() PolyArray {
 	return m
 }
 
-func (m PolyArray) MulPoly(p Polynomial) PolyArray {
-	m.ForEach(func(el RingElement, _ []int) {
-		el.(Polynomial).Mul(p)
-	})
-	return m
-}
-
-// ToPoly converts a coefficient vector into a polynomial.
+// ToPoly converts a coefficient vector into a polynomial and returns it.
 // Warning: The coefficients must fit into an uint64!
 func (v IntVector) ToPoly(baseRing *ring.Ring) Polynomial {
 	p := NewZeroPolynomial(baseRing)
@@ -57,18 +50,47 @@ func (v IntVector) ToPoly(baseRing *ring.Ring) Polynomial {
 	return p
 }
 
+// Max returns the maximum integer in the vector.
+func (v IntVector) Max() int64 {
+	maxElement := v.Element(0).(*ModInt).Value.Int64()
+	v.ForEach(func(el RingElement, _ int) {
+		maxElement = max(maxElement, el.(*ModInt).Value.Int64())
+	})
+	return maxElement
+}
+
+// Min returns the minimum integer in the vector.
+func (v IntVector) Min() int64 {
+	maxElement := v.Element(0).(*ModInt).Value.Int64()
+	v.ForEach(func(el RingElement, _ int) {
+		maxElement = min(maxElement, el.(*ModInt).Value.Int64())
+	})
+	return maxElement
+}
+
 // L2Norm returns the L2 norm of an integer vector.
 func (v IntVector) L2Norm() float64 {
-	return math.Sqrt(float64(v.Dot(v.Vector).(*ModInt).Uint64()))
+	return math.Sqrt(float64(v.Copy().AsVec().Dot(v.Vector).(*ModInt).Uint64()))
 }
 
 // L2Norm returns the L2 norm of a polynomial vector.
 func (v PolyVector) L2Norm(q *big.Int) float64 {
 	acc := 0.0
 	for i := 0; i < v.Length(); i++ {
-		acc += v.Element(i).(Polynomial).Coeffs(q).L2Norm()
+		coeffs := v.Element(i).(Polynomial).Coeffs(q)
+		acc += float64(coeffs.Dot(coeffs.AsVec()).(*ModInt).Value.Uint64())
 	}
 	return math.Sqrt(acc)
+}
+
+// InfNorm returns the infinity norm of a polynomial vector.
+func (v PolyVector) InfNorm(q *big.Int) int64 {
+	infNorm := v.Element(0).(Polynomial).Coeffs(q).Max()
+	for i := 1; i < v.Length(); i++ {
+		maxCoeff := v.Element(i).(Polynomial).Coeffs(q).Max()
+		infNorm = max(maxCoeff, infNorm)
+	}
+	return infNorm
 }
 
 // -- Conversion helpers

@@ -1,6 +1,9 @@
 package math
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 // Matrix represents a 2-dimensional matrix.
 type Matrix struct {
@@ -202,7 +205,7 @@ func (m Matrix) MulVec(x Vector) Vector {
 	}
 	out := NewVectorFromSize(m.Rows())
 	m.ForEachRow(func(row Vector, i int) {
-		out.SetElementAtIndex(i, row.Dot(x))
+		out.SetElementAtIndex(i, row.Copy().AsVec().Dot(x))
 	})
 	return out
 }
@@ -259,4 +262,12 @@ func (m Matrix) AnyCols(pred func(Vector, int) bool) bool {
 		}
 	}
 	return false
+}
+
+func (m Matrix) String() string {
+	strs := make([]string, 0, m.Rows())
+	m.ForEachRow(func(row Vector, i int) {
+		strs = append(strs, row.String())
+	})
+	return fmt.Sprintf("(%dx%d)[%s]", m.Rows(), m.Cols(), strings.Join(strs, ",\n"))
 }

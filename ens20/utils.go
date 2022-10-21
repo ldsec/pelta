@@ -34,10 +34,18 @@ func NewRandomPolynomialMatrix(rows int, cols int, baseRing *ring.Ring, sampler 
 	return A
 }
 
-// NewRandomIntegerVector constructs a random 2D vector of integers.
+// NewRandomIntegerVector constructs a random vector of integers.
 func NewRandomIntegerVector(dim int, mod *big.Int) math.IntVector {
 	v := math.NewVectorFromSize(dim).Populate(func(_ int) math.RingElement {
 		return math.NewModInt(ring.RandInt(mod).Int64(), mod)
+	})
+	return v.AsIntVec()
+}
+
+// NewRandomTernaryIntegerVector constructs a random vector of integers where each element \in {-1, 0, 1} mod q.
+func NewRandomTernaryIntegerVector(dim int, mod *big.Int) math.IntVector {
+	v := math.NewVectorFromSize(dim).Populate(func(_ int) math.RingElement {
+		return math.NewModInt(ring.RandInt(big.NewInt(3)).Int64()-1, mod)
 	})
 	return v.AsIntVec()
 }

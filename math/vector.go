@@ -1,6 +1,9 @@
 package math
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 type Vector struct {
 	*MultiArray
@@ -80,4 +83,13 @@ func (v Vector) Any(pred func(RingElement, int) bool) bool {
 	return v.MultiArray.Any(func(el RingElement, coords []int) bool {
 		return pred(el, coords[0])
 	})
+}
+
+// String returns a string representation of the vector.
+func (v Vector) String() string {
+	strs := make([]string, 0, v.Length())
+	for _, e := range v.Array {
+		strs = append(strs, e.String())
+	}
+	return fmt.Sprintf("(%d)[%s]", v.Length(), strings.Join(strs, ", "))
 }

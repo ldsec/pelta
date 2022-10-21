@@ -14,6 +14,7 @@ type RingElement interface {
 	One() RingElement                      // Converts into multiplicative identity
 	Copy() RingElement                     // Returns a copy of the element
 	Eq(RingElement) bool                   // Returns true if the two elements are equal
+	String() string
 }
 
 // MultiArray represents a multidimensional array of elements.
@@ -98,7 +99,7 @@ func (m *MultiArray) SetElements(startCoords []int, endCoords []int, replacement
 			len(replacement), abs(endIndex-startIndex)))
 	}
 	for i := 0; i < abs(endIndex-startIndex); i++ {
-		m.Array[min(startIndex, endIndex)+i] = replacement[i]
+		m.Array[minInt(startIndex, endIndex)+i] = replacement[i]
 	}
 }
 
@@ -168,9 +169,9 @@ func (m *MultiArray) Hadamard(q *MultiArray) *MultiArray {
 // Mul multiplies the elements with the given element in-place.
 // p, q => p *= q
 func (m *MultiArray) Mul(q RingElement) *MultiArray {
-	for i := 0; i < m.Length(); i++ {
-		m.ElementAtIndex(i).Mul(q)
-	}
+	m.ForEach(func(el RingElement, _ []int) {
+		el.Mul(q)
+	})
 	return m
 }
 

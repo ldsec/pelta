@@ -24,7 +24,7 @@ func NewOneModInt(mod *big.Int) *ModInt {
 }
 
 func NewModInt(value int64, mod *big.Int) *ModInt {
-	i := ModInt{*big.NewInt(value), *mod}
+	i := ModInt{*big.NewInt(value).Mod(big.NewInt(value), mod), *mod}
 	return &i
 }
 
@@ -46,7 +46,7 @@ func (m *ModInt) MulAdd(q RingElement, out RingElement) {
 }
 
 func (m *ModInt) Neg() RingElement {
-	m.Value.Neg(&m.Value)
+	m.Value.Neg(&m.Value).Mod(&m.Value, &m.Modulus)
 	return m
 }
 
@@ -74,12 +74,16 @@ func (m *ModInt) Pow(exp uint64) RingElement {
 }
 
 func (m *ModInt) Scale(factor uint64) RingElement {
-	m.Value.Mul(&m.Value, big.NewInt(int64(factor)))
+	m.Value.Mul(&m.Value, big.NewInt(int64(factor))).Mod(&m.Value, &m.Modulus)
 	return m
 }
 
 func (m *ModInt) Eq(el RingElement) bool {
 	return el.(*ModInt).Value.Cmp(&m.Value) == 0 && el.(*ModInt).Modulus.Cmp(&m.Modulus) == 0
+}
+
+func (m *ModInt) String() string {
+	return "Int{" + m.Value.String() + "}"
 }
 
 // Inv sets this integer to its multiplicative inverse and returns the result.

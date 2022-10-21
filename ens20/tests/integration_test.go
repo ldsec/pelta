@@ -18,14 +18,14 @@ func getTestSettings() ens20.Settings {
 	}
 	settings := ens20.Settings{
 		D:      ringParams.N(),
-		Q:      ringParams.QBigInt(),
+		Q:      ringParams.RingQP().RingQ.ModulusAtLevel[0],
 		N:      ringParams.N(),
-		M:      1,
+		M:      2,
 		K:      1,
 		Delta1: 16,
 		Lambda: 1,
 		Kappa:  1,
-		Beta:   1,
+		Beta:   16,
 	}
 	// Initialize the ring.
 	settings.BaseRing = ringParams.RingQP().RingQ
@@ -44,12 +44,25 @@ func getTestSettings() ens20.Settings {
 
 func TestSimple(tst *testing.T) {
 	settings := getTestSettings()
-	s := ens20.NewRandomIntegerVector(settings.N, settings.Q)
+	s := ens20.NewRandomTernaryIntegerVector(settings.N, settings.Q)
+	//fmt.Println("s = " + s.String())
 	params := ens20.NewDummyPublicParameters(s, settings)
 	prover := ens20.NewProver(params, settings)
 	verifier := ens20.NewVerifier(params, settings)
-
+	// Commit to the message.
 	t0, t, w, ps := prover.CommitToMessage(s)
+	// Check consistency in the state.
+	if !ps.T0.Eq(t0.MultiArray) || !ps.T.Eq(t.MultiArray) || !ps.W.Eq(w.MultiArray) {
+		tst.Errorf("TestSimple: CommitToMessage state consistency check failed")
+	}
+	// Check t0.
+	if !t0.Eq(params.B0.Copy().AsMatrix().MulVec(ps.R).MultiArray) {
+		tst.Errorf("TestSimple: CommitToMessage t0 != B0 * r")
+	}
+	// Check t[n/d].
+	if !t.Element(settings.NumSplits).Copy().Add(params.B.Row(settings.NumSplits).Copy().AsVec().Dot(ps.R).Neg()).Eq(ps.G) {
+		tst.Errorf("TestSimple: CommitToMessage t[n/d] != b[n/d] * r + g")
+	}
 	alpha, gamma, vs := verifier.CreateMasks(t0, t, w)
 	t, h, v, vp, ps := prover.CommitToRelation(alpha, gamma, ps)
 	c, vs := verifier.CreateChallenge(t, h, v, vp, vs)

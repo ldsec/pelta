@@ -1,8 +1,10 @@
 package math
 
 import (
+	"fmt"
 	"github.com/tuneinsight/lattigo/v4/ring"
 	"math/big"
+	"strings"
 )
 
 type Polynomial struct {
@@ -31,20 +33,34 @@ func (p Polynomial) Copy() RingElement {
 
 func (p Polynomial) Add(q RingElement) RingElement {
 	p.BaseRing.Add(p.Ref, q.(Polynomial).Ref, p.Ref)
+	p.BaseRing.Reduce(p.Ref, p.Ref)
 	return p
 }
 
 func (p Polynomial) Mul(q RingElement) RingElement {
+	p.NTT()
+	q.(Polynomial).NTT()
 	p.BaseRing.MulCoeffs(p.Ref, q.(Polynomial).Ref, p.Ref)
+	p.BaseRing.Reduce(p.Ref, p.Ref)
+	p.InvNTT()
+	q.(Polynomial).InvNTT()
 	return p
 }
 
 func (p Polynomial) MulAdd(q RingElement, out RingElement) {
+	p.NTT()
+	q.(Polynomial).NTT()
+	out.(Polynomial).NTT()
 	p.BaseRing.MulCoeffsAndAdd(p.Ref, q.(Polynomial).Ref, out.(Polynomial).Ref)
+	p.BaseRing.Reduce(out.(Polynomial).Ref, out.(Polynomial).Ref)
+	p.InvNTT()
+	q.(Polynomial).InvNTT()
+	out.(Polynomial).InvNTT()
 }
 
 func (p Polynomial) Neg() RingElement {
 	p.BaseRing.Neg(p.Ref, p.Ref)
+	p.BaseRing.Reduce(p.Ref, p.Ref)
 	return p
 }
 
@@ -52,14 +68,19 @@ func (p Polynomial) Neg() RingElement {
 // p => p = c*p
 func (p Polynomial) Scale(factor uint64) RingElement {
 	p.BaseRing.MulScalar(p.Ref, factor, p.Ref)
+	p.BaseRing.Reduce(p.Ref, p.Ref)
 	return p
 }
 
 func (p Polynomial) Pow(exp uint64) RingElement {
-	out := p.Copy().One()
-	for i := uint64(0); i < exp; i++ {
+	if exp == 0 {
+		return NewOnePolynomial(p.BaseRing)
+	}
+	out := p.Copy()
+	for i := uint64(1); i < exp; i++ {
 		out.Mul(p)
 	}
+	p.BaseRing.Reduce(out.(Polynomial).Ref, out.(Polynomial).Ref)
 	p.Ref.CopyValues(out.(Polynomial).Ref)
 	return p
 }
@@ -130,6 +151,14 @@ func (p Polynomial) Coeff(i int) uint64 {
 	return p.Ref.Coeffs[0][i]
 }
 
+func (p Polynomial) String() string {
+	strs := make([]string, 0, p.Ref.N())
+	for _, e := range p.Ref.Coeffs[0] {
+		strs = append(strs, fmt.Sprint(e))
+	}
+	return fmt.Sprint("Poly{" + strings.Join(strs[:10], ", ") + ", ...}")
+}
+
 // Automorphism represents a Galois automorphism over polynomial rings.
 type Automorphism struct {
 	g int64 // The automorphism generator
@@ -153,6 +182,7 @@ func (aut Automorphism) Permute(exp int64, p Polynomial) Polynomial {
 	// Write the permuted result on out
 	out := NewZeroPolynomial(p.BaseRing)
 	p.BaseRing.Permute(p.Ref, gen, out.Ref)
+	p.BaseRing.Reduce(out.Ref, out.Ref)
 	return out
 }
 
