@@ -1,8 +1,10 @@
 package math
 
 import (
+	"fmt"
 	"github.com/tuneinsight/lattigo/v4/ring"
 	"math"
+	"math/big"
 )
 
 // Helpers for specialized polynomial constructs
@@ -12,6 +14,10 @@ type PolyArray struct {
 }
 
 type IntVector struct {
+	Vector
+}
+
+type PolyVector struct {
 	Vector
 }
 
@@ -51,9 +57,18 @@ func (v IntVector) ToPoly(baseRing *ring.Ring) Polynomial {
 	return p
 }
 
-// L2Norm returns the L2 norm of the vector.
+// L2Norm returns the L2 norm of an integer vector.
 func (v IntVector) L2Norm() float64 {
 	return math.Sqrt(float64(v.Dot(v.Vector).(*ModInt).Uint64()))
+}
+
+// L2Norm returns the L2 norm of a polynomial vector.
+func (v PolyVector) L2Norm(q *big.Int) float64 {
+	acc := 0.0
+	for i := 0; i < v.Length(); i++ {
+		acc += v.Element(i).(Polynomial).Coeffs(q).L2Norm()
+	}
+	return math.Sqrt(acc)
 }
 
 // -- Conversion helpers
@@ -61,24 +76,46 @@ func (v IntVector) L2Norm() float64 {
 // AsMatrix converts the representation to a matrix.
 func (m *MultiArray) AsMatrix() Matrix {
 	// assert len(a.Dimensions()) == 2
+	if len(m.Dimensions()) != 2 {
+		panic(fmt.Sprintf("AsMatrix: Cannot convert a multi-array with %d dimensions into a matrix", m.Dimensions()))
+	}
 	return Matrix{m}
 }
 
 // AsVec converts the representation to a vector.
 func (m *MultiArray) AsVec() Vector {
 	// assert len(a.Dimensions()) == 1
+	if len(m.Dimensions()) != 1 {
+		panic(fmt.Sprintf("AsVec: Cannot convert a multi-array with %d dimensions into a vector", m.Dimensions()))
+	}
 	return Vector{m}
 }
 
-// AsPolyArray converts the representation of a multi array of polynomials.
+// AsPolyArray converts to the representation of a multi array of polynomials.
 // Allows calling specialized methods.
 func (m *MultiArray) AsPolyArray() PolyArray {
 	// assert type
+	if _, ok := m.ElementAtIndex(0).(Polynomial); !ok {
+		panic(fmt.Sprintf("AsPolyArray: Not a polynomial array"))
+	}
 	return PolyArray{m}
 }
 
-// AsCoeffs converts a mod int vector into a coefficient vector.
-func (v Vector) AsCoeffs() IntVector {
+// AsIntVec converts to the representation of a mod int.
+// Allows calling specialized methods.
+func (v Vector) AsIntVec() IntVector {
 	// assert type
+	if _, ok := v.Element(0).(*ModInt); !ok {
+		panic(fmt.Sprintf("AsIntVec: Not an integer vector"))
+	}
 	return IntVector{v}
+}
+
+// AsPolyVec converts to the representation of a vector of polynomials.
+// Allows calling specialized methods.
+func (v Vector) AsPolyVec() PolyVector {
+	if _, ok := v.Element(0).(Polynomial); !ok {
+		panic(fmt.Sprintf("AsPolyVec: Not a polynomial vector"))
+	}
+	return PolyVector{v}
 }

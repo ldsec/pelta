@@ -68,6 +68,15 @@ func (p Polynomial) Eq(el RingElement) bool {
 	return p.BaseRing.Equal(p.Ref, el.(Polynomial).Ref)
 }
 
+// Coeffs returns the vector representation of the zero-level coefficients of this polynomial.
+func (p Polynomial) Coeffs(q *big.Int) IntVector {
+	v := make([]RingElement, p.Ref.N())
+	for i := 0; i < len(v); i++ {
+		v[i] = NewModInt(int64(p.Ref.Coeffs[0][i]), q)
+	}
+	return NewVectorFromSlice(v).AsIntVec()
+}
+
 // NTT converts into the NTT space in-place.
 // p => p = NTT(p)
 func (p Polynomial) NTT() Polynomial {

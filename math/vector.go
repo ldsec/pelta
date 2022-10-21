@@ -1,5 +1,7 @@
 package math
 
+import "fmt"
+
 type Vector struct {
 	*MultiArray
 }
@@ -48,6 +50,9 @@ func (v Vector) ForEach(f func(RingElement, int)) {
 
 // Dot performs a dot product of the vectors and returns the result.
 func (v Vector) Dot(b Vector) RingElement {
+	if v.Length() != b.Length() {
+		panic(fmt.Sprintf("Vector.Dot: Different sizes %d != %d", v.Length(), b.Length()))
+	}
 	out := v.ElementAtIndex(0).Copy().Zero()
 	v.ForEach(func(el RingElement, i int) {
 		el.MulAdd(b.ElementAtIndex(i), out)
@@ -57,6 +62,9 @@ func (v Vector) Dot(b Vector) RingElement {
 
 // Slice returns a view to the slice [start, end).
 func (v Vector) Slice(start int, end int) Vector {
+	if start < 0 || end > v.Length() || end < start {
+		panic(fmt.Sprintf("Vector.Slice: Slice (%d, %d) out of bounds for %d", start, end, v.Length()))
+	}
 	return NewVectorFromSlice(v.Array[start:end])
 }
 

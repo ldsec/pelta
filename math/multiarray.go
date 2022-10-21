@@ -1,5 +1,7 @@
 package math
 
+import "fmt"
+
 // RingElement represents an element of a ring.
 type RingElement interface {
 	Add(q RingElement) RingElement         // p = p + q
@@ -60,22 +62,28 @@ func (m *MultiArray) Length() int {
 // ElementAtCoords returns the element at the given coordinates.
 func (m *MultiArray) ElementAtCoords(coords []int) RingElement {
 	index := m.coordMap.FromCoords(coords)
-	return m.Array[index]
+	return m.ElementAtIndex(index)
 }
 
 // ElementAtIndex returns the element at the given linear index.
 func (m *MultiArray) ElementAtIndex(index int) RingElement {
+	if index >= m.Length() {
+		panic(fmt.Sprintf("MultiArray.ElementAtIndex: Index out of bounds %d >= %d", index, m.Length()))
+	}
 	return m.Array[index]
 }
 
 // SetElementAtCoords updates the element at the given coordinates.
 func (m *MultiArray) SetElementAtCoords(coords []int, newElement RingElement) {
 	index := m.coordMap.FromCoords(coords)
-	m.Array[index] = newElement
+	m.SetElementAtIndex(index, newElement)
 }
 
 // SetElementAtIndex updates the element at the given linear index.
 func (m *MultiArray) SetElementAtIndex(index int, newElement RingElement) {
+	if index >= m.Length() {
+		panic(fmt.Sprintf("MultiArray.SetElementAtIndex: Index out of bounds %d >= %d", index, m.Length()))
+	}
 	m.Array[index] = newElement
 }
 
@@ -85,6 +93,10 @@ func (m *MultiArray) SetElements(startCoords []int, endCoords []int, replacement
 	startIndex := m.coordMap.FromCoords(startCoords)
 	endIndex := m.coordMap.FromCoords(endCoords)
 	// assert abs(endIndex - startIndex) == len(replacement)
+	if abs(endIndex-startIndex) != len(replacement) {
+		panic(fmt.Sprintf("MultiArray.SetElements: Replacement does not fit exactly %d != %d",
+			len(replacement), abs(endIndex-startIndex)))
+	}
 	for i := 0; i < abs(endIndex-startIndex); i++ {
 		m.Array[min(startIndex, endIndex)+i] = replacement[i]
 	}
@@ -133,6 +145,9 @@ func (m *MultiArray) Scale(factor uint64) *MultiArray {
 // Add adds two arrays coefficient-wise in-place.
 // p, q => p += q
 func (m *MultiArray) Add(q *MultiArray) *MultiArray {
+	if m.Length() != q.Length() {
+		panic(fmt.Sprintf("MultiArray.Add: Different sizes %d != %d", m.Length(), q.Length()))
+	}
 	for i := 0; i < m.Length(); i++ {
 		m.ElementAtIndex(i).Add(q.ElementAtIndex(i))
 	}
@@ -141,6 +156,9 @@ func (m *MultiArray) Add(q *MultiArray) *MultiArray {
 
 // Hadamard multiplies the elements coefficient-wise in-place.
 func (m *MultiArray) Hadamard(q *MultiArray) *MultiArray {
+	if m.Length() != q.Length() {
+		panic(fmt.Sprintf("MultiArray.Hadamard: Different sizes %d != %d", m.Length(), q.Length()))
+	}
 	for i := 0; i < m.Length(); i++ {
 		m.ElementAtIndex(i).Mul(q.ElementAtIndex(i))
 	}

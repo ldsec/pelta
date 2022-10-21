@@ -1,5 +1,7 @@
 package math
 
+import "fmt"
+
 // Matrix represents a 2-dimensional matrix.
 type Matrix struct {
 	*MultiArray
@@ -36,7 +38,11 @@ func (m Matrix) Populate(f func(int, int) RingElement) Matrix {
 // PopulateRows initializes the rows of this multi array using a given function.
 func (m Matrix) PopulateRows(f func(int) Vector) Matrix {
 	for i := 0; i < m.Rows(); i++ {
-		m.SetRow(i, f(i))
+		newRow := f(i)
+		if newRow.Length() != m.Cols() {
+			panic(fmt.Sprintf("Matrix.PopulateRows: Returned invalid row %d != %d", newRow.Length(), m.Cols()))
+		}
+		m.SetRow(i, newRow)
 	}
 	return m
 }
@@ -44,7 +50,11 @@ func (m Matrix) PopulateRows(f func(int) Vector) Matrix {
 // PopulateCols initializes the cols of this multi array using a given function.
 func (m Matrix) PopulateCols(f func(int) Vector) Matrix {
 	for i := 0; i < m.Cols(); i++ {
-		m.SetCol(i, f(i))
+		newCol := f(i)
+		if newCol.Length() != m.Rows() {
+			panic(fmt.Sprintf("Matrix.PopulateCols: Returned invalid col %d != %d", newCol.Length(), m.Rows()))
+		}
+		m.SetCol(i, newCol)
 	}
 	return m
 }
@@ -67,6 +77,9 @@ func (m Matrix) Dimensions() (int, int) {
 // Row returns the vector representation of the given row.
 func (m Matrix) Row(row int) Vector {
 	// assert row < m.Rows()
+	if row >= m.Rows() {
+		panic(fmt.Sprintf("Matrix.Row: Invalid row %d >= %d", row, m.Rows()))
+	}
 	indexStart := m.coordMap.FromCoords([]int{0, row})
 	indexEnd := m.coordMap.FromCoords([]int{0, row + 1})
 	rowArray := m.Array[indexStart:indexEnd]
@@ -76,6 +89,9 @@ func (m Matrix) Row(row int) Vector {
 // Col returns the vector representation of the given col.
 func (m Matrix) Col(col int) Vector {
 	// assert col < m.Cols()
+	if col >= m.Cols() {
+		panic(fmt.Sprintf("Matrix.Col: Invalid col %d >= %d", col, m.Cols()))
+	}
 	colSlice := make([]RingElement, m.Rows())
 	for i := 0; i < m.Rows(); i++ {
 		colSlice[i] = m.Element(i, col)
@@ -97,6 +113,9 @@ func (m Matrix) SetElement(row int, col int, newElement RingElement) {
 // Warning: Does not copy the underlying array of the elements!
 func (m Matrix) SetRow(row int, v Vector) {
 	// assert m.Cols() == v.Length()
+	if m.Cols() != v.Length() {
+		panic(fmt.Sprintf("Matrix.SetRow: Lengths do not match %d != %d", m.Cols(), v.Length()))
+	}
 	m.SetElements([]int{0, row}, []int{0, row + 1}, v.Array)
 }
 
@@ -104,6 +123,9 @@ func (m Matrix) SetRow(row int, v Vector) {
 // Warning: Does not copy the underlying array of the elements!
 func (m Matrix) SetCol(col int, v Vector) {
 	// assert m.Rows() == v.Length()
+	if m.Rows() != v.Length() {
+		panic(fmt.Sprintf("Matrix.SetCol: Lengths do not match %d != %d", m.Rows(), v.Length()))
+	}
 	for i := 0; i < m.Rows(); i++ {
 		m.SetElement(i, col, v.ElementAtIndex(i))
 	}
@@ -141,7 +163,11 @@ func (m Matrix) Map(f func(RingElement, int, int) RingElement) Matrix {
 // MapRows replaces every row with the output of the given function in-place.
 func (m Matrix) MapRows(f func(Vector, int) Vector) Matrix {
 	for i := 0; i < m.Rows(); i++ {
-		m.SetRow(i, f(m.Row(i), i))
+		newRow := f(m.Row(i), i)
+		if newRow.Length() >= m.Cols() {
+			panic(fmt.Sprintf("Matrix.MapRows: Returned invalid row %d >= %d", newRow.Length(), m.Cols()))
+		}
+		m.SetRow(i, newRow)
 	}
 	return m
 }
@@ -171,6 +197,9 @@ func (m Matrix) ForEachCol(f func(Vector, int)) {
 
 // MulVec performs a matrix vector multiplication and returns the result.
 func (m Matrix) MulVec(x Vector) Vector {
+	if m.Cols() != x.Length() {
+		panic(fmt.Sprintf("Matrix.MulVec: Cannot multiply (%d, %d) with %d", m.Rows(), m.Cols(), x.Length()))
+	}
 	out := NewVectorFromSize(m.Rows())
 	m.ForEachRow(func(row Vector, i int) {
 		out.SetElementAtIndex(i, row.Dot(x))

@@ -179,7 +179,7 @@ package main
 //	maskedOpeningTest := z.AllRows(
 //		func(zi math.Vector, i int) bool {
 //			rhs := w.Row(i).Copy().Add(t0.Mul(sig.Permute(int64(i), c)))
-//			return zi.AsCoeffs().L2Norm() < params.beta && B0.MulVec(zi).Eq(rhs)
+//			return zi.AsIntVec().L2Norm() < params.beta && B0.MulVec(zi).Eq(rhs)
 //		})
 //	if !maskedOpeningTest {
 //		return false
