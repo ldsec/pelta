@@ -86,7 +86,12 @@ func (p Polynomial) Pow(exp uint64) RingElement {
 }
 
 func (p Polynomial) Eq(el RingElement) bool {
-	return p.BaseRing.Equal(p.Ref, el.(Polynomial).Ref)
+	for i, c1 := range p.Ref.Coeffs[0] {
+		if c1 != el.(Polynomial).Ref.Coeffs[0][i] {
+			return false
+		}
+	}
+	return true
 }
 
 // Coeffs returns the vector representation of the zero-level coefficients of this polynomial.

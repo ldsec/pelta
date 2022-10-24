@@ -67,40 +67,35 @@ func (p Prover) CommitToMessage(s math.IntVector) (math.Vector, math.Vector, mat
 // Returns t, h, v, vp
 func (p Prover) CommitToRelation(alpha math.Vector, gamma math.Matrix, state ProverState) (math.Vector, math.Polynomial, math.Polynomial, math.Vector, ProverState) {
 	// Prover further set up.
-	sum1 := math.NewMatrixFromDimensions(p.settings.K, p.settings.NumSplits).
-		Populate(func(i int, j int) math.RingElement {
-			// (b[j] * y[i]) ^ 2
+	sum1 := CommitmentSum(p.settings.K, p.settings.NumSplits, alpha.AsPolyVec(), state.Sig,
+		func(i int, j int) math.Polynomial {
+			// (b[j] * y[i])^2
 			tmp := p.publicParams.B.Row(j).Copy().AsVec().Dot(state.Y.Row(i)).Pow(2)
-			// sig^(-1)(3s[j] * tmp)
-			tmp2 := state.Sig.Permute(-1,
-				state.SHat.Element(j).Copy().(math.Polynomial).
-					Scale(uint64(3)).
-					Mul(tmp).(math.Polynomial))
-			// alpha[i*n/d+j] * tmp2
-			return alpha.Element(i*p.settings.NumSplits + j).Copy().Mul(tmp2)
-		}).Sum().Neg()
-	sum2 := math.NewMatrixFromDimensions(p.settings.K, p.settings.NumSplits).
-		Populate(func(i int, j int) math.RingElement {
+			// 3s[j] * (b[j] * y[i])^2
+			return state.SHat.Element(j).Copy().(math.Polynomial).
+				Scale(uint64(3)).
+				Mul(tmp).(math.Polynomial)
+		}).Neg()
+	sum2 := CommitmentSum(p.settings.K, p.settings.NumSplits, alpha.AsPolyVec(), state.Sig,
+		func(i int, j int) math.Polynomial {
 			// b[j] * y[i]
 			tmp := p.publicParams.B.Row(j).Copy().AsVec().Dot(state.Y.Row(i))
-			// sig^(-1)((3s[j]^2 - 1) * tmp)
-			tmp2 := state.Sig.Permute(-1,
-				state.SHat.Element(j).Copy().(math.Polynomial).
-					Pow(2).(math.Polynomial).
-					Scale(3).
-					Add(math.NewOnePolynomial(p.settings.BaseRing).Neg()).
-					Mul(tmp).(math.Polynomial))
-			// alpha[i*n/d+j] * tmp2
-			return alpha.Element(i*p.settings.NumSplits + j).Copy().Mul(tmp2)
-		}).Sum()
-	sum3 := math.NewMatrixFromDimensions(p.settings.K, p.settings.NumSplits).
-		Populate(func(i int, j int) math.RingElement {
-			tmp := state.Sig.Permute(-1,
-				p.publicParams.B.Row(j).Copy().AsVec().
-					Dot(state.Y.Row(i)).
-					Pow(3).(math.Polynomial))
-			return alpha.Element(i*p.settings.NumSplits + j).Copy().Mul(tmp)
-		}).Sum()
+			// 3s[j]^2
+			tmp2 := state.SHat.Element(j).Copy().(math.Polynomial).
+				Pow(2).(math.Polynomial).
+				Scale(3)
+			// (3s[j]^2-1) (b[j] * y[i])
+			return tmp2.
+				Add(math.NewOnePolynomial(p.settings.BaseRing).Neg()).
+				Mul(tmp).(math.Polynomial)
+		})
+	sum3 := CommitmentSum(p.settings.K, p.settings.NumSplits, alpha.AsPolyVec(), state.Sig,
+		func(i int, j int) math.Polynomial {
+			// (b[j] * y[i])^3
+			return p.publicParams.B.Row(j).Copy().AsVec().
+				Dot(state.Y.Row(i)).
+				Pow(3).(math.Polynomial)
+		})
 	state.T.SetElementAtIndex(p.settings.NumSplits+1,
 		p.publicParams.B.Row(p.settings.NumSplits+1).Copy().AsVec().
 			Dot(state.R).
@@ -119,41 +114,34 @@ func (p Prover) CommitToRelation(alpha math.Vector, gamma math.Matrix, state Pro
 			tmp := At.Copy().AsMatrix().MulVec(gamma.Row(mu)).AsIntVec()
 			return SplitInvNTT(tmp, p.settings.NumSplits, p.settings.D, p.settings.BaseRing).AsVec()
 		})
-	invk := math.NewModInt(int64(p.settings.K), p.settings.Q).Inv()
-	gMask := math.NewVectorFromSize(p.settings.K).Populate(
-		func(mu int) math.RingElement {
-			tmp := math.NewVectorFromSize(p.settings.K).Populate(
-				func(v int) math.RingElement {
-					dec := math.NewOnePolynomial(p.settings.BaseRing).Scale(
-						p.publicParams.U.Copy().AsVec().Dot(gamma.Row(mu)).(*math.ModInt).Uint64())
-					sum := math.NewVectorFromSize(p.settings.NumSplits).Populate(
-						func(j int) math.RingElement {
-							return psi.Element(mu, j).Copy().
-								Mul(state.SHat.Element(j)).(math.Polynomial).
-								Scale(uint64(p.settings.D))
-						}).Sum()
-					return state.Sig.Permute(int64(v), sum.Add(dec.Neg()).(math.Polynomial))
-				}).Sum().(math.Polynomial)
-			return Lmu(mu, tmp, invk)
-		}).Sum()
+	invk := math.NewModInt(int64(p.settings.K), p.settings.Q).Inv().Uint64()
+	gMask := LmuSum(p.settings.K, invk, state.Sig,
+		func(mu int, v int) math.Polynomial {
+			// (u * gamma_mu)
+			mul := p.publicParams.U.Copy().AsVec().Dot(gamma.Row(mu)).(*math.ModInt).Uint64()
+			dec := math.NewOnePolynomial(p.settings.BaseRing).Scale(mul).Neg()
+			sum := math.NewVectorFromSize(p.settings.NumSplits).Populate(
+				func(j int) math.RingElement {
+					return psi.Element(mu, j).Copy().
+						Mul(state.SHat.Element(j)).(math.Polynomial).
+						Scale(uint64(p.settings.D))
+				}).Sum()
+			return sum.Add(dec).(math.Polynomial)
+		})
 	h := state.G.Copy().Add(gMask).(math.Polynomial)
 	vp := math.NewVectorFromSize(p.settings.K).Populate(
 		func(i int) math.RingElement {
-			sum := math.NewVectorFromSize(p.settings.K).Populate(
-				func(mu int) math.RingElement {
-					tmp := math.NewMatrixFromDimensions(p.settings.K, p.settings.NumSplits).Populate(
-						func(v, j int) math.RingElement {
-							index := (i - v) % state.Y.Rows()
-							return state.Sig.Permute(int64(v),
-								p.publicParams.B.Row(j).Copy().
-									Mul(psi.Element(mu, j)).
-									Scale(uint64(p.settings.D)).AsVec().
-									Dot(state.Y.Row(index)).(math.Polynomial))
-						}).Sum().(math.Polynomial)
-					return Lmu(mu, tmp, invk)
-				}).
-				Sum()
-			return sum.Add(p.publicParams.B.Row(p.settings.NumSplits).Copy().AsVec().Dot(state.Y.Row(i)))
+			add := p.publicParams.B.Row(p.settings.NumSplits).Copy().AsVec().Dot(state.Y.Row(i))
+			sum := LmuSumOuter(p.settings.K, p.settings.NumSplits, invk, state.Sig,
+				func(mu int, v int, j int) math.Polynomial {
+					index := (i - v) % state.Y.Rows()
+					return state.Sig.Permute(int64(v),
+						p.publicParams.B.Row(j).Copy().
+							Mul(psi.Element(mu, j)).
+							Scale(uint64(p.settings.D)).AsVec().
+							Dot(state.Y.Row(index)).(math.Polynomial))
+				})
+			return sum.Add(add)
 		})
 	// Update the state.
 	state.V = v

@@ -66,9 +66,45 @@ func SplitInvNTT(lhs math.IntVector, numSplits, d int, baseRing *ring.Ring) math
 		}).AsPolyVec()
 }
 
-// Lmu computes the value of the function Lmu(L) = 1/K * X^mu * TrL
-func Lmu(mu int, TrL math.Polynomial, invk *math.ModInt) math.Polynomial {
+// Lmu computes the value of the function Lmu(L) = 1/k * X^mu * TrL
+func Lmu(mu int, invk uint64, TrL math.Polynomial) math.Polynomial {
 	return TrL.Copy().(math.Polynomial).
 		RRot(mu).
-		Scale(invk.Uint64()).(math.Polynomial)
+		Scale(invk).(math.Polynomial)
+}
+
+// LmuSum computes the value of the function \sum_{mu=0}^{k-1} (1/k) * X^mu * [ \sum_{v=0}^{k-1} sig^v (f(mu, v)) ]
+func LmuSum(k int, invk uint64, sig math.Automorphism, f func(int, int) math.Polynomial) math.Polynomial {
+	return math.NewVectorFromSize(k).Populate(
+		func(mu int) math.RingElement {
+			tmp := math.NewVectorFromSize(k).Populate(
+				func(v int) math.RingElement {
+					return sig.Permute(int64(v), f(mu, v))
+				}).Sum().(math.Polynomial)
+			return Lmu(mu, invk, tmp)
+		}).Sum().(math.Polynomial)
+}
+
+// LmuSumOuter computes the value of the function \sum_{mu=0}^{k-1} (1/k) * X^mu * \sum_{v=0}^{k-1} \sum_{j=0}^{numSplits-1} sig^v (f(mu, v, j))
+func LmuSumOuter(k, numSplits int, invk uint64, sig math.Automorphism, f func(int, int, int) math.Polynomial) math.Polynomial {
+	return math.NewVectorFromSize(k).Populate(
+		func(mu int) math.RingElement {
+			tmp := math.NewVectorFromSize(k).Populate(
+				func(v int) math.RingElement {
+					return math.NewVectorFromSize(numSplits).Populate(
+						func(j int) math.RingElement {
+							return sig.Permute(int64(v), f(mu, v, j))
+						}).Sum().(math.Polynomial)
+				}).Sum().(math.Polynomial)
+			return Lmu(mu, invk, tmp)
+		}).Sum().(math.Polynomial)
+}
+
+// CommitmentSum computes \sum_{i=0}^{k-1} \sum_{j=0}^{numSplits} alpha_{i*numSplits+j} sig^{-i} (f(i, j))
+func CommitmentSum(k, numSplits int, alpha math.PolyVector, sig math.Automorphism, f func(int, int) math.Polynomial) math.Polynomial {
+	return math.NewMatrixFromDimensions(k, numSplits).Populate(
+		func(i int, j int) math.RingElement {
+			index := (i*numSplits + j) % alpha.Length()
+			return sig.Permute(int64(-i), f(i, j)).Mul(alpha.Element(index))
+		}).Sum().(math.Polynomial)
 }

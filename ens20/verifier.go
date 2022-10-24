@@ -72,18 +72,15 @@ func (vf Verifier) Verify(z math.Matrix, state VerifierState) bool {
 		})
 	f2 := vf.publicParams.B.Row(vf.settings.NumSplits + 1).Copy().AsVec().Dot(z.Row(0)).Add(state.c.Copy().Mul(state.T.Element(vf.settings.NumSplits + 1)).Neg())
 	f3 := vf.publicParams.B.Row(vf.settings.NumSplits + 2).Copy().AsVec().Dot(z.Row(0)).Add(state.c.Copy().Mul(state.T.Element(vf.settings.NumSplits + 2)).Neg())
-	vTest := math.NewMatrixFromDimensions(vf.settings.K, vf.settings.NumSplits).Populate(
-		func(i int, j int) math.RingElement {
+	vTest := CommitmentSum(vf.settings.K, vf.settings.NumSplits, state.Alpha.AsPolyVec(), state.Sig,
+		func(i int, j int) math.Polynomial {
 			p1 := f.Element(i, j).Copy()
 			p2 := f.Element(i, j).Copy().Add(state.Sig.Permute(int64(i), state.c))
 			p3 := f.Element(i, j).Copy().Add(state.Sig.Permute(int64(i), state.c).Neg())
-			return state.Alpha.Element(vf.settings.NumSplits*i + j).Copy().Mul(state.Sig.Permute(int64(-i), p1.Mul(p2).Mul(p3).(math.Polynomial)))
-		}).Sum().
-		Add(f2).
-		Add(state.c.Copy().Mul(f3)).
-		Eq(state.v)
-	if !vTest {
-		fmt.Println("Verifier.Verify: Failed relation check")
+			return p1.Mul(p2).Mul(p3).(math.Polynomial)
+		}).Add(f2).Add(f3.Copy().Mul(state.c))
+	if !vTest.Eq(state.v) {
+		fmt.Println("Verifier.Verify: Failed relation check: ", vTest.String()+" != "+state.v.String())
 		//return false
 	}
 	hTest := math.NewVectorFromSize(vf.settings.K).All(
@@ -102,47 +99,38 @@ func (vf Verifier) Verify(z math.Matrix, state VerifierState) bool {
 			return SplitInvNTT(tmp, vf.settings.NumSplits, vf.settings.D, vf.settings.BaseRing).AsVec()
 		})
 	// Reconstruct the commitment to f
-	invk := math.NewModInt(int64(vf.settings.K), vf.settings.Q).Inv()
-	tao := math.NewVectorFromSize(vf.settings.K).Populate(
-		func(mu int) math.RingElement {
-			tmp := math.NewVectorFromSize(vf.settings.K).Populate(
-				func(v int) math.RingElement {
-					tmp2 := math.NewVectorFromSize(vf.settings.NumSplits).Populate(
-						func(j int) math.RingElement {
-							dec := math.NewOnePolynomial(vf.settings.BaseRing).
-								Scale(vf.publicParams.U.Copy().AsVec().Dot(state.Gamma.Row(mu)).(*math.ModInt).Uint64()).
-								Neg()
-							return psi.Element(mu, j).Copy().
-								Mul(state.T.Element(j)).
-								Scale(uint64(vf.settings.D)).
-								Add(dec)
-						}).Sum()
-					return state.Sig.Permute(int64(v), tmp2.(math.Polynomial))
-				}).Sum().(math.Polynomial)
-			return Lmu(mu, tmp, invk)
-		}).Sum()
+	invk := math.NewModInt(int64(vf.settings.K), vf.settings.Q).Inv().Uint64()
+	tao := LmuSum(vf.settings.K, invk, state.Sig,
+		func(mu int, v int) math.Polynomial {
+			// (u * gamma_mu)
+			mul := vf.publicParams.U.Copy().AsVec().Dot(state.Gamma.Row(mu)).(*math.ModInt).Uint64()
+			dec := math.NewOnePolynomial(vf.settings.BaseRing).Scale(mul).Neg()
+			sum := math.NewVectorFromSize(vf.settings.NumSplits).Populate(
+				func(j int) math.RingElement {
+					return psi.Element(mu, j).Copy().
+						Mul(state.T.Element(j)).(math.Polynomial).
+						Scale(uint64(vf.settings.D))
+				}).Sum()
+			return sum.Add(dec).(math.Polynomial)
+		})
 	// Verify the function commitment
-	functionCommitmentTest := math.NewVectorFromSize(vf.settings.K).Populate(
+	functionCommitment := math.NewVectorFromSize(vf.settings.K).Populate(
 		func(i int) math.RingElement {
-			return math.NewVectorFromSize(vf.settings.K).Populate(
-				func(mu int) math.RingElement {
-					tmp := math.NewVectorFromSize(vf.settings.K).Populate(
-						func(v int) math.RingElement {
-							tmp2 := math.NewVectorFromSize(vf.settings.NumSplits).Populate(
-								func(j int) math.RingElement {
-									index := (i - v) % vf.settings.K
-									return psi.Element(mu, j).Copy().
-										Scale(uint64(vf.settings.D)).
-										Mul(vf.publicParams.B.Row(j).Copy().AsVec().Dot(z.Row(index)))
-								}).Sum()
-							return state.Sig.Permute(int64(v), tmp2.(math.Polynomial))
-						}).Sum().(math.Polynomial)
-					return Lmu(mu, tmp, invk)
-				}).Sum().Add(vf.publicParams.B.Row(vf.settings.NumSplits + 1).Copy().AsVec().Dot(z.Row(i)))
-		}).All(
+			outerSum := LmuSumOuter(vf.settings.K, vf.settings.NumSplits, invk, state.Sig,
+				func(mu int, v int, j int) math.Polynomial {
+					index := (i - v) % vf.settings.K
+					mul := vf.publicParams.B.Row(j).Copy().AsVec().Dot(z.Row(index))
+					return psi.Element(mu, j).Copy().
+						Scale(uint64(vf.settings.D)).
+						Mul(mul).(math.Polynomial)
+				})
+			add := vf.publicParams.B.Row(vf.settings.NumSplits).Copy().AsVec().Dot(z.Row(i))
+			return outerSum.Add(add)
+		})
+	functionCommitmentTest := functionCommitment.All(
 		func(lhs math.RingElement, i int) bool {
 			rhsAdd := state.Sig.Permute(int64(i), state.c).Mul(
-				tao.Copy().Add(state.T.Element(vf.settings.NumSplits + 1)).Copy().Add(state.h.Neg()))
+				tao.Copy().Add(state.T.Element(vf.settings.NumSplits)).Copy().Add(state.h.Neg()))
 			rhs := state.vp.Element(i).Copy().Add(rhsAdd)
 			return lhs.Eq(rhs)
 		})
