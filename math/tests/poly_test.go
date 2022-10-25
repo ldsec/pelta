@@ -18,7 +18,7 @@ func coeffsAtLevelEqual(coeff1 []uint64, coeff2 []uint64) bool {
 }
 
 // Creates a new polynomial with 0-level coefficients 0, 1, ..., N-1
-func newTestPolynomial() (*math.Polynomial, *ring.Ring) {
+func newTestPolynomial() (math.Polynomial, *ring.Ring) {
 	// Initialize the ring.
 	ringParamDef := bfv.PN13QP218
 	ringParamDef.T = 0x3ee0001
@@ -27,13 +27,13 @@ func newTestPolynomial() (*math.Polynomial, *ring.Ring) {
 	// Create a polynomial with coefficients 0, 1, 2, ..., N-1
 	p0 := math.NewZeroPolynomial(baseRing)
 	for i := 0; i < p0.Ref.N(); i++ {
-		p0.SetCoeff(i, uint64(i))
+		p0.SetCoefficient(i, uint64(i))
 	}
 	return p0, baseRing
 }
 
 // Creates a new polynomial with 0-level coefficients as the given vector.
-func newTestPolynomialFrom(coeffs []uint64) (*math.Polynomial, *ring.Ring) {
+func newTestPolynomialFrom(coeffs []uint64) (math.Polynomial, *ring.Ring) {
 	// Initialize the ring.
 	ringParamDef := bfv.PN13QP218
 	ringParamDef.T = 0x3ee0001
@@ -41,7 +41,7 @@ func newTestPolynomialFrom(coeffs []uint64) (*math.Polynomial, *ring.Ring) {
 	baseRing := ringParams.RingQP().RingQ
 	p0 := math.NewZeroPolynomial(baseRing)
 	for i := 0; i < len(coeffs); i++ {
-		p0.SetCoeff(i, coeffs[i])
+		p0.SetCoefficient(i, coeffs[i])
 	}
 	return p0, baseRing
 }
