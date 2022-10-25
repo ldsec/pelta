@@ -31,16 +31,19 @@ func (p Polynomial) Copy() RingElement {
 	return Polynomial{p.Ref.CopyNew(), p.BaseRing}
 }
 
+// Add adds a polynomial to this polynomial, and returns itself.
 func (p Polynomial) Add(q RingElement) RingElement {
 	p.BaseRing.Add(p.Ref, q.(Polynomial).Ref, p.Ref)
 	p.BaseRing.Reduce(p.Ref, p.Ref)
 	return p
 }
 
+// Sub subtracts a polynomial from this polynomial, and returns itself.
 func (p Polynomial) Sub(q RingElement) RingElement {
 	return p.Add(q.Copy().Neg())
 }
 
+// Mul multiplies a polynomial with this polynomial, and returns itself.
 func (p Polynomial) Mul(q RingElement) RingElement {
 	p.NTT()
 	q.(Polynomial).NTT()
@@ -75,6 +78,8 @@ func (p Polynomial) Scale(factor uint64) RingElement {
 	return p
 }
 
+// Pow takes the exponentiation of this polynomial, returning itself.
+// Warning: Unoptimized & slow
 func (p Polynomial) Pow(exp uint64) RingElement {
 	if exp == 0 {
 		return NewOnePolynomial(p.BaseRing)
@@ -134,11 +139,12 @@ func (p Polynomial) One() RingElement {
 }
 
 // SetCoefficient updates the coefficient at the given index `i` and propagates the update through the levels.
-func (p Polynomial) SetCoefficient(i int, newValue uint64) {
+func (p Polynomial) SetCoefficient(i int, newValue uint64) Polynomial {
 	for lvl := 0; lvl <= p.Ref.Level(); lvl++ {
 		p.Ref.Coeffs[lvl][i] = newValue
 	}
 	p.BaseRing.Reduce(p.Ref, p.Ref)
+	return p
 }
 
 // LRot performs a left rotation on the coefficients by the given positive amount in-place.
@@ -165,44 +171,4 @@ func (p Polynomial) String() string {
 		strs = append(strs, fmt.Sprint(e))
 	}
 	return fmt.Sprint("Poly{" + strings.Join(strs[:5], ", ") + ", ..., " + strings.Join(strs[len(strs)-5:], ", ") + "}")
-}
-
-// Automorphism represents a Galois automorphism over polynomial rings.
-type Automorphism struct {
-	g int64 // The automorphism generator
-	d int64 // Polynomial degree
-}
-
-func NewAutomorphism(d, k int64) Automorphism {
-	return Automorphism{2*d/k + 1, d}
-}
-
-// Permute returns the permutation (sig^exp)(p) s.t. X^i => X^(i*(g^exp)) where g = (2N/k + 1)
-func (aut Automorphism) Permute(exp int64, p Polynomial) Polynomial {
-	var gen uint64
-	if exp >= 0 {
-		gen = aut.Exponent(uint64(exp))
-	} else {
-		// Get the additive inverse of g^exp under mod d => (exp mod d) for exp < 0
-		invExp := big.NewInt(0).Mod(big.NewInt(exp), big.NewInt(aut.d)).Uint64()
-		gen = aut.Exponent(invExp)
-	}
-	// Write the permuted result on out
-	out := NewZeroPolynomial(p.BaseRing)
-	p.BaseRing.Permute(p.Ref, gen, out.Ref)
-	p.BaseRing.Reduce(out.Ref, out.Ref)
-	return out
-}
-
-// Trace calculates the trace of this polynomial: sig^0(p) + sig^1(p) + ... + sig^k(p) and returns the result.
-func (aut Automorphism) Trace(p Polynomial, k int) Polynomial {
-	return NewVectorFromSize(k).Populate(
-		func(v int) RingElement {
-			return aut.Permute(int64(v), p)
-		}).Sum().(Polynomial)
-}
-
-// Exponent computes the exponent multiplier g^exp
-func (aut Automorphism) Exponent(exp uint64) uint64 {
-	return big.NewInt(0).Exp(big.NewInt(aut.g), big.NewInt(int64(exp)), nil).Uint64()
 }

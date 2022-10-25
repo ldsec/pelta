@@ -71,7 +71,7 @@ func SplitInvNTT(lhs math.IntVector, numSplits int, baseRing *ring.Ring) math.Po
 // Lmu computes the value of the function Lmu(L) = 1/k * X^mu * TrL in-place.
 func Lmu(mu int, invk uint64, TrL math.Polynomial) math.Polynomial {
 	// Compute X^mu
-	xmu := math.NewOnePolynomial(TrL.BaseRing).RRot(1).Pow(uint64(mu))
+	xmu := math.NewZeroPolynomial(TrL.BaseRing).SetCoefficient(mu, 1)
 	return TrL.Mul(xmu).Scale(invk).(math.Polynomial)
 }
 
@@ -79,10 +79,10 @@ func Lmu(mu int, invk uint64, TrL math.Polynomial) math.Polynomial {
 func LmuSum(k int, invk uint64, sig math.Automorphism, f func(int, int) math.Polynomial) math.Polynomial {
 	return math.NewVectorFromSize(k).Populate(
 		func(mu int) math.RingElement {
-			tmp := math.NewVectorFromSize(k).Populate(
-				func(v int) math.RingElement {
-					return sig.Permute(int64(v), f(mu, v))
-				}).Sum().(math.Polynomial)
+			tmp := sig.Trace(
+				func(v int) math.Polynomial {
+					return f(mu, v)
+				}, k)
 			return Lmu(mu, invk, tmp)
 		}).Sum().(math.Polynomial)
 }
