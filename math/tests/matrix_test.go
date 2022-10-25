@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-func TestDimensions(t *testing.T) {
+func TestMatrixDimensions(t *testing.T) {
 	M := math.NewMatrixFromDimensions(5, 3).Populate(
 		func(row int, col int) math.RingElement {
 			return math.NewModInt(int64(col+1), big.NewInt(100))
@@ -16,7 +16,7 @@ func TestDimensions(t *testing.T) {
 	}
 }
 
-func TestMulVec(t *testing.T) {
+func TestMatrixMulVec(t *testing.T) {
 	// ((1 2 3) (1 2 3) (1 2 3) (1 2 3) (1 2 3)) * (1 1 1) = (6 6 6 6 6)
 	M := math.NewMatrixFromDimensions(5, 3).Populate(
 		func(row int, col int) math.RingElement {
@@ -39,7 +39,7 @@ func TestMulVec(t *testing.T) {
 	}
 }
 
-func TestTranspose(t *testing.T) {
+func TestMatrixTranspose(t *testing.T) {
 	// ((1 1 1) (2 2 2) (3 3 3) (4 4 4))^T = ((1 2 3 4) (1 2 3 4) (1 2 3 4))
 	M := math.NewMatrixFromDimensions(4, 3).Populate(
 		func(row int, col int) math.RingElement {

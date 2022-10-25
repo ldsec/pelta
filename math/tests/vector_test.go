@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-func TestDotProduct(t *testing.T) {
+func TestMatrixDotProduct(t *testing.T) {
 	// (1 2 3) * (1 2 3) = 14
 	v1 := math.NewVectorFromSize(3).Populate(
 		func(i int) math.RingElement {

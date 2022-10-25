@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-func TestFromCoords(t *testing.T) {
+func TestCoordMapFromCoords(t *testing.T) {
 	coordMap := math.NewCoordMap([]int{4, 5, 7})
 	if coordMap.FromCoords([]int{0, 0, 0}) != 0 {
 		t.Errorf("CoordMap.FromCoords: (0, 0, 0) => 0")
@@ -31,7 +31,7 @@ func TestFromCoords(t *testing.T) {
 	}
 }
 
-func TestToCoords(t *testing.T) {
+func TestCoordMapToCoords(t *testing.T) {
 	coordMap := math.NewCoordMap([]int{4, 5, 7})
 	if !reflect.DeepEqual([]int{0, 0, 0}, coordMap.ToCoords(0)) {
 		t.Errorf("CoordMap.ToCoords: (0, 0, 0) <= 0")
@@ -56,7 +56,7 @@ func TestToCoords(t *testing.T) {
 	}
 }
 
-func TestReversed(t *testing.T) {
+func TestCoordMapReversed(t *testing.T) {
 	coordMap := math.NewCoordMap([]int{4, 5, 7})
 	rev := coordMap.Reversed()
 	if !reflect.DeepEqual(rev.Dims, []int{7, 5, 4}) {

@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-func TestPopulate(t *testing.T) {
+func TestMultiArrayPopulate(t *testing.T) {
 	cm := math.NewCoordMap([]int{3, 5, 9, 7})
 	m := math.NewMultiArray(cm.Dims).
 		Populate(func(dims []int) math.RingElement {
@@ -20,7 +20,7 @@ func TestPopulate(t *testing.T) {
 	}
 }
 
-func TestSetElements(t *testing.T) {
+func TestMultiArraySetElements(t *testing.T) {
 	cm := math.NewCoordMap([]int{6, 6})
 	m := math.NewMultiArray(cm.Dims).
 		Populate(func(dims []int) math.RingElement {
@@ -43,7 +43,7 @@ func TestSetElements(t *testing.T) {
 	}
 }
 
-func TestAdd(t *testing.T) {
+func TestMultiArrayAdd(t *testing.T) {
 	cm := math.NewCoordMap([]int{6, 6})
 	m1 := math.NewMultiArray(cm.Dims).
 		Populate(func(dims []int) math.RingElement {
@@ -63,7 +63,7 @@ func TestAdd(t *testing.T) {
 	}
 }
 
-func TestMul(t *testing.T) {
+func TestMultiArrayMul(t *testing.T) {
 	cm := math.NewCoordMap([]int{6, 6})
 	m1 := math.NewMultiArray(cm.Dims).
 		Populate(func(dims []int) math.RingElement {
@@ -78,7 +78,7 @@ func TestMul(t *testing.T) {
 	}
 }
 
-func TestHadamard(t *testing.T) {
+func TestMultiArrayHadamard(t *testing.T) {
 	cm := math.NewCoordMap([]int{6, 6})
 	m1 := math.NewMultiArray(cm.Dims).
 		Populate(func(dims []int) math.RingElement {
@@ -98,7 +98,7 @@ func TestHadamard(t *testing.T) {
 	}
 }
 
-func TestNeg(t *testing.T) {
+func TestMultiArrayNeg(t *testing.T) {
 	cm := math.NewCoordMap([]int{6, 6})
 	m := math.NewMultiArray(cm.Dims).
 		Populate(func(dims []int) math.RingElement {
@@ -113,7 +113,7 @@ func TestNeg(t *testing.T) {
 	}
 }
 
-func TestSum(t *testing.T) {
+func TestMultiArraySum(t *testing.T) {
 	cm := math.NewCoordMap([]int{2, 2})
 	m := math.NewMultiArray(cm.Dims).
 		Populate(func(dims []int) math.RingElement {
@@ -125,7 +125,7 @@ func TestSum(t *testing.T) {
 	}
 }
 
-func TestProduct(t *testing.T) {
+func TestMultiArrayProduct(t *testing.T) {
 	cm := math.NewCoordMap([]int{2, 2})
 	m := math.NewMultiArray(cm.Dims).
 		Populate(func(dims []int) math.RingElement {
@@ -137,7 +137,7 @@ func TestProduct(t *testing.T) {
 	}
 }
 
-func TestForEach(t *testing.T) {
+func TestMultiArrayForEach(t *testing.T) {
 	cm := math.NewCoordMap([]int{2, 2})
 	m := math.NewMultiArray(cm.Dims).Populate(func(dims []int) math.RingElement {
 		index := cm.FromCoords(dims)
@@ -151,7 +151,7 @@ func TestForEach(t *testing.T) {
 	})
 }
 
-func TestMap(t *testing.T) {
+func TestMultiArrayMap(t *testing.T) {
 	cm := math.NewCoordMap([]int{2, 2})
 	m := math.NewMultiArray(cm.Dims).Populate(func(dims []int) math.RingElement {
 		index := cm.FromCoords(dims)
