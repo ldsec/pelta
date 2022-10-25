@@ -37,11 +37,14 @@ func (p Polynomial) Add(q RingElement) RingElement {
 	return p
 }
 
+func (p Polynomial) Sub(q RingElement) RingElement {
+	return p.Add(q.Copy().Neg())
+}
+
 func (p Polynomial) Mul(q RingElement) RingElement {
 	p.NTT()
 	q.(Polynomial).NTT()
 	p.BaseRing.MulCoeffs(p.Ref, q.(Polynomial).Ref, p.Ref)
-	p.BaseRing.Reduce(p.Ref, p.Ref)
 	p.InvNTT()
 	q.(Polynomial).InvNTT()
 	return p
@@ -52,7 +55,6 @@ func (p Polynomial) MulAdd(q RingElement, out RingElement) {
 	q.(Polynomial).NTT()
 	out.(Polynomial).NTT()
 	p.BaseRing.MulCoeffsAndAdd(p.Ref, q.(Polynomial).Ref, out.(Polynomial).Ref)
-	p.BaseRing.Reduce(out.(Polynomial).Ref, out.(Polynomial).Ref)
 	p.InvNTT()
 	q.(Polynomial).InvNTT()
 	out.(Polynomial).InvNTT()
@@ -67,8 +69,9 @@ func (p Polynomial) Neg() RingElement {
 // Scale scales the coefficients of the polynomial in-place.
 // p => p = c*p
 func (p Polynomial) Scale(factor uint64) RingElement {
+	p.NTT()
 	p.BaseRing.MulScalar(p.Ref, factor, p.Ref)
-	p.BaseRing.Reduce(p.Ref, p.Ref)
+	p.InvNTT()
 	return p
 }
 
@@ -161,7 +164,7 @@ func (p Polynomial) String() string {
 	for _, e := range p.Ref.Coeffs[0] {
 		strs = append(strs, fmt.Sprint(e))
 	}
-	return fmt.Sprint("Poly{" + strings.Join(strs[:10], ", ") + ", ...}")
+	return fmt.Sprint("Poly{" + strings.Join(strs[:5], ", ") + ", ..., " + strings.Join(strs[len(strs)-5:], ", ") + "}")
 }
 
 // Automorphism represents a Galois automorphism over polynomial rings.

@@ -59,18 +59,20 @@ func NewRandomIntegerMatrix(rows int, cols int, mod *big.Int) math.Matrix {
 }
 
 // SplitInvNTT returns the x that satisfies lhs = NTT(x_1) || NTT(x_2) || ... || NTT(x_numSplits)
-func SplitInvNTT(lhs math.IntVector, numSplits, d int, baseRing *ring.Ring) math.PolyVector {
+func SplitInvNTT(lhs math.IntVector, numSplits int, baseRing *ring.Ring) math.PolyVector {
+	lhsLen := lhs.Length()
+	splitLen := lhsLen / numSplits
 	return math.NewVectorFromSize(numSplits).Populate(
 		func(i int) math.RingElement {
-			return lhs.Slice(i*d, (i+1)*d).Copy().AsVec().AsIntVec().ToPoly(baseRing).InvNTT()
+			return lhs.Slice(i*splitLen, (i+1)*splitLen).Copy().AsVec().AsIntVec().ToPoly(baseRing).InvNTT()
 		}).AsPolyVec()
 }
 
-// Lmu computes the value of the function Lmu(L) = 1/k * X^mu * TrL
+// Lmu computes the value of the function Lmu(L) = 1/k * X^mu * TrL in-place.
 func Lmu(mu int, invk uint64, TrL math.Polynomial) math.Polynomial {
-	return TrL.Copy().(math.Polynomial).
-		RRot(mu).
-		Scale(invk).(math.Polynomial)
+	// Compute X^mu
+	xmu := math.NewOnePolynomial(TrL.BaseRing).RRot(1).Pow(uint64(mu))
+	return TrL.Mul(xmu).Scale(invk).(math.Polynomial)
 }
 
 // LmuSum computes the value of the function \sum_{mu=0}^{k-1} (1/k) * X^mu * [ \sum_{v=0}^{k-1} sig^v (f(mu, v)) ]
@@ -89,12 +91,9 @@ func LmuSum(k int, invk uint64, sig math.Automorphism, f func(int, int) math.Pol
 func LmuSumOuter(k, numSplits int, invk uint64, sig math.Automorphism, f func(int, int, int) math.Polynomial) math.Polynomial {
 	return math.NewVectorFromSize(k).Populate(
 		func(mu int) math.RingElement {
-			tmp := math.NewVectorFromSize(k).Populate(
-				func(v int) math.RingElement {
-					return math.NewVectorFromSize(numSplits).Populate(
-						func(j int) math.RingElement {
-							return sig.Permute(int64(v), f(mu, v, j))
-						}).Sum().(math.Polynomial)
+			tmp := math.NewMatrixFromDimensions(k, numSplits).Populate(
+				func(v, j int) math.RingElement {
+					return sig.Permute(int64(v), f(mu, v, j))
 				}).Sum().(math.Polynomial)
 			return Lmu(mu, invk, tmp)
 		}).Sum().(math.Polynomial)

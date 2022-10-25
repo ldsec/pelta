@@ -27,3 +27,11 @@ func abs(a int) int {
 	}
 	return a
 }
+
+func Mod(a int, n int) int {
+	a %= n
+	if a < 0 {
+		a += n
+	}
+	return a
+}

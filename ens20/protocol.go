@@ -9,7 +9,7 @@ import (
 // Settings represents the protocol settings.
 type Settings struct {
 	D               int      // deg(X^D + 1), a power of two
-	Q               *big.Int // Rational prime mod
+	Q               *big.Int // Prime mod
 	M               int      // # rows
 	N               int      // # cols, must be >= D
 	K               int      // Repetition rate

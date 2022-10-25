@@ -5,6 +5,7 @@ import "fmt"
 // RingElement represents an element of a ring.
 type RingElement interface {
 	Add(q RingElement) RingElement         // p = p + q
+	Sub(q RingElement) RingElement         // p = p - q
 	Mul(q RingElement) RingElement         // p = p * q
 	MulAdd(q RingElement, out RingElement) // out += p * q
 	Neg() RingElement                      // p = -p

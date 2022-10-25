@@ -103,11 +103,11 @@ func TestNeg(t *testing.T) {
 	m := math.NewMultiArray(cm.Dims).
 		Populate(func(dims []int) math.RingElement {
 			index := cm.FromCoords(dims)
-			return math.NewModInt(int64(index), big.NewInt(1000))
+			return math.NewModInt(int64(index+1), big.NewInt(1000))
 		})
 	m.Neg()
 	for i := 0; i < len(m.Array); i++ {
-		if m.Array[i].(*math.ModInt).Value.Cmp(big.NewInt(int64(-i))) != 0 {
+		if m.Array[i].(*math.ModInt).Value.Cmp(big.NewInt(int64(1000-i-1))) != 0 {
 			t.Errorf("MultiArray.Hadamard")
 		}
 	}

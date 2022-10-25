@@ -33,7 +33,7 @@ func NewProver(publicParams PublicParams, settings Settings) Prover {
 // Returns t0, t, w
 func (p Prover) CommitToMessage(s math.IntVector) (math.Vector, math.Vector, math.Matrix, ProverState) {
 	// Split the message into polynomial space.
-	sHat := SplitInvNTT(s, p.settings.NumSplits, p.settings.D, p.settings.BaseRing)
+	sHat := SplitInvNTT(s, p.settings.NumSplits, p.settings.BaseRing)
 	// Sample a polynomial g s.t. g_0=...=g_{K-1}=0
 	g := NewRandomPolynomial(p.settings.BaseRing, p.settings.UniformSampler)
 	for i := 0; i < p.settings.K; i++ {
@@ -75,7 +75,7 @@ func (p Prover) CommitToRelation(alpha math.Vector, gamma math.Matrix, state Pro
 			return state.SHat.Element(j).Copy().(math.Polynomial).
 				Scale(uint64(3)).
 				Mul(tmp).(math.Polynomial)
-		}).Neg()
+		})
 	sum2 := CommitmentSum(p.settings.K, p.settings.NumSplits, alpha.AsPolyVec(), state.Sig,
 		func(i int, j int) math.Polynomial {
 			// b[j] * y[i]
@@ -86,7 +86,7 @@ func (p Prover) CommitToRelation(alpha math.Vector, gamma math.Matrix, state Pro
 				Scale(3)
 			// (3s[j]^2-1) (b[j] * y[i])
 			return tmp2.
-				Add(math.NewOnePolynomial(p.settings.BaseRing).Neg()).
+				Sub(math.NewOnePolynomial(p.settings.BaseRing)).
 				Mul(tmp).(math.Polynomial)
 		})
 	sum3 := CommitmentSum(p.settings.K, p.settings.NumSplits, alpha.AsPolyVec(), state.Sig,
@@ -100,7 +100,7 @@ func (p Prover) CommitToRelation(alpha math.Vector, gamma math.Matrix, state Pro
 		p.publicParams.B.Row(p.settings.NumSplits+1).Copy().AsVec().
 			Dot(state.R).
 			Add(p.publicParams.B.Row(p.settings.NumSplits+2).Copy().AsVec().Dot(state.Y.Row(0))).
-			Add(sum1))
+			Sub(sum1))
 	state.T.SetElementAtIndex(p.settings.NumSplits+2,
 		p.publicParams.B.Row(p.settings.NumSplits+2).Copy().AsVec().
 			Dot(state.R).
@@ -112,36 +112,36 @@ func (p Prover) CommitToRelation(alpha math.Vector, gamma math.Matrix, state Pro
 	psi := math.NewMatrixFromDimensions(p.settings.K, p.settings.NumSplits).PopulateRows(
 		func(mu int) math.Vector {
 			tmp := At.Copy().AsMatrix().MulVec(gamma.Row(mu)).AsIntVec()
-			return SplitInvNTT(tmp, p.settings.NumSplits, p.settings.D, p.settings.BaseRing).AsVec()
+			return SplitInvNTT(tmp, p.settings.NumSplits, p.settings.BaseRing).AsVec()
 		})
 	invk := math.NewModInt(int64(p.settings.K), p.settings.Q).Inv().Uint64()
 	gMask := LmuSum(p.settings.K, invk, state.Sig,
 		func(mu int, v int) math.Polynomial {
 			// (u * gamma_mu)
 			mul := p.publicParams.U.Copy().AsVec().Dot(gamma.Row(mu)).(*math.ModInt).Uint64()
-			dec := math.NewOnePolynomial(p.settings.BaseRing).Scale(mul).Neg()
+			dec := math.NewOnePolynomial(p.settings.BaseRing).Scale(mul)
 			sum := math.NewVectorFromSize(p.settings.NumSplits).Populate(
 				func(j int) math.RingElement {
 					return psi.Element(mu, j).Copy().
 						Mul(state.SHat.Element(j)).(math.Polynomial).
 						Scale(uint64(p.settings.D))
 				}).Sum()
-			return sum.Add(dec).(math.Polynomial)
+			return sum.Sub(dec).(math.Polynomial)
 		})
 	h := state.G.Copy().Add(gMask).(math.Polynomial)
 	vp := math.NewVectorFromSize(p.settings.K).Populate(
 		func(i int) math.RingElement {
+			// b[n/d] * y[i]
 			add := p.publicParams.B.Row(p.settings.NumSplits).Copy().AsVec().Dot(state.Y.Row(i))
-			sum := LmuSumOuter(p.settings.K, p.settings.NumSplits, invk, state.Sig,
+			outerSum := LmuSumOuter(p.settings.K, p.settings.NumSplits, invk, state.Sig,
 				func(mu int, v int, j int) math.Polynomial {
-					index := (i - v) % state.Y.Rows()
-					return state.Sig.Permute(int64(v),
-						p.publicParams.B.Row(j).Copy().
-							Mul(psi.Element(mu, j)).
-							Scale(uint64(p.settings.D)).AsVec().
-							Dot(state.Y.Row(index)).(math.Polynomial))
+					index := math.Mod(i-v, p.settings.K)
+					return p.publicParams.B.Row(j).Copy().
+						Mul(psi.Element(mu, j)).
+						Scale(uint64(p.settings.D)).AsVec().
+						Dot(state.Y.Row(index)).(math.Polynomial)
 				})
-			return sum.Add(add)
+			return outerSum.Add(add)
 		})
 	// Update the state.
 	state.V = v
@@ -160,6 +160,7 @@ func (p Prover) MaskedOpening(c math.Polynomial, state ProverState) (math.Matrix
 			sigc := state.Sig.Permute(int64(i), c)
 			return state.Y.Row(i).Copy().Add(state.R.Copy().Mul(sigc)).AsVec()
 		})
+
 	//normInBounds := z.AllRows(
 	//	func(zi math.Vector, i int) bool {
 	//		infNorm := zi.AsPolyVec().InfNorm(p.settings.Q)

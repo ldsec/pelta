@@ -33,6 +33,10 @@ func (m *ModInt) Add(q RingElement) RingElement {
 	return m
 }
 
+func (m *ModInt) Sub(q RingElement) RingElement {
+	return m.Add(q.Copy().Neg())
+}
+
 func (m *ModInt) Mul(q RingElement) RingElement {
 	m.Value.Mul(&m.Value, &q.(*ModInt).Value).Mod(&m.Value, &m.Modulus)
 	return m
