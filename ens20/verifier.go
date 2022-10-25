@@ -81,7 +81,7 @@ func (vf Verifier) Verify(z math.Matrix, state VerifierState) bool {
 		}).Add(f2).Add(f3.Copy().Mul(state.c))
 	vTestResult := vTest.Eq(state.v)
 	if !vTestResult {
-		fmt.Println("Verifier.Verify: Failed relation check: ", vTest.String()+" != "+state.v.String())
+		fmt.Println("Verifier.Verify: Failed relation check")
 		return false
 	}
 	hTestResult := math.NewVectorFromSize(vf.settings.K).All(
