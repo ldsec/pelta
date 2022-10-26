@@ -64,7 +64,7 @@ func SplitInvNTT(lhs math.IntVector, numSplits int, baseRing *ring.Ring) math.Po
 	splitLen := lhsLen / numSplits
 	return math.NewVectorFromSize(numSplits).Populate(
 		func(i int) math.RingElement {
-			return lhs.Slice(i*splitLen, (i+1)*splitLen).Copy().AsVec().AsIntVec().ToPoly(baseRing).InvNTT()
+			return lhs.Slice(i*splitLen, (i+1)*splitLen).Copy().AsVec().AsIntVec().ToPoly(baseRing, true).InvNTT()
 		}).AsPolyVec()
 }
 

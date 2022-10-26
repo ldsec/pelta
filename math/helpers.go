@@ -9,10 +9,6 @@ import (
 
 // Helpers for specialized polynomial constructs
 
-type PolyArray struct {
-	*MultiArray
-}
-
 type IntVector struct {
 	Vector
 }
@@ -21,32 +17,15 @@ type PolyVector struct {
 	Vector
 }
 
-// NTT converts the vector of polynomials into the NTT space in-place.
-// p_i => NTT(p_i)
-func (m PolyArray) NTT() PolyArray {
-	m.ForEach(func(el RingElement, _ []int) {
-		el.(Polynomial).NTT()
-	})
-	return m
-}
-
-// InvNTT converts the vector of NTT polynomials back into the poly space in-place.
-// p_i => InvNTT(p_i)
-func (m PolyArray) InvNTT() PolyArray {
-	m.ForEach(func(el RingElement, _ []int) {
-		el.(Polynomial).InvNTT()
-	})
-	return m
-}
-
 // ToPoly converts a coefficient vector into a polynomial and returns it.
 // Warning: The coefficients must fit into an uint64!
-func (v IntVector) ToPoly(baseRing *ring.Ring) Polynomial {
+func (v IntVector) ToPoly(baseRing *ring.Ring, isNTT bool) Polynomial {
 	p := NewZeroPolynomial(baseRing)
 	for i := 0; i < v.Length(); i++ {
 		c := v.Element(i).(*ModInt).Value.Uint64()
 		p.SetCoefficient(i, c)
 	}
+	p.Ref.IsNTT = isNTT
 	return p
 }
 
@@ -111,16 +90,6 @@ func (m *MultiArray) AsVec() Vector {
 		panic(fmt.Sprintf("AsVec: Cannot convert a multi-array with %d dimensions into a vector", m.Dimensions()))
 	}
 	return Vector{m}
-}
-
-// AsPolyArray converts to the representation of a multi array of polynomials.
-// Allows calling specialized methods.
-func (m *MultiArray) AsPolyArray() PolyArray {
-	// assert type
-	if _, ok := m.ElementAtIndex(0).(Polynomial); !ok {
-		panic(fmt.Sprintf("AsPolyArray: Not a polynomial array"))
-	}
-	return PolyArray{m}
 }
 
 // AsIntVec converts to the representation of a mod int.

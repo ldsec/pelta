@@ -24,6 +24,7 @@ func (aut Automorphism) Permute(exp int64, p Polynomial) Polynomial {
 	}
 	// Write the permuted result on out
 	out := NewZeroPolynomial(p.BaseRing)
+	p.InvNTT()
 	p.BaseRing.Permute(p.Ref, gen, out.Ref)
 	p.BaseRing.Reduce(out.Ref, out.Ref)
 	return out

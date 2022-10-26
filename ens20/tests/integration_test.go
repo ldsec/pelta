@@ -7,6 +7,7 @@ import (
 	"github.com/tuneinsight/lattigo/v4/ring"
 	"github.com/tuneinsight/lattigo/v4/utils"
 	"testing"
+	"time"
 )
 
 func getSimpleTestSettings() ens20.Settings {
@@ -62,9 +63,9 @@ func ExecuteAndTestCorrectness(outputPrefix string, tst *testing.T, s math.IntVe
 }
 
 func ExecuteAndTestSoundness(outputPrefix string, tst *testing.T, s math.IntVector, settings ens20.Settings, params ens20.PublicParams) {
-	perturb := func(v *math.MultiArray) {
+	perturbArray := func(v *math.MultiArray) {
 		v.ForEach(func(el math.RingElement, _ []int) {
-			el.(*math.Polynomial).RRot(2)
+			el.(math.Polynomial).RRot(2)
 		})
 	}
 	prover := ens20.NewProver(params, settings)
@@ -74,7 +75,7 @@ func ExecuteAndTestSoundness(outputPrefix string, tst *testing.T, s math.IntVect
 		// Commit to the message.
 		t0, t, w, ps := prover.CommitToMessage(s)
 		// Perturb t.
-		perturb(t.MultiArray)
+		perturbArray(t.MultiArray)
 		alpha, gamma, vs := verifier.CreateMasks(t0, t, w)
 		t, h, v, vp, ps := prover.CommitToRelation(alpha, gamma, ps)
 		c, vs := verifier.CreateChallenge(t, h, v, vp, vs)
@@ -92,7 +93,7 @@ func ExecuteAndTestSoundness(outputPrefix string, tst *testing.T, s math.IntVect
 		// Commit to the message.
 		t0, t, w, ps := prover.CommitToMessage(s)
 		// Perturb t0.
-		perturb(t0.MultiArray)
+		perturbArray(t0.MultiArray)
 		alpha, gamma, vs := verifier.CreateMasks(t0, t, w)
 		t, h, v, vp, ps := prover.CommitToRelation(alpha, gamma, ps)
 		c, vs := verifier.CreateChallenge(t, h, v, vp, vs)
@@ -110,7 +111,7 @@ func ExecuteAndTestSoundness(outputPrefix string, tst *testing.T, s math.IntVect
 		// Commit to the message.
 		t0, t, w, ps := prover.CommitToMessage(s)
 		// Perturb w.
-		perturb(w.MultiArray)
+		perturbArray(w.MultiArray)
 		alpha, gamma, vs := verifier.CreateMasks(t0, t, w)
 		t, h, v, vp, ps := prover.CommitToRelation(alpha, gamma, ps)
 		c, vs := verifier.CreateChallenge(t, h, v, vp, vs)
@@ -130,7 +131,7 @@ func ExecuteAndTestSoundness(outputPrefix string, tst *testing.T, s math.IntVect
 		alpha, gamma, vs := verifier.CreateMasks(t0, t, w)
 		t, h, v, vp, ps := prover.CommitToRelation(alpha, gamma, ps)
 		// Perturb vp.
-		perturb(vp.MultiArray)
+		perturbArray(vp.MultiArray)
 		c, vs := verifier.CreateChallenge(t, h, v, vp, vs)
 		// Recreate the masked opening until it satisfies the shortness condition.
 		z, ps, err := prover.MaskedOpening(c, ps)
@@ -205,7 +206,7 @@ func ExecuteAndTestSoundness(outputPrefix string, tst *testing.T, s math.IntVect
 		// Recreate the masked opening until it satisfies the shortness condition.
 		z, ps, err := prover.MaskedOpening(c, ps)
 		// Perturb c.
-		perturb(z.MultiArray)
+		perturbArray(z.MultiArray)
 		for err != nil {
 			z, ps, err = prover.MaskedOpening(c, ps)
 		}
@@ -226,15 +227,15 @@ func TestConsistency(tst *testing.T) {
 	t0, t, w, ps := prover.CommitToMessage(s)
 	// Check consistency in the state.
 	if !ps.T0.Eq(t0.MultiArray) || !ps.T.Eq(t.MultiArray) || !ps.W.Eq(w.MultiArray) {
-		tst.Errorf("TestSimple: CommitToMessage state consistency check failed")
+		tst.Errorf("TestConsistency: CommitToMessage state consistency check failed")
 	}
 	// Check t0.
 	if !t0.Eq(params.B0.Copy().AsMatrix().MulVec(ps.R).MultiArray) {
-		tst.Errorf("TestSimple: CommitToMessage t0 != B0 * r")
+		tst.Errorf("TestConsistency: CommitToMessage t0 != B0 * r")
 	}
 	// Check t[n/d].
 	if !t.Element(settings.NumSplits).Copy().Add(params.B.Row(settings.NumSplits).Copy().AsVec().Dot(ps.R).Neg()).Eq(ps.G) {
-		tst.Errorf("TestSimple: CommitToMessage t[n/d] != b[n/d] * r + g")
+		tst.Errorf("TestConsistency: CommitToMessage t[n/d] != b[n/d] * r + g")
 	}
 	_, _, _ = verifier.CreateMasks(t0, t, w)
 	// TODO: add more consistency checks
@@ -288,4 +289,23 @@ func TestMultiSplitMultiReplication(tst *testing.T) {
 	ExecuteAndTestCorrectness("Simple", tst, s, settings, params)
 	tst.Log("Checking soundness...")
 	ExecuteAndTestSoundness("Simple", tst, s, settings, params)
+}
+
+func TestPerformance(tst *testing.T) {
+	settings := getSimpleTestSettings()
+	tst.Log("Checking correctness...")
+	for k := 1; k < 4; k++ {
+		settings.K = k
+		for _, numSplits := range []int{1, 4, 10, 20, 30, 50} {
+			tst.Logf("Executing for k=%d, n/d=%d...", k, numSplits)
+			settings.N = settings.D * numSplits
+			settings.NumSplits = numSplits
+			s := ens20.NewRandomTernaryIntegerVector(settings.N, settings.Q)
+			params := ens20.NewDummyPublicParameters(s, settings)
+			t0 := time.Now()
+			ExecuteAndTestCorrectness("Simple", tst, s, settings, params)
+			dt := time.Since(t0).Milliseconds()
+			tst.Logf(">> Took %d ms", dt)
+		}
+	}
 }

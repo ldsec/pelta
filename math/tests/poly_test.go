@@ -60,7 +60,7 @@ func TestPolyLRot(t *testing.T) {
 	for lShiftAmount := 0; lShiftAmount < maxShift; lShiftAmount++ {
 		//fmt.Printf("Poly.LRot=%d\n", lShiftAmount)
 		// Copy the polynomial.
-		p := p0.Copy().(*math.Polynomial)
+		p := p0.Copy().(math.Polynomial)
 		p.LRot(lShiftAmount)
 		// Create the expected coefficients
 		shiftedCoeffs := make([]uint64, p.Ref.N())
@@ -82,7 +82,7 @@ func TestPolyRRot(t *testing.T) {
 	for rShiftAmount := 0; rShiftAmount < maxShift; rShiftAmount++ {
 		//fmt.Printf("Poly.LRot=%d\n", rShiftAmount)
 		// Copy the polynomial.
-		p := p0.Copy().(*math.Polynomial)
+		p := p0.Copy().(math.Polynomial)
 		p.RRot(rShiftAmount)
 		// Create the expected coefficients
 		shiftedCoeffs := make([]uint64, p.Ref.N())
@@ -144,14 +144,54 @@ func TestPolyMul(t *testing.T) {
 
 func TestPolyPow(t *testing.T) {
 	// 19x^4 + 2x^2 + 3x + 6
-	p0, _ := newTestPolynomialFrom([]uint64{6, 3, 2, 0, 19})
+	p0, baseRing := newTestPolynomialFrom([]uint64{6, 3, 2, 0, 19})
+	if !p0.Copy().Pow(0).Eq(math.NewOnePolynomial(baseRing)) {
+		t.Errorf("Poly.Pow: 0")
+	}
+	if !p0.Copy().Pow(1).Eq(p0) {
+		t.Errorf("Poly.Pow: 1")
+	}
 	// 361x^8 + 76x^6 + 114x^5 + 232x^4 + 12x^3 + 33x^2 + 36x + 36
-	p0_2, _ := newTestPolynomialFrom([]uint64{36, 36, 33, 12, 232, 114, 76, 0, 361})
-	if !p0.Copy().Pow(2).Eq(p0_2) {
-		t.Errorf("Poly.Pow")
+	p0Squared, _ := newTestPolynomialFrom([]uint64{36, 36, 33, 12, 232, 114, 76, 0, 361})
+	if !p0.Copy().Pow(2).Eq(p0Squared) {
+		t.Errorf("Poly.Pow: 2")
+	}
+	// 6859x^12 + 2166x^10 + 3249x^9 + 6726x^8 + 684x^7 + 1889x^6 + 2088x^5 + 2178x^4 + 243x^3 + 378x^2 + 324x + 216
+	p0Cubed, _ := newTestPolynomialFrom([]uint64{216, 324, 378, 243, 2178, 2088, 1889, 684, 6726, 3249, 2166, 0, 6859})
+	if !p0.Copy().Pow(3).Eq(p0Cubed) {
+		t.Errorf("Poly.Pow: 3")
 	}
 }
 
-func TestTrace(t *testing.T) {
-	// TODO
+func TestPolyNTTFlag(t *testing.T) {
+	p0, _ := newTestPolynomial()
+	p1 := p0.Copy().(math.Polynomial)
+	if p0.Ref.IsNTT || p1.Ref.IsNTT {
+		t.Errorf("Poly.NTTFlag")
+	}
+	p0.Mul(p1)
+	if !p0.Ref.IsNTT || !p1.Ref.IsNTT {
+		t.Errorf("Poly.NTTFlag")
+	}
+	p0.InvNTT()
+	p1.InvNTT()
+	p2 := p1.Copy().(math.Polynomial)
+	if p0.Ref.IsNTT || p1.Ref.IsNTT || p2.Ref.IsNTT {
+		t.Errorf("Poly.NTTFlag")
+	}
+	p0.MulAdd(p1, p2)
+	if !p0.Ref.IsNTT || !p1.Ref.IsNTT || !p2.Ref.IsNTT {
+		t.Errorf("Poly.NTTFlag")
+	}
+}
+
+func TestCombination(t *testing.T) {
+	p0, baseRing := newTestPolynomial()
+	p1 := p0.Copy().(math.Polynomial)
+	sig := math.NewAutomorphism(int64(baseRing.N), int64(4))
+	r := sig.Permute(int64(-7), sig.Permute(int64(7), p0.Copy().Mul(p1).(math.Polynomial)))
+	sig.Permute(int64(-7), p1)
+	if !r.Eq(p0.Mul(p1)) {
+		t.Errorf("Poly.Combination")
+	}
 }
