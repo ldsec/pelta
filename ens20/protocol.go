@@ -17,11 +17,15 @@ type Settings struct {
 	Lambda          int      // M-LWE dimension
 	Kappa           int      // M-SIS dimension
 	Beta            float64  // Norm limit
-	NumSplits       int      // N / D
 	BaseRing        *ring.Ring
 	UniformSampler  PolySampler
 	TernarySampler  PolySampler
 	GaussianSampler PolySampler
+}
+
+// NumSplits returns n/d
+func (s Settings) NumSplits() int {
+	return s.N / s.D
 }
 
 // PublicParams contains the public parameters of the protocol.
@@ -36,7 +40,7 @@ func NewDummyPublicParameters(s math.IntVector, settings Settings) PublicParams 
 	A := NewRandomIntegerMatrix(settings.M, settings.N, settings.Q)
 	// As = U
 	u := A.MulVec(s.AsVec()).AsIntVec()
-	bSize := settings.NumSplits + 3
+	bSize := settings.NumSplits() + 3
 	B0 := NewRandomPolynomialMatrix(settings.Kappa, settings.Lambda+settings.Kappa+bSize, settings.BaseRing, settings.UniformSampler)
 	b := NewRandomPolynomialMatrix(bSize, B0.Cols(), settings.BaseRing, settings.UniformSampler)
 

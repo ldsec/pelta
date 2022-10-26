@@ -39,8 +39,6 @@ func getSimpleTestSettings() ens20.Settings {
 	settings.UniformSampler = ring.NewUniformSampler(prng, settings.BaseRing)
 	settings.TernarySampler = ring.NewTernarySampler(prng, settings.BaseRing, 1.0/3.0, false)
 	settings.GaussianSampler = ring.NewGaussianSampler(prng, settings.BaseRing, ringParams.Sigma(), settings.Delta1)
-	// Inputs
-	settings.NumSplits = settings.N / settings.D
 	return settings
 }
 
@@ -234,7 +232,7 @@ func TestConsistency(tst *testing.T) {
 		tst.Errorf("TestConsistency: CommitToMessage t0 != B0 * r")
 	}
 	// Check t[n/d].
-	if !t.Element(settings.NumSplits).Copy().Add(params.B.Row(settings.NumSplits).Copy().AsVec().Dot(ps.R).Neg()).Eq(ps.G) {
+	if !t.Element(settings.NumSplits()).Copy().Add(params.B.Row(settings.NumSplits()).Copy().AsVec().Dot(ps.R).Neg()).Eq(ps.G) {
 		tst.Errorf("TestConsistency: CommitToMessage t[n/d] != b[n/d] * r + g")
 	}
 	_, _, _ = verifier.CreateMasks(t0, t, w)
@@ -267,7 +265,6 @@ func TestMultiReplication(tst *testing.T) {
 func TestMultiSplit(tst *testing.T) {
 	settings := getSimpleTestSettings()
 	settings.N *= 4
-	settings.NumSplits = 4
 	s := ens20.NewRandomTernaryIntegerVector(settings.N, settings.Q)
 	//fmt.Println("s = " + s.String())
 	params := ens20.NewDummyPublicParameters(s, settings)
@@ -280,7 +277,6 @@ func TestMultiSplit(tst *testing.T) {
 func TestMultiSplitMultiReplication(tst *testing.T) {
 	settings := getSimpleTestSettings()
 	settings.N *= 4
-	settings.NumSplits = 4
 	settings.K = 4
 	s := ens20.NewRandomTernaryIntegerVector(settings.N, settings.Q)
 	//fmt.Println("s = " + s.String())
@@ -294,12 +290,11 @@ func TestMultiSplitMultiReplication(tst *testing.T) {
 func TestPerformance(tst *testing.T) {
 	settings := getSimpleTestSettings()
 	tst.Log("Checking correctness...")
-	for k := 1; k < 4; k++ {
+	for _, k := range []int{1, 2, 4} {
 		settings.K = k
-		for _, numSplits := range []int{1, 4, 10, 20, 30, 50} {
-			tst.Logf("Executing for k=%d, n/d=%d...", k, numSplits)
+		for _, numSplits := range []int{1, 5, 10, 20, 30} {
 			settings.N = settings.D * numSplits
-			settings.NumSplits = numSplits
+			tst.Logf("Executing for k=%d, n/d=%d...", k, settings.NumSplits())
 			s := ens20.NewRandomTernaryIntegerVector(settings.N, settings.Q)
 			params := ens20.NewDummyPublicParameters(s, settings)
 			t0 := time.Now()

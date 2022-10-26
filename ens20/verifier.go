@@ -30,7 +30,7 @@ func NewVerifier(publicParams PublicParams, settings Settings) Verifier {
 // CreateMasks returns the relation masks in response to a message commitment.
 // Returns alpha, gamma
 func (vf Verifier) CreateMasks(t0 math.Vector, t math.Vector, w math.Matrix) (math.Vector, math.Matrix, VerifierState) {
-	alpha := NewRandomPolynomialVector(vf.settings.K*vf.settings.NumSplits, vf.settings.BaseRing, vf.settings.UniformSampler)
+	alpha := NewRandomPolynomialVector(vf.settings.K*vf.settings.NumSplits(), vf.settings.BaseRing, vf.settings.UniformSampler)
 	gamma := NewRandomIntegerMatrix(vf.settings.K, vf.settings.M, vf.settings.Q)
 	// Create the automorphism.
 	sig := math.NewAutomorphism(int64(vf.settings.D), int64(vf.settings.K))
@@ -65,14 +65,14 @@ func (vf Verifier) Verify(z math.Matrix, state VerifierState) bool {
 		return false
 	}
 	// Constructing f
-	f := math.NewMatrixFromDimensions(vf.settings.K, vf.settings.NumSplits).Populate(
+	f := math.NewMatrixFromDimensions(vf.settings.K, vf.settings.NumSplits()).Populate(
 		func(i int, j int) math.RingElement {
 			tmp := state.T.Element(j).Copy().Mul(state.Sig.Permute(int64(i), state.c))
 			return vf.publicParams.B.Row(j).Copy().AsVec().Dot(z.Row(i)).Sub(tmp)
 		})
-	f2 := vf.publicParams.B.Row(vf.settings.NumSplits + 1).Copy().AsVec().Dot(z.Row(0)).Sub(state.c.Copy().Mul(state.T.Element(vf.settings.NumSplits + 1)))
-	f3 := vf.publicParams.B.Row(vf.settings.NumSplits + 2).Copy().AsVec().Dot(z.Row(0)).Sub(state.c.Copy().Mul(state.T.Element(vf.settings.NumSplits + 2)))
-	vTest := CommitmentSum(vf.settings.K, vf.settings.NumSplits, state.Alpha.AsPolyVec(), state.Sig,
+	f2 := vf.publicParams.B.Row(vf.settings.NumSplits() + 1).Copy().AsVec().Dot(z.Row(0)).Sub(state.c.Copy().Mul(state.T.Element(vf.settings.NumSplits() + 1)))
+	f3 := vf.publicParams.B.Row(vf.settings.NumSplits() + 2).Copy().AsVec().Dot(z.Row(0)).Sub(state.c.Copy().Mul(state.T.Element(vf.settings.NumSplits() + 2)))
+	vTest := CommitmentSum(vf.settings.K, vf.settings.NumSplits(), state.Alpha.AsPolyVec(), state.Sig,
 		func(i int, j int) math.Polynomial {
 			p1 := f.Element(i, j).Copy()
 			p2 := f.Element(i, j).Copy().Add(state.Sig.Permute(int64(i), state.c))
@@ -94,10 +94,10 @@ func (vf Verifier) Verify(z math.Matrix, state VerifierState) bool {
 	}
 	// Reconstruct psi
 	At := vf.publicParams.A.Copy().AsMatrix().Transpose()
-	psi := math.NewMatrixFromDimensions(vf.settings.K, vf.settings.NumSplits).PopulateRows(
+	psi := math.NewMatrixFromDimensions(vf.settings.K, vf.settings.NumSplits()).PopulateRows(
 		func(mu int) math.Vector {
 			tmp := At.Copy().AsMatrix().MulVec(state.Gamma.Row(mu)).AsIntVec()
-			return SplitInvNTT(tmp, vf.settings.NumSplits, vf.settings.BaseRing).AsVec()
+			return SplitInvNTT(tmp, vf.settings.NumSplits(), vf.settings.BaseRing).AsVec()
 		})
 	// Reconstruct the commitment to f
 	invk := math.NewModInt(int64(vf.settings.K), vf.settings.Q).Inv().Uint64()
@@ -107,7 +107,7 @@ func (vf Verifier) Verify(z math.Matrix, state VerifierState) bool {
 			mul := vf.publicParams.U.Copy().AsVec().Dot(state.Gamma.Row(mu)).(*math.ModInt).Uint64()
 			dec := math.NewOnePolynomial(vf.settings.BaseRing).Scale(mul)
 			// \sum_{j=0}^{numSplits-1} (d*psi[mu][j] * (b[j] * z[i - v]))
-			sum := math.NewVectorFromSize(vf.settings.NumSplits).Populate(
+			sum := math.NewVectorFromSize(vf.settings.NumSplits()).Populate(
 				func(j int) math.RingElement {
 					return psi.Element(mu, j).Copy().
 						Mul(state.T.Element(j)).(math.Polynomial).
@@ -119,8 +119,8 @@ func (vf Verifier) Verify(z math.Matrix, state VerifierState) bool {
 	functionCommitmentTest := math.NewVectorFromSize(vf.settings.K).Populate(
 		func(i int) math.RingElement {
 			// (b[n/d] * z[i])
-			add := vf.publicParams.B.Row(vf.settings.NumSplits).Copy().AsVec().Dot(z.Row(i))
-			outerSum := LmuSumOuter(vf.settings.K, vf.settings.NumSplits, invk, state.Sig,
+			add := vf.publicParams.B.Row(vf.settings.NumSplits()).Copy().AsVec().Dot(z.Row(i))
+			outerSum := LmuSumOuter(vf.settings.K, vf.settings.NumSplits(), invk, state.Sig,
 				func(mu int, v int, j int) math.Polynomial {
 					index := math.Mod(i-v, vf.settings.K)
 					// b[j] * z[i - v]
@@ -136,13 +136,13 @@ func (vf Verifier) Verify(z math.Matrix, state VerifierState) bool {
 	//functionCommitmentTestRHS := math.NewVectorFromSize(vf.settings.K).Populate(
 	//	func(i int) math.RingElement {
 	//		rhsAdd := state.Sig.Permute(int64(i), state.c).Mul(
-	//			tao.Copy().Add(state.T.Element(vf.settings.NumSplits)).Sub(state.h))
+	//			tao.Copy().Add(state.T.Element(vf.settings.NumSplits())).Sub(state.h))
 	//		return state.vp.Element(i).Copy().Add(rhsAdd)
 	//	})
 	functionCommitmentTestResult := functionCommitmentTest.All(
 		func(lhs math.RingElement, i int) bool {
 			rhsAdd := state.Sig.Permute(int64(i), state.c).Mul(
-				tao.Copy().Add(state.T.Element(vf.settings.NumSplits)).Sub(state.h))
+				tao.Copy().Add(state.T.Element(vf.settings.NumSplits())).Sub(state.h))
 			rhs := state.vp.Element(i).Copy().Add(rhsAdd)
 			return lhs.Eq(rhs)
 		})

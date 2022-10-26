@@ -129,11 +129,10 @@ func (m *MultiArray) Copy() *MultiArray {
 	for i := 0; i < len(array); i++ {
 		array[i] = m.Array[i].Copy()
 	}
-	new := MultiArray{
+	return &MultiArray{
 		coordMap: m.coordMap.Copied(),
 		Array:    array,
 	}
-	return &new
 }
 
 // Scale scales every element by the given factor.

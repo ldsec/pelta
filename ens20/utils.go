@@ -101,9 +101,13 @@ func LmuSumOuter(k, numSplits int, invk uint64, sig math.Automorphism, f func(in
 
 // CommitmentSum computes \sum_{i=0}^{k-1} \sum_{j=0}^{numSplits} alpha_{i*numSplits+j} sig^{-i} (f(i, j))
 func CommitmentSum(k, numSplits int, alpha math.PolyVector, sig math.Automorphism, f func(int, int) math.Polynomial) math.Polynomial {
-	return math.NewMatrixFromDimensions(k, numSplits).Populate(
+	unscaled := math.NewMatrixFromDimensions(k, numSplits).Populate(
 		func(i int, j int) math.RingElement {
+			return sig.Permute(int64(-i), f(i, j))
+		})
+	return unscaled.Map(
+		func(el math.RingElement, i int, j int) math.RingElement {
 			index := (i*numSplits + j) % alpha.Length()
-			return sig.Permute(int64(-i), f(i, j)).Mul(alpha.Element(index))
+			return el.Mul(alpha.Element(index))
 		}).Sum().(math.Polynomial)
 }

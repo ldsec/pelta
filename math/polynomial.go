@@ -28,10 +28,13 @@ func (p Polynomial) Copy() RingElement {
 
 // Add adds a polynomial to this polynomial, and returns itself.
 func (p Polynomial) Add(q RingElement) RingElement {
-	p.InvNTT()
-	q.(Polynomial).InvNTT()
+	// Make sure both polynomials are in the same domain.
+	if q.(Polynomial).Ref.IsNTT {
+		p.NTT()
+	} else {
+		p.InvNTT()
+	}
 	p.BaseRing.Add(p.Ref, q.(Polynomial).Ref, p.Ref)
-	//p.BaseRing.Reduce(p.Ref, p.Ref)
 	return p
 }
 
@@ -45,8 +48,6 @@ func (p Polynomial) Mul(q RingElement) RingElement {
 	p.NTT()
 	q.(Polynomial).NTT()
 	p.BaseRing.MulCoeffs(p.Ref, q.(Polynomial).Ref, p.Ref)
-	//p.InvNTT()
-	//q.(Polynomial).InvNTT()
 	return p
 }
 
@@ -55,9 +56,6 @@ func (p Polynomial) MulAdd(q RingElement, out RingElement) {
 	q.(Polynomial).NTT()
 	out.(Polynomial).NTT()
 	p.BaseRing.MulCoeffsAndAdd(p.Ref, q.(Polynomial).Ref, out.(Polynomial).Ref)
-	//p.InvNTT()
-	//q.(Polynomial).InvNTT()
-	//out.(Polynomial).InvNTT()
 }
 
 func (p Polynomial) Neg() RingElement {
@@ -82,18 +80,19 @@ func (p Polynomial) Pow(exp uint64) RingElement {
 	for i := uint64(1); i < exp; i++ {
 		out.Mul(p)
 	}
-	//p.BaseRing.Reduce(out.(Polynomial).Ref, out.(Polynomial).Ref)
 	p.Ref.CopyValues(out.(Polynomial).Ref)
 	return p
 }
 
-func (p Polynomial) Eq(el RingElement) bool {
-	p.InvNTT()
-	p.BaseRing.Reduce(p.Ref, p.Ref)
-	el.(Polynomial).InvNTT()
-	el.(Polynomial).BaseRing.Reduce(el.(Polynomial).Ref, el.(Polynomial).Ref)
+func (p Polynomial) Eq(q RingElement) bool {
+	// Make sure both polynomials are in the same domain.
+	if q.(Polynomial).Ref.IsNTT {
+		p.NTT()
+	} else {
+		p.InvNTT()
+	}
 	for i, c1 := range p.Ref.Coeffs[0] {
-		if c1 != el.(Polynomial).Ref.Coeffs[0][i] {
+		if c1 != q.(Polynomial).Ref.Coeffs[0][i] {
 			return false
 		}
 	}
@@ -113,7 +112,7 @@ func (p Polynomial) One() RingElement {
 	return p
 }
 
-// NTT converts into the NTT space in-place.
+// NTT converts into the NTT domain in-place only if it is in the polynomial domain.
 // p => p = NTT(p)
 func (p Polynomial) NTT() Polynomial {
 	if !p.Ref.IsNTT {
@@ -123,7 +122,7 @@ func (p Polynomial) NTT() Polynomial {
 	return p
 }
 
-// InvNTT converts back into the poly space in-place.
+// InvNTT converts back into the poly domain in-place only if it is in the NTT domain.
 // p => p = InvNTT(p)
 func (p Polynomial) InvNTT() Polynomial {
 	if p.Ref.IsNTT {
@@ -147,13 +146,14 @@ func (p Polynomial) RRot(amount int) Polynomial {
 	return p
 }
 
-// SetCoefficient updates the coefficient at the given index `i` and propagates the update through the levels.
+// SetCoefficient updates the coefficient at the given index `i` on all levels.
+// Warning: Reduction should be done separately!
 func (p Polynomial) SetCoefficient(i int, newValue uint64) Polynomial {
 	p.InvNTT()
 	for lvl := 0; lvl <= p.Ref.Level(); lvl++ {
 		p.Ref.Coeffs[lvl][i] = newValue
 	}
-	p.BaseRing.Reduce(p.Ref, p.Ref)
+	//p.BaseRing.Reduce(p.Ref, p.Ref)
 	return p
 }
 

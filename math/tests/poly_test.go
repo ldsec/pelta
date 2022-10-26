@@ -46,14 +46,6 @@ func newTestPolynomialFrom(coeffs []uint64) (math.Polynomial, *ring.Ring) {
 	return p0, baseRing
 }
 
-func TestNTT(t *testing.T) {
-	// TODO
-}
-
-func TestInvNTT(t *testing.T) {
-	// TODO
-}
-
 func TestPolyLRot(t *testing.T) {
 	p0, _ := newTestPolynomial()
 	maxShift := p0.Ref.N()
@@ -161,6 +153,14 @@ func TestPolyPow(t *testing.T) {
 	if !p0.Copy().Pow(3).Eq(p0Cubed) {
 		t.Errorf("Poly.Pow: 3")
 	}
+}
+
+func TestPolyAdd(t *testing.T) {
+	//p0, _ := newTestPolynomial()
+	//p1 := p0.Copy().(math.Polynomial)
+	//p0.Add(p1)
+	//t.Logf(p1.String())
+	//t.Logf(p0.String())
 }
 
 func TestPolyNTTFlag(t *testing.T) {
