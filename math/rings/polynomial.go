@@ -1,7 +1,8 @@
-package math
+package rings
 
 import (
 	"fmt"
+	"github.com/ldsec/codeBase/commitment/math/algebra"
 	"github.com/tuneinsight/lattigo/v4/ring"
 	"math/big"
 	"strings"
@@ -22,12 +23,12 @@ func NewOnePolynomial(baseRing *ring.Ring) Polynomial {
 }
 
 // Copy copies the polynomial.
-func (p Polynomial) Copy() RingElement {
+func (p Polynomial) Copy() algebra.Element {
 	return Polynomial{p.Ref.CopyNew(), p.BaseRing}
 }
 
 // Add adds a polynomial to this polynomial, and returns itself.
-func (p Polynomial) Add(q RingElement) RingElement {
+func (p Polynomial) Add(q algebra.Element) algebra.Element {
 	// Make sure both polynomials are in the same domain.
 	if q.(Polynomial).Ref.IsNTT {
 		p.NTT()
@@ -39,40 +40,40 @@ func (p Polynomial) Add(q RingElement) RingElement {
 }
 
 // Sub subtracts a polynomial from this polynomial, and returns itself.
-func (p Polynomial) Sub(q RingElement) RingElement {
+func (p Polynomial) Sub(q algebra.Element) algebra.Element {
 	return p.Add(q.Copy().Neg())
 }
 
 // Mul multiplies a polynomial with this polynomial, and returns itself.
-func (p Polynomial) Mul(q RingElement) RingElement {
+func (p Polynomial) Mul(q algebra.Element) algebra.Element {
 	p.NTT()
 	q.(Polynomial).NTT()
 	p.BaseRing.MulCoeffs(p.Ref, q.(Polynomial).Ref, p.Ref)
 	return p
 }
 
-func (p Polynomial) MulAdd(q RingElement, out RingElement) {
+func (p Polynomial) MulAdd(q algebra.Element, out algebra.Element) {
 	p.NTT()
 	q.(Polynomial).NTT()
 	out.(Polynomial).NTT()
 	p.BaseRing.MulCoeffsAndAdd(p.Ref, q.(Polynomial).Ref, out.(Polynomial).Ref)
 }
 
-func (p Polynomial) Neg() RingElement {
+func (p Polynomial) Neg() algebra.Element {
 	p.BaseRing.Neg(p.Ref, p.Ref)
 	return p
 }
 
 // Scale scales the coefficients of the polynomial in-place.
 // p => p = c*p
-func (p Polynomial) Scale(factor uint64) RingElement {
+func (p Polynomial) Scale(factor uint64) algebra.Element {
 	p.BaseRing.MulScalar(p.Ref, factor, p.Ref)
 	return p
 }
 
 // Pow takes the exponentiation of this polynomial, returning itself.
 // Warning: Unoptimized & slow
-func (p Polynomial) Pow(exp uint64) RingElement {
+func (p Polynomial) Pow(exp uint64) algebra.Element {
 	if exp == 0 {
 		return NewOnePolynomial(p.BaseRing)
 	}
@@ -84,7 +85,7 @@ func (p Polynomial) Pow(exp uint64) RingElement {
 	return p
 }
 
-func (p Polynomial) Eq(q RingElement) bool {
+func (p Polynomial) Eq(q algebra.Element) bool {
 	// Make sure both polynomials are in the same domain.
 	if q.(Polynomial).Ref.IsNTT {
 		p.NTT()
@@ -100,13 +101,13 @@ func (p Polynomial) Eq(q RingElement) bool {
 }
 
 // Zero sets all the coefficients of this polynomial to zero.
-func (p Polynomial) Zero() RingElement {
+func (p Polynomial) Zero() algebra.Element {
 	p.Ref.Zero()
 	return p
 }
 
 // One sets the first coefficient of this polynomial to one and the remaining to zero.
-func (p Polynomial) One() RingElement {
+func (p Polynomial) One() algebra.Element {
 	p.Zero()
 	p.SetCoefficient(0, 1)
 	return p
@@ -160,11 +161,11 @@ func (p Polynomial) SetCoefficient(i int, newValue uint64) Polynomial {
 // Coeffs returns the vector representation of the zero-level coefficients of this polynomial.
 func (p Polynomial) Coeffs(q *big.Int) IntVector {
 	p.InvNTT()
-	v := make([]RingElement, p.Ref.N())
+	v := make([]algebra.Element, p.Ref.N())
 	for i := 0; i < len(v); i++ {
 		v[i] = NewModInt(int64(p.Ref.Coeffs[0][i]), q)
 	}
-	return NewVectorFromSlice(v).AsIntVec()
+	return NewIntVec(algebra.NewVectorFromSlice(v))
 }
 
 // Coeff returns the ith coefficient.

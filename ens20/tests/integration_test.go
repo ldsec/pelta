@@ -3,6 +3,8 @@ package tests
 import (
 	"github.com/ldsec/codeBase/commitment/ens20"
 	"github.com/ldsec/codeBase/commitment/math"
+	"github.com/ldsec/codeBase/commitment/math/algebra"
+	"github.com/ldsec/codeBase/commitment/math/rings"
 	"github.com/tuneinsight/lattigo/v4/bfv"
 	"github.com/tuneinsight/lattigo/v4/ring"
 	"github.com/tuneinsight/lattigo/v4/utils"
@@ -42,7 +44,7 @@ func getSimpleTestSettings() ens20.Settings {
 	return settings
 }
 
-func ExecuteAndTestCorrectness(outputPrefix string, tst *testing.T, s math.IntVector, settings ens20.Settings, params ens20.PublicParams) {
+func ExecuteAndTestCorrectness(outputPrefix string, tst *testing.T, s rings.IntVector, settings ens20.Settings, params ens20.PublicParams) {
 	prover := ens20.NewProver(params, settings)
 	verifier := ens20.NewVerifier(params, settings)
 	// Commit to the message.
@@ -60,10 +62,10 @@ func ExecuteAndTestCorrectness(outputPrefix string, tst *testing.T, s math.IntVe
 	}
 }
 
-func ExecuteAndTestSoundness(outputPrefix string, tst *testing.T, s math.IntVector, settings ens20.Settings, params ens20.PublicParams) {
-	perturbArray := func(v *math.MultiArray) {
-		v.ForEach(func(el math.RingElement, _ []int) {
-			el.(math.Polynomial).RRot(2)
+func ExecuteAndTestSoundness(outputPrefix string, tst *testing.T, s rings.IntVector, settings ens20.Settings, params ens20.PublicParams) {
+	perturbArray := func(v *algebra.MultiArray) {
+		v.ForEach(func(el algebra.Element, _ []int) {
+			el.(rings.Polynomial).RRot(2)
 		})
 	}
 	prover := ens20.NewProver(params, settings)
@@ -216,7 +218,7 @@ func ExecuteAndTestSoundness(outputPrefix string, tst *testing.T, s math.IntVect
 
 func TestConsistency(tst *testing.T) {
 	settings := getSimpleTestSettings()
-	s := ens20.NewRandomTernaryIntegerVector(settings.N, settings.Q)
+	s := math.NewRandomTernaryIntegerVector(settings.N, settings.Q)
 	//fmt.Println("s = " + s.String())
 	params := ens20.NewDummyPublicParameters(s, settings)
 	prover := ens20.NewProver(params, settings)
@@ -241,7 +243,7 @@ func TestConsistency(tst *testing.T) {
 
 func TestSimple(tst *testing.T) {
 	settings := getSimpleTestSettings()
-	s := ens20.NewRandomTernaryIntegerVector(settings.N, settings.Q)
+	s := math.NewRandomTernaryIntegerVector(settings.N, settings.Q)
 	//fmt.Println("s = " + s.String())
 	params := ens20.NewDummyPublicParameters(s, settings)
 	tst.Log("Checking correctness...")
@@ -253,7 +255,7 @@ func TestSimple(tst *testing.T) {
 func TestMultiReplication(tst *testing.T) {
 	settings := getSimpleTestSettings()
 	settings.K = 4
-	s := ens20.NewRandomTernaryIntegerVector(settings.N, settings.Q)
+	s := math.NewRandomTernaryIntegerVector(settings.N, settings.Q)
 	//fmt.Println("s = " + s.String())
 	params := ens20.NewDummyPublicParameters(s, settings)
 	tst.Log("Checking correctness...")
@@ -265,7 +267,7 @@ func TestMultiReplication(tst *testing.T) {
 func TestMultiSplit(tst *testing.T) {
 	settings := getSimpleTestSettings()
 	settings.N *= 4
-	s := ens20.NewRandomTernaryIntegerVector(settings.N, settings.Q)
+	s := math.NewRandomTernaryIntegerVector(settings.N, settings.Q)
 	//fmt.Println("s = " + s.String())
 	params := ens20.NewDummyPublicParameters(s, settings)
 	tst.Log("Checking correctness...")
@@ -278,7 +280,7 @@ func TestMultiSplitMultiReplication(tst *testing.T) {
 	settings := getSimpleTestSettings()
 	settings.N *= 4
 	settings.K = 4
-	s := ens20.NewRandomTernaryIntegerVector(settings.N, settings.Q)
+	s := math.NewRandomTernaryIntegerVector(settings.N, settings.Q)
 	//fmt.Println("s = " + s.String())
 	params := ens20.NewDummyPublicParameters(s, settings)
 	tst.Log("Checking correctness...")
@@ -295,7 +297,7 @@ func TestPerformance(tst *testing.T) {
 		for _, numSplits := range []int{1, 5, 10, 20, 30} {
 			settings.N = settings.D * numSplits
 			tst.Logf("Executing for k=%d, n/d=%d...", k, settings.NumSplits())
-			s := ens20.NewRandomTernaryIntegerVector(settings.N, settings.Q)
+			s := math.NewRandomTernaryIntegerVector(settings.N, settings.Q)
 			params := ens20.NewDummyPublicParameters(s, settings)
 			t0 := time.Now()
 			ExecuteAndTestCorrectness("Simple", tst, s, settings, params)

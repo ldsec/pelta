@@ -2,6 +2,8 @@ package ens20
 
 import (
 	"github.com/ldsec/codeBase/commitment/math"
+	"github.com/ldsec/codeBase/commitment/math/algebra"
+	"github.com/ldsec/codeBase/commitment/math/rings"
 	"github.com/tuneinsight/lattigo/v4/ring"
 	"math/big"
 )
@@ -18,9 +20,9 @@ type Settings struct {
 	Kappa           int      // M-SIS dimension
 	Beta            float64  // Norm limit
 	BaseRing        *ring.Ring
-	UniformSampler  PolySampler
-	TernarySampler  PolySampler
-	GaussianSampler PolySampler
+	UniformSampler  math.PolySampler
+	TernarySampler  math.PolySampler
+	GaussianSampler math.PolySampler
 }
 
 // NumSplits returns n/d
@@ -30,19 +32,19 @@ func (s Settings) NumSplits() int {
 
 // PublicParams contains the public parameters of the protocol.
 type PublicParams struct {
-	A  math.Matrix
-	U  math.IntVector
-	B0 math.Matrix
-	B  math.Matrix
+	A  algebra.Matrix
+	U  rings.IntVector
+	B0 algebra.Matrix
+	B  algebra.Matrix
 }
 
-func NewDummyPublicParameters(s math.IntVector, settings Settings) PublicParams {
-	A := NewRandomIntegerMatrix(settings.M, settings.N, settings.Q)
+func NewDummyPublicParameters(s rings.IntVector, settings Settings) PublicParams {
+	A := math.NewRandomIntegerMatrix(settings.M, settings.N, settings.Q)
 	// As = U
-	u := A.MulVec(s.AsVec()).AsIntVec()
+	u := rings.NewIntVec(A.MulVec(s.AsVec()))
 	bSize := settings.NumSplits() + 3
-	B0 := NewRandomPolynomialMatrix(settings.Kappa, settings.Lambda+settings.Kappa+bSize, settings.BaseRing, settings.UniformSampler)
-	b := NewRandomPolynomialMatrix(bSize, B0.Cols(), settings.BaseRing, settings.UniformSampler)
+	B0 := math.NewRandomPolynomialMatrix(settings.Kappa, settings.Lambda+settings.Kappa+bSize, settings.BaseRing, settings.UniformSampler)
+	b := math.NewRandomPolynomialMatrix(bSize, B0.Cols(), settings.BaseRing, settings.UniformSampler)
 
 	return PublicParams{
 		A:  A,

@@ -1,4 +1,4 @@
-package math
+package algebra
 
 // CoordMap represents a mapping from a linear space to a multidimensional coordinate space.
 type CoordMap struct {

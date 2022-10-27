@@ -1,4 +1,4 @@
-package math
+package algebra
 
 import (
 	"fmt"
@@ -17,7 +17,7 @@ func NewMatrixFromDimensions(rows int, cols int) Matrix {
 
 // NewMatrixFromSlice constructs a matrix from the given slice.
 // The slice is assumed to be a list of row vectors.
-func NewMatrixFromSlice(array [][]RingElement) Matrix {
+func NewMatrixFromSlice(array [][]Element) Matrix {
 	// Create an empty matrix.
 	rows, cols := len(array), len(array[0])
 	m := NewMatrixFromDimensions(rows, cols)
@@ -30,8 +30,8 @@ func NewMatrixFromSlice(array [][]RingElement) Matrix {
 }
 
 // Populate initializes the elements of this multi array using a given function.
-func (m Matrix) Populate(f func(int, int) RingElement) Matrix {
-	m.MultiArray.Populate(func(coords []int) RingElement {
+func (m Matrix) Populate(f func(int, int) Element) Matrix {
+	m.MultiArray.Populate(func(coords []int) Element {
 		col, row := coords[0], coords[1]
 		return f(row, col)
 	})
@@ -95,7 +95,7 @@ func (m Matrix) Col(col int) Vector {
 	if col >= m.Cols() {
 		panic(fmt.Sprintf("Matrix.Col: Invalid col %d >= %d", col, m.Cols()))
 	}
-	colSlice := make([]RingElement, m.Rows())
+	colSlice := make([]Element, m.Rows())
 	for i := 0; i < m.Rows(); i++ {
 		colSlice[i] = m.Element(i, col)
 	}
@@ -103,12 +103,12 @@ func (m Matrix) Col(col int) Vector {
 }
 
 // Element returns the element at the given position.
-func (m Matrix) Element(row int, col int) RingElement {
+func (m Matrix) Element(row int, col int) Element {
 	return m.ElementAtCoords([]int{col, row})
 }
 
 // SetElement updates the element at the given position.
-func (m Matrix) SetElement(row int, col int, newElement RingElement) {
+func (m Matrix) SetElement(row int, col int, newElement Element) {
 	m.SetElementAtCoords([]int{col, row}, newElement)
 }
 
@@ -138,7 +138,7 @@ func (m Matrix) SetCol(col int, v Vector) {
 func (m Matrix) Transpose() Matrix {
 	// TODO can optimize to use swaps.
 	// Shallow copy the elements in.
-	old := make([]RingElement, m.Length())
+	old := make([]Element, m.Length())
 	for i := 0; i < m.Length(); i++ {
 		old[i] = m.Array[i]
 	}
@@ -157,8 +157,8 @@ func (m Matrix) Transpose() Matrix {
 }
 
 // Map replaces every cell with the output of the given function in-place.
-func (m Matrix) Map(f func(RingElement, int, int) RingElement) Matrix {
-	return m.MultiArray.Map(func(el RingElement, coords []int) RingElement {
+func (m Matrix) Map(f func(Element, int, int) Element) Matrix {
+	return m.MultiArray.Map(func(el Element, coords []int) Element {
 		return f(el, coords[1], coords[0])
 	}).AsMatrix()
 }
@@ -176,8 +176,8 @@ func (m Matrix) MapRows(f func(Vector, int) Vector) Matrix {
 }
 
 // ForEach calls the given function with the contents of each cell.
-func (m Matrix) ForEach(f func(RingElement, int, int)) {
-	m.MultiArray.ForEach(func(el RingElement, coords []int) {
+func (m Matrix) ForEach(f func(Element, int, int)) {
+	m.MultiArray.ForEach(func(el Element, coords []int) {
 		f(el, coords[1], coords[0])
 	})
 }
@@ -211,8 +211,8 @@ func (m Matrix) MulVec(x Vector) Vector {
 }
 
 // All returns true if all the elements return true on the given predicate.
-func (m Matrix) All(pred func(RingElement, int, int) bool) bool {
-	return m.MultiArray.All(func(el RingElement, coords []int) bool {
+func (m Matrix) All(pred func(Element, int, int) bool) bool {
+	return m.MultiArray.All(func(el Element, coords []int) bool {
 		return pred(el, coords[1], coords[0])
 	})
 }
@@ -238,8 +238,8 @@ func (m Matrix) AllCols(pred func(Vector, int) bool) bool {
 }
 
 // Any returns true if some element returns true on the given predicate.
-func (m Matrix) Any(pred func(RingElement, int, int) bool) bool {
-	return m.MultiArray.Any(func(el RingElement, coords []int) bool {
+func (m Matrix) Any(pred func(Element, int, int) bool) bool {
+	return m.MultiArray.Any(func(el Element, coords []int) bool {
 		return pred(el, coords[1], coords[0])
 	})
 }

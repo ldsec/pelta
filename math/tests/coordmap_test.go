@@ -1,13 +1,13 @@
 package tests
 
 import (
-	"github.com/ldsec/codeBase/commitment/math"
+	"github.com/ldsec/codeBase/commitment/math/algebra"
 	"reflect"
 	"testing"
 )
 
 func TestCoordMapFromCoords(t *testing.T) {
-	coordMap := math.NewCoordMap([]int{4, 5, 7})
+	coordMap := algebra.NewCoordMap([]int{4, 5, 7})
 	if coordMap.FromCoords([]int{0, 0, 0}) != 0 {
 		t.Errorf("CoordMap.FromCoords: (0, 0, 0) => 0")
 	}
@@ -32,7 +32,7 @@ func TestCoordMapFromCoords(t *testing.T) {
 }
 
 func TestCoordMapToCoords(t *testing.T) {
-	coordMap := math.NewCoordMap([]int{4, 5, 7})
+	coordMap := algebra.NewCoordMap([]int{4, 5, 7})
 	if !reflect.DeepEqual([]int{0, 0, 0}, coordMap.ToCoords(0)) {
 		t.Errorf("CoordMap.ToCoords: (0, 0, 0) <= 0")
 	}
@@ -57,7 +57,7 @@ func TestCoordMapToCoords(t *testing.T) {
 }
 
 func TestCoordMapReversed(t *testing.T) {
-	coordMap := math.NewCoordMap([]int{4, 5, 7})
+	coordMap := algebra.NewCoordMap([]int{4, 5, 7})
 	rev := coordMap.Reversed()
 	if !reflect.DeepEqual(rev.Dims, []int{7, 5, 4}) {
 		t.Errorf("CoordMap.Reversed: (4, 5, 7) => (7, 5, 4)")

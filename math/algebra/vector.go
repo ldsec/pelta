@@ -1,4 +1,4 @@
-package math
+package algebra
 
 import (
 	"fmt"
@@ -16,7 +16,7 @@ func NewVectorFromSize(dim int) Vector {
 
 // NewVectorFromSlice constructs a new vector from the given slice.
 // Warning: Does not copy the underlying elements.
-func NewVectorFromSlice(elements []RingElement) Vector {
+func NewVectorFromSlice(elements []Element) Vector {
 	a := MultiArray{
 		coordMap: NewCoordMap([]int{len(elements)}),
 		Array:    elements,
@@ -25,7 +25,7 @@ func NewVectorFromSlice(elements []RingElement) Vector {
 }
 
 // Populate initializes the items of this vector using a given function.
-func (v Vector) Populate(f func(int) RingElement) Vector {
+func (v Vector) Populate(f func(int) Element) Vector {
 	for i := 0; i < v.Length(); i++ {
 		v.SetElementAtIndex(i, f(i))
 	}
@@ -33,31 +33,31 @@ func (v Vector) Populate(f func(int) RingElement) Vector {
 }
 
 // Element returns the ith element of this vector.
-func (v Vector) Element(i int) RingElement {
+func (v Vector) Element(i int) Element {
 	return v.ElementAtIndex(i)
 }
 
 // Map replaces every cell with the output of the given function in-place.
-func (v Vector) Map(f func(RingElement, int) RingElement) Vector {
-	return v.MultiArray.Map(func(el RingElement, coords []int) RingElement {
+func (v Vector) Map(f func(Element, int) Element) Vector {
+	return v.MultiArray.Map(func(el Element, coords []int) Element {
 		return f(el, coords[0])
 	}).AsVec()
 }
 
 // ForEach calls the given function with the contents of each cell.
-func (v Vector) ForEach(f func(RingElement, int)) {
-	v.MultiArray.ForEach(func(el RingElement, coords []int) {
+func (v Vector) ForEach(f func(Element, int)) {
+	v.MultiArray.ForEach(func(el Element, coords []int) {
 		f(el, coords[0])
 	})
 }
 
 // Dot performs a dot product of the vectors and returns the result.
-func (v Vector) Dot(b Vector) RingElement {
+func (v Vector) Dot(b Vector) Element {
 	if v.Length() != b.Length() {
 		panic(fmt.Sprintf("Vector.Dot: Different sizes %d != %d", v.Length(), b.Length()))
 	}
 	out := v.ElementAtIndex(0).Copy().Zero()
-	v.ForEach(func(el RingElement, i int) {
+	v.ForEach(func(el Element, i int) {
 		el.MulAdd(b.ElementAtIndex(i), out)
 	})
 	return out
@@ -72,17 +72,31 @@ func (v Vector) Slice(start int, end int) Vector {
 }
 
 // All returns true if all the elements return true on the given predicate.
-func (v Vector) All(pred func(RingElement, int) bool) bool {
-	return v.MultiArray.All(func(el RingElement, coords []int) bool {
+func (v Vector) All(pred func(Element, int) bool) bool {
+	return v.MultiArray.All(func(el Element, coords []int) bool {
 		return pred(el, coords[0])
 	})
 }
 
 // Any returns true if some element returns true on the given predicate.
-func (v Vector) Any(pred func(RingElement, int) bool) bool {
-	return v.MultiArray.Any(func(el RingElement, coords []int) bool {
+func (v Vector) Any(pred func(Element, int) bool) bool {
+	return v.MultiArray.Any(func(el Element, coords []int) bool {
 		return pred(el, coords[0])
 	})
+}
+
+// Diag converts this N-vector into a diagonal NxN matrix.
+func (v Vector) Diag() Matrix {
+	zero := v.Element(0).Copy().Zero()
+	return NewMatrixFromDimensions(v.Length(), v.Length()).PopulateRows(
+		func(i int) Vector {
+			ithRow := NewVectorFromSize(v.Length()).Populate(
+				func(_ int) Element {
+					return zero.Copy()
+				})
+			ithRow.SetElementAtIndex(i, v.Element(i))
+			return ithRow
+		})
 }
 
 // String returns a string representation of the vector.

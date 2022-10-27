@@ -1,27 +1,13 @@
-package math
+package algebra
 
-import "fmt"
-
-// RingElement represents an element of a ring.
-type RingElement interface {
-	Add(q RingElement) RingElement         // p = p + q
-	Sub(q RingElement) RingElement         // p = p - q
-	Mul(q RingElement) RingElement         // p = p * q
-	MulAdd(q RingElement, out RingElement) // out += p * q
-	Neg() RingElement                      // p = -p
-	Pow(exp uint64) RingElement            // p = p^exp
-	Scale(factor uint64) RingElement       // p = factor*p
-	Zero() RingElement                     // Converts into additive identity
-	One() RingElement                      // Converts into multiplicative identity
-	Copy() RingElement                     // Returns a copy of the element
-	Eq(RingElement) bool                   // Returns true if the two elements are equal
-	String() string
-}
+import (
+	"fmt"
+)
 
 // MultiArray represents a multidimensional array of elements.
 type MultiArray struct {
 	coordMap CoordMap
-	Array    []RingElement // Linearized array.
+	Array    []Element // Linearized array.
 }
 
 // NewMultiArray constructs a new empty multi array with the given dimensions.
@@ -31,7 +17,7 @@ func NewMultiArray(dims []int) *MultiArray {
 		totalLength *= dims[i]
 	}
 	// Initialize the underlying Array to nil values.
-	array := make([]RingElement, totalLength)
+	array := make([]Element, totalLength)
 	for i := 0; i < len(array); i++ {
 		array[i] = nil
 	}
@@ -43,7 +29,7 @@ func NewMultiArray(dims []int) *MultiArray {
 }
 
 // Populate initializes the cells of this multi array using a given function.
-func (m *MultiArray) Populate(f func([]int) RingElement) *MultiArray {
+func (m *MultiArray) Populate(f func([]int) Element) *MultiArray {
 	for i := 0; i < m.Length(); i++ {
 		coords := m.coordMap.ToCoords(i)
 		m.Array[i] = f(coords)
@@ -62,13 +48,13 @@ func (m *MultiArray) Length() int {
 }
 
 // ElementAtCoords returns the element at the given coordinates.
-func (m *MultiArray) ElementAtCoords(coords []int) RingElement {
+func (m *MultiArray) ElementAtCoords(coords []int) Element {
 	index := m.coordMap.FromCoords(coords)
 	return m.ElementAtIndex(index)
 }
 
 // ElementAtIndex returns the element at the given linear index.
-func (m *MultiArray) ElementAtIndex(index int) RingElement {
+func (m *MultiArray) ElementAtIndex(index int) Element {
 	if index >= m.Length() {
 		panic(fmt.Sprintf("MultiArray.ElementAtIndex: Index out of bounds %d >= %d", index, m.Length()))
 	}
@@ -76,13 +62,13 @@ func (m *MultiArray) ElementAtIndex(index int) RingElement {
 }
 
 // SetElementAtCoords updates the element at the given coordinates.
-func (m *MultiArray) SetElementAtCoords(coords []int, newElement RingElement) {
+func (m *MultiArray) SetElementAtCoords(coords []int, newElement Element) {
 	index := m.coordMap.FromCoords(coords)
 	m.SetElementAtIndex(index, newElement)
 }
 
 // SetElementAtIndex updates the element at the given linear index.
-func (m *MultiArray) SetElementAtIndex(index int, newElement RingElement) {
+func (m *MultiArray) SetElementAtIndex(index int, newElement Element) {
 	if index >= m.Length() {
 		panic(fmt.Sprintf("MultiArray.SetElementAtIndex: Index out of bounds %d >= %d", index, m.Length()))
 	}
@@ -90,7 +76,7 @@ func (m *MultiArray) SetElementAtIndex(index int, newElement RingElement) {
 }
 
 // SetElements updates the array within the given coordinates. End exclusive.
-func (m *MultiArray) SetElements(startCoords []int, endCoords []int, replacement []RingElement) {
+func (m *MultiArray) SetElements(startCoords []int, endCoords []int, replacement []Element) {
 	// assert startCoords < endCoords
 	startIndex := m.coordMap.FromCoords(startCoords)
 	endIndex := m.coordMap.FromCoords(endCoords)
@@ -105,7 +91,7 @@ func (m *MultiArray) SetElements(startCoords []int, endCoords []int, replacement
 }
 
 // Map maps every cell with as the output given function in-place.
-func (m *MultiArray) Map(f func(RingElement, []int) RingElement) *MultiArray {
+func (m *MultiArray) Map(f func(Element, []int) Element) *MultiArray {
 	for i := 0; i < m.Length(); i++ {
 		coords := m.coordMap.ToCoords(i)
 		// Update the value in-place.
@@ -115,7 +101,7 @@ func (m *MultiArray) Map(f func(RingElement, []int) RingElement) *MultiArray {
 }
 
 // ForEach calls the given function with the contents of each cell.
-func (m *MultiArray) ForEach(f func(RingElement, []int)) {
+func (m *MultiArray) ForEach(f func(Element, []int)) {
 	for i := 0; i < m.Length(); i++ {
 		coords := m.coordMap.ToCoords(i)
 		f(m.Array[i], coords)
@@ -125,7 +111,7 @@ func (m *MultiArray) ForEach(f func(RingElement, []int)) {
 // Copy returns a deep copy of the multi array, where each element is also copied.
 func (m *MultiArray) Copy() *MultiArray {
 	// Create an exact copy of the contents.
-	array := make([]RingElement, m.Length())
+	array := make([]Element, m.Length())
 	for i := 0; i < len(array); i++ {
 		array[i] = m.Array[i].Copy()
 	}
@@ -168,8 +154,8 @@ func (m *MultiArray) Hadamard(q *MultiArray) *MultiArray {
 
 // Mul multiplies the elements with the given element in-place.
 // p, q => p *= q
-func (m *MultiArray) Mul(q RingElement) *MultiArray {
-	m.ForEach(func(el RingElement, _ []int) {
+func (m *MultiArray) Mul(q Element) *MultiArray {
+	m.ForEach(func(el Element, _ []int) {
 		el.Mul(q)
 	})
 	return m
@@ -178,32 +164,32 @@ func (m *MultiArray) Mul(q RingElement) *MultiArray {
 // Neg negates the elements in-place.
 // p_i => -p_i
 func (m *MultiArray) Neg() *MultiArray {
-	m.ForEach(func(el RingElement, _ []int) {
+	m.ForEach(func(el Element, _ []int) {
 		el.Neg()
 	})
 	return m
 }
 
 // Sum sums the polynomials in the array, returning the result.
-func (m *MultiArray) Sum() RingElement {
+func (m *MultiArray) Sum() Element {
 	out := m.Array[0].Copy().Zero()
-	m.ForEach(func(el RingElement, _ []int) {
+	m.ForEach(func(el Element, _ []int) {
 		out.Add(el)
 	})
 	return out
 }
 
 // Product takes the coefficient wise product of all the elements in the array, returning the result.
-func (m *MultiArray) Product() RingElement {
+func (m *MultiArray) Product() Element {
 	out := m.Array[0].Copy().One()
-	m.ForEach(func(el RingElement, _ []int) {
+	m.ForEach(func(el Element, _ []int) {
 		out.Mul(el)
 	})
 	return out
 }
 
 // All returns true if all the elements return true on the given predicate.
-func (m *MultiArray) All(pred func(RingElement, []int) bool) bool {
+func (m *MultiArray) All(pred func(Element, []int) bool) bool {
 	for i := 0; i < m.Length(); i++ {
 		coords := m.coordMap.ToCoords(i)
 		if !pred(m.ElementAtIndex(i), coords) {
@@ -214,7 +200,7 @@ func (m *MultiArray) All(pred func(RingElement, []int) bool) bool {
 }
 
 // Any returns true if some element returns true on the given predicate.
-func (m *MultiArray) Any(pred func(RingElement, []int) bool) bool {
+func (m *MultiArray) Any(pred func(Element, []int) bool) bool {
 	for i := 0; i < m.Length(); i++ {
 		coords := m.coordMap.ToCoords(i)
 		if pred(m.ElementAtIndex(i), coords) {
@@ -226,7 +212,7 @@ func (m *MultiArray) Any(pred func(RingElement, []int) bool) bool {
 
 // Eq returns true if all the elements are the same in the same positions.
 func (m *MultiArray) Eq(other *MultiArray) bool {
-	return m.All(func(el RingElement, coords []int) bool {
+	return m.All(func(el Element, coords []int) bool {
 		return other.ElementAtCoords(coords).Eq(el)
 	})
 }

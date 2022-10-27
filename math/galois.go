@@ -1,6 +1,10 @@
 package math
 
-import "math/big"
+import (
+	"github.com/ldsec/codeBase/commitment/math/algebra"
+	"github.com/ldsec/codeBase/commitment/math/rings"
+	"math/big"
+)
 
 // Automorphism represents a Galois automorphism over polynomial rings.
 type Automorphism struct {
@@ -13,7 +17,7 @@ func NewAutomorphism(d, k int64) Automorphism {
 }
 
 // Permute returns the permutation (sig^exp)(p) s.t. X^i => X^(i*(g^exp)) where g = (2N/k + 1)
-func (aut Automorphism) Permute(exp int64, p Polynomial) Polynomial {
+func (aut Automorphism) Permute(exp int64, p rings.Polynomial) rings.Polynomial {
 	var gen uint64
 	if exp >= 0 {
 		gen = aut.Exponent(uint64(exp))
@@ -23,7 +27,7 @@ func (aut Automorphism) Permute(exp int64, p Polynomial) Polynomial {
 		gen = aut.Exponent(invExp)
 	}
 	// Write the permuted result on out
-	out := NewZeroPolynomial(p.BaseRing)
+	out := rings.NewZeroPolynomial(p.BaseRing)
 	p.InvNTT()
 	p.BaseRing.Permute(p.Ref, gen, out.Ref)
 	p.BaseRing.Reduce(out.Ref, out.Ref)
@@ -31,11 +35,11 @@ func (aut Automorphism) Permute(exp int64, p Polynomial) Polynomial {
 }
 
 // Trace calculates the trace of this function: sig^0(f(0)) + sig^1(f(1)) + ... + sig^k(f(k)) and returns the result.
-func (aut Automorphism) Trace(f func(int) Polynomial, k int) Polynomial {
-	return NewVectorFromSize(k).Populate(
-		func(v int) RingElement {
+func (aut Automorphism) Trace(f func(int) rings.Polynomial, k int) rings.Polynomial {
+	return algebra.NewVectorFromSize(k).Populate(
+		func(v int) algebra.Element {
 			return aut.Permute(int64(v), f(v))
-		}).Sum().(Polynomial)
+		}).Sum().(rings.Polynomial)
 }
 
 // Exponent computes the exponent multiplier g^exp

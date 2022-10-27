@@ -2,6 +2,7 @@ package tests
 
 import (
 	"github.com/ldsec/codeBase/commitment/math"
+	"github.com/ldsec/codeBase/commitment/math/rings"
 	"github.com/tuneinsight/lattigo/v4/bfv"
 	"github.com/tuneinsight/lattigo/v4/ring"
 	"testing"
@@ -18,14 +19,14 @@ func coeffsAtLevelEqual(coeff1 []uint64, coeff2 []uint64) bool {
 }
 
 // Creates a new polynomial with 0-level coefficients 0, 1, ..., N-1
-func newTestPolynomial() (math.Polynomial, *ring.Ring) {
+func newTestPolynomial() (rings.Polynomial, *ring.Ring) {
 	// Initialize the ring.
 	ringParamDef := bfv.PN13QP218
 	ringParamDef.T = 0x3ee0001
 	ringParams, _ := bfv.NewParametersFromLiteral(ringParamDef)
 	baseRing := ringParams.RingQP().RingQ
 	// Create a polynomial with coefficients 0, 1, 2, ..., N-1
-	p0 := math.NewZeroPolynomial(baseRing)
+	p0 := rings.NewZeroPolynomial(baseRing)
 	for i := 0; i < p0.Ref.N(); i++ {
 		p0.SetCoefficient(i, uint64(i))
 	}
@@ -33,13 +34,13 @@ func newTestPolynomial() (math.Polynomial, *ring.Ring) {
 }
 
 // Creates a new polynomial with 0-level coefficients as the given vector.
-func newTestPolynomialFrom(coeffs []uint64) (math.Polynomial, *ring.Ring) {
+func newTestPolynomialFrom(coeffs []uint64) (rings.Polynomial, *ring.Ring) {
 	// Initialize the ring.
 	ringParamDef := bfv.PN13QP218
 	ringParamDef.T = 0x3ee0001
 	ringParams, _ := bfv.NewParametersFromLiteral(ringParamDef)
 	baseRing := ringParams.RingQP().RingQ
-	p0 := math.NewZeroPolynomial(baseRing)
+	p0 := rings.NewZeroPolynomial(baseRing)
 	for i := 0; i < len(coeffs); i++ {
 		p0.SetCoefficient(i, coeffs[i])
 	}
@@ -52,7 +53,7 @@ func TestPolyLRot(t *testing.T) {
 	for lShiftAmount := 0; lShiftAmount < maxShift; lShiftAmount++ {
 		//fmt.Printf("Poly.LRot=%d\n", lShiftAmount)
 		// Copy the polynomial.
-		p := p0.Copy().(math.Polynomial)
+		p := p0.Copy().(rings.Polynomial)
 		p.LRot(lShiftAmount)
 		// Create the expected coefficients
 		shiftedCoeffs := make([]uint64, p.Ref.N())
@@ -74,7 +75,7 @@ func TestPolyRRot(t *testing.T) {
 	for rShiftAmount := 0; rShiftAmount < maxShift; rShiftAmount++ {
 		//fmt.Printf("Poly.LRot=%d\n", rShiftAmount)
 		// Copy the polynomial.
-		p := p0.Copy().(math.Polynomial)
+		p := p0.Copy().(rings.Polynomial)
 		p.RRot(rShiftAmount)
 		// Create the expected coefficients
 		shiftedCoeffs := make([]uint64, p.Ref.N())
@@ -137,7 +138,7 @@ func TestPolyMul(t *testing.T) {
 func TestPolyPow(t *testing.T) {
 	// 19x^4 + 2x^2 + 3x + 6
 	p0, baseRing := newTestPolynomialFrom([]uint64{6, 3, 2, 0, 19})
-	if !p0.Copy().Pow(0).Eq(math.NewOnePolynomial(baseRing)) {
+	if !p0.Copy().Pow(0).Eq(rings.NewOnePolynomial(baseRing)) {
 		t.Errorf("Poly.Pow: 0")
 	}
 	if !p0.Copy().Pow(1).Eq(p0) {
@@ -165,7 +166,7 @@ func TestPolyAdd(t *testing.T) {
 
 func TestPolyNTTFlag(t *testing.T) {
 	p0, _ := newTestPolynomial()
-	p1 := p0.Copy().(math.Polynomial)
+	p1 := p0.Copy().(rings.Polynomial)
 	if p0.Ref.IsNTT || p1.Ref.IsNTT {
 		t.Errorf("Poly.NTTFlag")
 	}
@@ -175,7 +176,7 @@ func TestPolyNTTFlag(t *testing.T) {
 	}
 	p0.InvNTT()
 	p1.InvNTT()
-	p2 := p1.Copy().(math.Polynomial)
+	p2 := p1.Copy().(rings.Polynomial)
 	if p0.Ref.IsNTT || p1.Ref.IsNTT || p2.Ref.IsNTT {
 		t.Errorf("Poly.NTTFlag")
 	}
@@ -187,9 +188,9 @@ func TestPolyNTTFlag(t *testing.T) {
 
 func TestCombination(t *testing.T) {
 	p0, baseRing := newTestPolynomial()
-	p1 := p0.Copy().(math.Polynomial)
+	p1 := p0.Copy().(rings.Polynomial)
 	sig := math.NewAutomorphism(int64(baseRing.N), int64(4))
-	r := sig.Permute(int64(-7), sig.Permute(int64(7), p0.Copy().Mul(p1).(math.Polynomial)))
+	r := sig.Permute(int64(-7), sig.Permute(int64(7), p0.Copy().Mul(p1).(rings.Polynomial)))
 	sig.Permute(int64(-7), p1)
 	if !r.Eq(p0.Mul(p1)) {
 		t.Errorf("Poly.Combination")
