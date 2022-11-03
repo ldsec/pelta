@@ -3,6 +3,8 @@ package rlwe
 import (
 	"github.com/ldsec/codeBase/commitment/math/algebra"
 	"github.com/ldsec/codeBase/commitment/math/rings"
+	"github.com/tuneinsight/lattigo/v4/ring"
+	"github.com/tuneinsight/lattigo/v4/utils"
 )
 
 // DecomposeIntoTernary computes an integer vector v's ternary (0, 1, 2) decomposition.
@@ -40,4 +42,20 @@ func ComputeBasis(base rings.ZInt, n int) rings.ZIntVector {
 		func(i int) algebra.Element {
 			return base.Copy().Pow(uint64(i))
 		}))
+}
+
+func ExtractNTTTransform(baseRing *ring.Ring, logN uint64) algebra.Matrix {
+	w := ring.InvMForm(baseRing.NttPsi[0][baseRing.N>>1], baseRing.Modulus[0], baseRing.MredParams[0])
+	mask := uint64(2*baseRing.N - 1)
+	T := algebra.NewMatrixFromDimensions(baseRing.N, baseRing.N).PopulateRows(
+		func(i int) algebra.Vector {
+			twoirev := 2*utils.BitReverse64(uint64(i), logN) + 1
+			return algebra.NewVectorFromSize(baseRing.N).Populate(
+				func(j int) algebra.Element {
+					gen := uint64(j) * twoirev & mask
+					result := ring.ModExp(w, gen, baseRing.Modulus[0])
+					return rings.NewZInt(int64(result))
+				})
+		})
+	return T
 }
