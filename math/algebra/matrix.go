@@ -198,7 +198,7 @@ func (m Matrix) ForEachCol(f func(Vector, int)) {
 	}
 }
 
-// MulVec performs a matrix vector multiplication and returns the result.
+// MulVec performs a matrix-vector multiplication and returns the result.
 func (m Matrix) MulVec(x Vector) Vector {
 	if m.Cols() != x.Length() {
 		panic(fmt.Sprintf("Matrix.MulVec: Cannot multiply (%d, %d) with %d", m.Rows(), m.Cols(), x.Length()))
@@ -208,6 +208,17 @@ func (m Matrix) MulVec(x Vector) Vector {
 		out.SetElementAtIndex(i, row.Copy().AsVec().Dot(x))
 	})
 	return out
+}
+
+// MulMat performs a matrix-matrix multiplication and returns the result.
+func (m Matrix) MulMat(B Matrix) Matrix {
+	if m.Cols() != B.Rows() {
+		panic(fmt.Sprintf("Matrix.MulMat: Cannot multiply (_, %d) with (%d, _)", m.Cols(), B.Rows()))
+	}
+	return NewMatrixFromDimensions(m.Rows(), B.Cols()).Populate(
+		func(i int, j int) Element {
+			return m.Row(i).Copy().AsVec().Dot(B.Col(j))
+		})
 }
 
 // All returns true if all the elements return true on the given predicate.

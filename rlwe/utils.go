@@ -44,6 +44,7 @@ func ComputeBasis(base rings.ZInt, n int) rings.ZIntVector {
 		}))
 }
 
+// ExtractNTTTransform computes and returns the integer NTT transformation matrix for the given base ring.
 func ExtractNTTTransform(baseRing *ring.Ring, logN uint64) algebra.Matrix {
 	w := ring.InvMForm(baseRing.NttPsi[0][baseRing.N>>1], baseRing.Modulus[0], baseRing.MredParams[0])
 	mask := uint64(2*baseRing.N - 1)
