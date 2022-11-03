@@ -159,13 +159,13 @@ func (p Polynomial) SetCoefficient(i int, newValue uint64) Polynomial {
 }
 
 // Coeffs returns the vector representation of the zero-level coefficients of this polynomial.
-func (p Polynomial) Coeffs(q *big.Int) IntVector {
+func (p Polynomial) Coeffs(q *big.Int) ZIntVector {
 	p.InvNTT()
 	v := make([]algebra.Element, p.Ref.N())
 	for i := 0; i < len(v); i++ {
-		v[i] = NewModInt(int64(p.Ref.Coeffs[0][i]), q)
+		v[i] = NewZqInt(int64(p.Ref.Coeffs[0][i]), q)
 	}
-	return NewIntVec(algebra.NewVectorFromSlice(v))
+	return NewZIntVec(algebra.NewVectorFromSlice(v))
 }
 
 // Coeff returns the ith coefficient.

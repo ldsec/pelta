@@ -33,15 +33,15 @@ func (s Settings) NumSplits() int {
 // PublicParams contains the public parameters of the protocol.
 type PublicParams struct {
 	A  algebra.Matrix
-	U  rings.IntVector
+	U  rings.ZIntVector
 	B0 algebra.Matrix
 	B  algebra.Matrix
 }
 
-func NewDummyPublicParameters(s rings.IntVector, settings Settings) PublicParams {
+func NewDummyPublicParameters(s rings.ZIntVector, settings Settings) PublicParams {
 	A := math.NewRandomIntegerMatrix(settings.M, settings.N, settings.Q)
 	// As = U
-	u := rings.NewIntVec(A.MulVec(s.AsVec()))
+	u := rings.NewZIntVec(A.MulVec(s.AsVec()))
 	bSize := settings.NumSplits() + 3
 	B0 := math.NewRandomPolynomialMatrix(settings.Kappa, settings.Lambda+settings.Kappa+bSize, settings.BaseRing, settings.UniformSampler)
 	b := math.NewRandomPolynomialMatrix(bSize, B0.Cols(), settings.BaseRing, settings.UniformSampler)

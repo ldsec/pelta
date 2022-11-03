@@ -38,28 +38,28 @@ func NewRandomPolynomialMatrix(rows int, cols int, baseRing *ring.Ring, sampler 
 }
 
 // NewRandomIntegerVector constructs a random vector of integers mod n.
-func NewRandomIntegerVector(dim int, n *big.Int) rings.IntVector {
+func NewRandomIntegerVector(dim int, n *big.Int) rings.ZIntVector {
 	v := algebra.NewVectorFromSize(dim).Populate(
 		func(_ int) algebra.Element {
-			return rings.NewModInt(ring.RandInt(n).Int64(), n)
+			return rings.NewZqInt(ring.RandInt(n).Int64(), n)
 		})
-	return rings.NewIntVec(v)
+	return rings.NewZIntVec(v)
 }
 
 // NewRandomTernaryIntegerVector constructs a random vector of integers where each element \in {-1, 0, 1}.
-func NewRandomTernaryIntegerVector(dim int, n *big.Int) rings.IntVector {
+func NewRandomTernaryIntegerVector(dim int, n *big.Int) rings.ZIntVector {
 	v := algebra.NewVectorFromSize(dim).Populate(
 		func(_ int) algebra.Element {
-			return rings.NewInt(ring.RandInt(big.NewInt(3)).Int64() - 1)
+			return rings.NewZInt(ring.RandInt(big.NewInt(3)).Int64() - 1)
 		})
-	return rings.NewIntVec(v)
+	return rings.NewZIntVec(v)
 }
 
 // NewRandomIntegerMatrix constructs a random 2D matrix of integers mod n.
 func NewRandomIntegerMatrix(rows int, cols int, n *big.Int) algebra.Matrix {
 	A := algebra.NewMatrixFromDimensions(rows, cols).Populate(
 		func(_, _ int) algebra.Element {
-			return rings.NewModInt(ring.RandInt(n).Int64(), n)
+			return rings.NewZqInt(ring.RandInt(n).Int64(), n)
 		})
 	return A
 }

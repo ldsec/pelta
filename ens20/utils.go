@@ -9,12 +9,12 @@ import (
 )
 
 // SplitInvNTT returns the x that satisfies lhs = NTT(x_1) || NTT(x_2) || ... || NTT(x_numSplits)
-func SplitInvNTT(lhs rings.IntVector, numSplits int, mod *big.Int, baseRing *ring.Ring) rings.PolyVector {
+func SplitInvNTT(lhs rings.ZIntVector, numSplits int, mod *big.Int, baseRing *ring.Ring) rings.PolyVector {
 	lhsLen := lhs.Length()
 	splitLen := lhsLen / numSplits
 	return rings.NewPolyVec(algebra.NewVectorFromSize(numSplits).Populate(
 		func(i int) algebra.Element {
-			return rings.NewIntVec(lhs.Slice(i*splitLen, (i+1)*splitLen).Copy().AsVec()).ToPoly(baseRing, mod, true).InvNTT()
+			return rings.NewZIntVec(lhs.Slice(i*splitLen, (i+1)*splitLen).Copy().AsVec()).ToPoly(baseRing, mod, true).InvNTT()
 		}))
 }
 

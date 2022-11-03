@@ -33,7 +33,7 @@ func NewProver(publicParams PublicParams, settings Settings) Prover {
 
 // CommitToMessage commits to the given secret message s.
 // Returns t0, t, w
-func (p Prover) CommitToMessage(s rings.IntVector) (algebra.Vector, algebra.Vector, algebra.Matrix, ProverState) {
+func (p Prover) CommitToMessage(s rings.ZIntVector) (algebra.Vector, algebra.Vector, algebra.Matrix, ProverState) {
 	// Split the message into polynomial space.
 	sHat := SplitInvNTT(s, p.settings.NumSplits(), p.settings.Q, p.settings.BaseRing)
 	// Sample a polynomial g s.t. g_0=...=g_{K-1}=0
@@ -113,10 +113,10 @@ func (p Prover) CommitToRelation(alpha algebra.Vector, gamma algebra.Matrix, sta
 	At := p.publicParams.A.Copy().AsMatrix().Transpose()
 	psi := algebra.NewMatrixFromDimensions(p.settings.K, p.settings.NumSplits()).PopulateRows(
 		func(mu int) algebra.Vector {
-			tmp := rings.NewIntVec(At.Copy().AsMatrix().MulVec(gamma.Row(mu)))
+			tmp := rings.NewZIntVec(At.Copy().AsMatrix().MulVec(gamma.Row(mu)))
 			return SplitInvNTT(tmp, p.settings.NumSplits(), p.settings.Q, p.settings.BaseRing).AsVec()
 		})
-	invk := rings.NewModInt(int64(p.settings.K), p.settings.Q).Inv().Uint64()
+	invk := rings.NewZqInt(int64(p.settings.K), p.settings.Q).Inv().Uint64()
 	gMask := LmuSum(p.settings.K, invk, state.Sig,
 		func(mu int, v int) rings.Polynomial {
 			// (u * gamma_mu)

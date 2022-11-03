@@ -9,7 +9,7 @@ import (
 
 // Helpers for specialized polynomial constructs
 
-type IntVector struct {
+type ZIntVector struct {
 	algebra.Vector
 }
 
@@ -19,7 +19,7 @@ type PolyVector struct {
 
 // ToPoly converts a coefficient vector into a polynomial and returns it.
 // Warning: The coefficients must fit into an uint64!
-func (v IntVector) ToPoly(baseRing *ring.Ring, mod *big.Int, isNTT bool) Polynomial {
+func (v ZIntVector) ToPoly(baseRing *ring.Ring, mod *big.Int, isNTT bool) Polynomial {
 	p := NewZeroPolynomial(baseRing)
 	for i := 0; i < v.Length(); i++ {
 		c := v.Element(i).(ZInt).Uint64WithMod(mod)
@@ -30,7 +30,7 @@ func (v IntVector) ToPoly(baseRing *ring.Ring, mod *big.Int, isNTT bool) Polynom
 }
 
 // Max returns the maximum integer in the vector.
-func (v IntVector) Max() int64 {
+func (v ZIntVector) Max() int64 {
 	maxElement := v.Element(0).(ZInt).Int64()
 	v.ForEach(func(el algebra.Element, _ int) {
 		maxElement = max(maxElement, el.(ZInt).Int64())
@@ -39,7 +39,7 @@ func (v IntVector) Max() int64 {
 }
 
 // Min returns the minimum integer in the vector.
-func (v IntVector) Min() int64 {
+func (v ZIntVector) Min() int64 {
 	maxElement := v.Element(0).(ZInt).Int64()
 	v.ForEach(func(el algebra.Element, _ int) {
 		maxElement = min(maxElement, el.(ZInt).Int64())
@@ -59,14 +59,14 @@ func (v PolyVector) InfNorm(q *big.Int) int64 {
 
 // -- Conversion helpers
 
-// NewIntVec converts to the representation of an int vector.
+// NewZIntVec converts to the representation of an int vector.
 // Allows calling specialized methods.
-func NewIntVec(v algebra.Vector) IntVector {
+func NewZIntVec(v algebra.Vector) ZIntVector {
 	// assert type
 	if _, ok := v.Element(0).(ZInt); !ok {
-		panic(fmt.Sprintf("NewIntVec: Not an integer vector"))
+		panic(fmt.Sprintf("NewZIntVec: Not an integer vector"))
 	}
-	return IntVector{v}
+	return ZIntVector{v}
 }
 
 // NewPolyVec converts to the representation of a vector of polynomials.

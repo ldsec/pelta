@@ -98,11 +98,11 @@ func (vf Verifier) Verify(z algebra.Matrix, state VerifierState) bool {
 	At := vf.publicParams.A.Copy().AsMatrix().Transpose()
 	psi := algebra.NewMatrixFromDimensions(vf.settings.K, vf.settings.NumSplits()).PopulateRows(
 		func(mu int) algebra.Vector {
-			tmp := rings.NewIntVec(At.Copy().AsMatrix().MulVec(state.Gamma.Row(mu)))
+			tmp := rings.NewZIntVec(At.Copy().AsMatrix().MulVec(state.Gamma.Row(mu)))
 			return SplitInvNTT(tmp, vf.settings.NumSplits(), vf.settings.Q, vf.settings.BaseRing).AsVec()
 		})
 	// Reconstruct the commitment to f
-	invk := rings.NewModInt(int64(vf.settings.K), vf.settings.Q).Inv().Uint64()
+	invk := rings.NewZqInt(int64(vf.settings.K), vf.settings.Q).Inv().Uint64()
 	tao := LmuSum(vf.settings.K, invk, state.Sig,
 		func(mu int, v int) rings.Polynomial {
 			// (u * gamma_mu)

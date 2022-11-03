@@ -44,7 +44,7 @@ func getSimpleTestSettings() ens20.Settings {
 	return settings
 }
 
-func ExecuteAndTestCorrectness(outputPrefix string, tst *testing.T, s rings.IntVector, settings ens20.Settings, params ens20.PublicParams) {
+func ExecuteAndTestCorrectness(outputPrefix string, tst *testing.T, s rings.ZIntVector, settings ens20.Settings, params ens20.PublicParams) {
 	prover := ens20.NewProver(params, settings)
 	verifier := ens20.NewVerifier(params, settings)
 	// Commit to the message.
@@ -62,7 +62,7 @@ func ExecuteAndTestCorrectness(outputPrefix string, tst *testing.T, s rings.IntV
 	}
 }
 
-func ExecuteAndTestSoundness(outputPrefix string, tst *testing.T, s rings.IntVector, settings ens20.Settings, params ens20.PublicParams) {
+func ExecuteAndTestSoundness(outputPrefix string, tst *testing.T, s rings.ZIntVector, settings ens20.Settings, params ens20.PublicParams) {
 	perturbArray := func(v *algebra.MultiArray) {
 		v.ForEach(func(el algebra.Element, _ []int) {
 			el.(rings.Polynomial).RRot(2)
