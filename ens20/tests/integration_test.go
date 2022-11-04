@@ -39,7 +39,7 @@ func getSimpleTestSettings() ens20.Settings {
 		panic("could not initialize the prng: %s")
 	}
 	settings.UniformSampler = ring.NewUniformSampler(prng, settings.BaseRing)
-	settings.TernarySampler = ring.NewTernarySampler(prng, settings.BaseRing, 1.0/3.0, false)
+	settings.TernarySampler = math.TernaryPolySampler{}
 	settings.GaussianSampler = ring.NewGaussianSampler(prng, settings.BaseRing, ringParams.Sigma(), settings.Delta1)
 	return settings
 }

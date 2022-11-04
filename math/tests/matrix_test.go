@@ -34,7 +34,7 @@ func TestMatrixMulVec(t *testing.T) {
 		})
 	res := M.MulVec(x)
 	for i := 0; i < len(y.Array); i++ {
-		if y.Array[i].(*rings.ZInt).Value.Cmp(res.Array[i].(*rings.ZInt).Value) != 0 {
+		if y.Array[i].(rings.ZInt).Value.Cmp(res.Array[i].(rings.ZInt).Value) != 0 {
 			t.Errorf("Matrix.MulVec")
 		}
 	}
@@ -51,7 +51,7 @@ func TestMatrixTranspose(t *testing.T) {
 		t.Errorf("Matrix.Transpose: wrong dimensions")
 	}
 	M.ForEach(func(el algebra.Element, row int, col int) {
-		if el.(*rings.ZInt).Value.Cmp(big.NewInt(int64(col)+1)) != 0 {
+		if el.(rings.ZInt).Value.Cmp(big.NewInt(int64(col)+1)) != 0 {
 			t.Errorf("Matrix.Transpose: wrong values")
 		}
 	})
