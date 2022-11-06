@@ -5,44 +5,9 @@ import (
 	"github.com/ldsec/codeBase/commitment/math"
 	"github.com/ldsec/codeBase/commitment/math/algebra"
 	"github.com/ldsec/codeBase/commitment/math/rings"
-	"github.com/tuneinsight/lattigo/v4/bfv"
-	"github.com/tuneinsight/lattigo/v4/ring"
-	"github.com/tuneinsight/lattigo/v4/utils"
 	"testing"
 	"time"
 )
-
-func getSimpleTestSettings() ens20.Settings {
-	// Initialize the ring parameters.
-	ringParamDef := bfv.PN13QP218
-	ringParamDef.T = 0x3ee0001
-	ringParams, err := bfv.NewParametersFromLiteral(ringParamDef)
-	if err != nil {
-		panic("could not initialize the ring parameters: %s")
-	}
-	settings := ens20.Settings{
-		D:      ringParams.N(),
-		Q:      ringParams.RingQP().RingQ.ModulusAtLevel[0],
-		N:      ringParams.N(),
-		M:      16,
-		K:      1,
-		Delta1: 16,
-		Lambda: 1,
-		Kappa:  1,
-		Beta:   16,
-	}
-	// Initialize the ring.
-	settings.BaseRing = ringParams.RingQP().RingQ
-	// Create the samplers.
-	prng, err := utils.NewPRNG()
-	if err != nil {
-		panic("could not initialize the prng: %s")
-	}
-	settings.UniformSampler = ring.NewUniformSampler(prng, settings.BaseRing)
-	settings.TernarySampler = ring.NewTernarySampler(prng, settings.BaseRing, 1.0/3.0, false)
-	settings.GaussianSampler = ring.NewGaussianSampler(prng, settings.BaseRing, ringParams.Sigma(), settings.Delta1)
-	return settings
-}
 
 func ExecuteAndTestCorrectness(outputPrefix string, tst *testing.T, s rings.ZIntVector, settings ens20.Settings, params ens20.PublicParams) {
 	prover := ens20.NewProver(params, settings)
@@ -217,8 +182,8 @@ func ExecuteAndTestSoundness(outputPrefix string, tst *testing.T, s rings.ZIntVe
 }
 
 func TestConsistency(tst *testing.T) {
-	settings := getSimpleTestSettings()
-	s := math.NewRandomTernaryIntegerVector(settings.N, settings.Q)
+	settings := ens20.GetSimpleTestSettings()
+	s := math.NewRandomTernaryIntegerVector(settings.N)
 	//fmt.Println("s = " + s.String())
 	params := ens20.NewDummyPublicParameters(s, settings)
 	prover := ens20.NewProver(params, settings)
@@ -324,8 +289,8 @@ func TestConsistency(tst *testing.T) {
 }
 
 func TestSimple(tst *testing.T) {
-	settings := getSimpleTestSettings()
-	s := math.NewRandomTernaryIntegerVector(settings.N, settings.Q)
+	settings := ens20.GetSimpleTestSettings()
+	s := math.NewRandomTernaryIntegerVector(settings.N)
 	//fmt.Println("s = " + s.String())
 	params := ens20.NewDummyPublicParameters(s, settings)
 	tst.Log("Checking correctness...")
@@ -335,9 +300,9 @@ func TestSimple(tst *testing.T) {
 }
 
 func TestMultiReplication(tst *testing.T) {
-	settings := getSimpleTestSettings()
+	settings := ens20.GetSimpleTestSettings()
 	settings.K = 4
-	s := math.NewRandomTernaryIntegerVector(settings.N, settings.Q)
+	s := math.NewRandomTernaryIntegerVector(settings.N)
 	//fmt.Println("s = " + s.String())
 	params := ens20.NewDummyPublicParameters(s, settings)
 	tst.Log("Checking correctness...")
@@ -347,9 +312,9 @@ func TestMultiReplication(tst *testing.T) {
 }
 
 func TestMultiSplit(tst *testing.T) {
-	settings := getSimpleTestSettings()
+	settings := ens20.GetSimpleTestSettings()
 	settings.N *= 4
-	s := math.NewRandomTernaryIntegerVector(settings.N, settings.Q)
+	s := math.NewRandomTernaryIntegerVector(settings.N)
 	//fmt.Println("s = " + s.String())
 	params := ens20.NewDummyPublicParameters(s, settings)
 	tst.Log("Checking correctness...")
@@ -359,10 +324,10 @@ func TestMultiSplit(tst *testing.T) {
 }
 
 func TestMultiSplitMultiReplication(tst *testing.T) {
-	settings := getSimpleTestSettings()
+	settings := ens20.GetSimpleTestSettings()
 	settings.N *= 4
 	settings.K = 4
-	s := math.NewRandomTernaryIntegerVector(settings.N, settings.Q)
+	s := math.NewRandomTernaryIntegerVector(settings.N)
 	//fmt.Println("s = " + s.String())
 	params := ens20.NewDummyPublicParameters(s, settings)
 	tst.Log("Checking correctness...")
@@ -372,14 +337,14 @@ func TestMultiSplitMultiReplication(tst *testing.T) {
 }
 
 func TestPerformance(tst *testing.T) {
-	settings := getSimpleTestSettings()
+	settings := ens20.GetSimpleTestSettings()
 	tst.Log("Checking correctness...")
 	for _, k := range []int{1, 2, 4} {
 		settings.K = k
 		for _, numSplits := range []int{1, 5, 10, 20, 30} {
 			settings.N = settings.D * numSplits
 			tst.Logf("Executing for k=%d, n/d=%d...", k, settings.NumSplits())
-			s := math.NewRandomTernaryIntegerVector(settings.N, settings.Q)
+			s := math.NewRandomTernaryIntegerVector(settings.N)
 			params := ens20.NewDummyPublicParameters(s, settings)
 			t0 := time.Now()
 			ExecuteAndTestCorrectness("Simple", tst, s, settings, params)
