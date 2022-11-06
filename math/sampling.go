@@ -46,11 +46,11 @@ func NewRandomIntegerVector(dim int, n *big.Int) rings.ZIntVector {
 	return rings.NewZIntVec(v)
 }
 
-// NewRandomTernaryIntegerVector constructs a random vector of integers where each element \in {-1, 0, 1}.
+// NewRandomTernaryIntegerVector constructs a random vector of integers where each element \in {0, 1, 2}.
 func NewRandomTernaryIntegerVector(dim int, n *big.Int) rings.ZIntVector {
 	v := algebra.NewVectorFromSize(dim).Populate(
 		func(_ int) algebra.Element {
-			return rings.NewZInt(ring.RandInt(big.NewInt(3)).Int64() - 1)
+			return rings.NewZInt(ring.RandInt(big.NewInt(3)).Int64())
 		})
 	return rings.NewZIntVec(v)
 }

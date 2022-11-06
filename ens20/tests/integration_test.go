@@ -237,8 +237,90 @@ func TestConsistency(tst *testing.T) {
 	if !t.Element(settings.NumSplits()).Copy().Add(params.B.Row(settings.NumSplits()).Copy().AsVec().Dot(ps.R).Neg()).Eq(ps.G) {
 		tst.Errorf("TestConsistency: CommitToMessage t[n/d] != b[n/d] * r + g")
 	}
-	_, _, _ = verifier.CreateMasks(t0, t, w)
-	// TODO: add more consistency checks
+	alpha, gamma, vs := verifier.CreateMasks(t0, t, w)
+	t, h, v, vp, ps := prover.CommitToRelation(alpha, gamma, ps)
+	c, vs := verifier.CreateChallenge(t, h, v, vp, vs)
+	// Recreate the masked opening until it satisfies the shortness condition.
+	z, ps, err := prover.MaskedOpening(c, ps)
+	for err != nil {
+		z, ps, err = prover.MaskedOpening(c, ps)
+	}
+	// Constructing f
+	f := algebra.NewMatrixFromDimensions(settings.K, settings.NumSplits()).Populate(
+		func(i int, j int) algebra.Element {
+			// t[j]*sig^i(c)
+			tmp := t.Element(j).Copy().Mul(vs.Sig.Permute(int64(i), c))
+			// (b[j] * z[i]) - (t[j]*sig^i(c))
+			return params.B.Row(j).Copy().AsVec().Dot(z.Row(i)).Sub(tmp)
+		})
+	f2 := params.B.Row(settings.NumSplits() + 1).Copy().AsVec().
+		Dot(z.Row(0)).
+		Sub(c.Copy().
+			Mul(t.Element(settings.NumSplits() + 1)))
+	f3 := params.B.Row(settings.NumSplits() + 2).Copy().AsVec().
+		Dot(z.Row(0)).
+		Sub(c.Copy().
+			Mul(t.Element(settings.NumSplits() + 2)))
+	// Check some equalities.
+	check1 := f.All(
+		func(el algebra.Element, i int, j int) bool {
+			rhs := params.B.Row(j).Copy().AsVec().Dot(ps.Y.Row(i)).
+				Sub(ps.Sig.Permute(int64(i), c).Mul(ps.SHat.Element(j)))
+			return el.Eq(rhs)
+		})
+	if !check1 {
+		tst.Errorf("TestConsistency: f equivalence test failed")
+	}
+	check2Sum := ens20.CommitmentSum(settings.K, settings.NumSplits(), rings.NewPolyVec(alpha), ps.Sig,
+		func(i int, j int) rings.Polynomial {
+			// (b[j] * y[i])^2
+			tmp := params.B.Row(j).Copy().AsVec().
+				Dot(ps.Y.Row(i)).
+				Pow(2)
+			// 3s[j] - 3
+			tmp2 := ps.SHat.Element(j).Copy().(rings.Polynomial).
+				Scale(3).
+				Sub(rings.NewOnePolynomial(settings.BaseRing).
+					Scale(3))
+			// (3s[j]-3) (b[j] * y[i])^2
+			return tmp2.
+				Mul(tmp).(rings.Polynomial)
+		})
+	check2 := f2.Eq(params.B.Row(settings.NumSplits() + 1).Copy().AsVec().
+		Dot(ps.Y.Row(0)).
+		Sub(params.B.Row(settings.NumSplits() + 2).Copy().AsVec().
+			Dot(ps.Y.Row(0)).Mul(c)).
+		Add(check2Sum.Mul(c)))
+	if !check2 {
+		tst.Errorf("TestConsistency: f[n/d+2] equivalence test failed")
+	}
+	check3Sum := ens20.CommitmentSum(settings.K, settings.NumSplits(), rings.NewPolyVec(alpha), ps.Sig,
+		func(i int, j int) rings.Polynomial {
+			// b[j]*y[i]
+			tmp := params.B.Row(j).Copy().AsVec().
+				Dot(ps.Y.Row(i))
+			// 2s[j]-1
+			tmp1 := ps.SHat.Element(j).Copy().Scale(2).
+				Sub(rings.NewOnePolynomial(settings.BaseRing))
+			// s[j]-2
+			tmp2 := ps.SHat.Element(j).Copy().
+				Sub(rings.NewOnePolynomial(settings.BaseRing).
+					Scale(2))
+			// (s[j]-1)s[j]
+			tmp3 := ps.SHat.Element(j).Copy().
+				Sub(rings.NewOnePolynomial(settings.BaseRing)).
+				Mul(ps.SHat.Element(j))
+			// [(2s[j]-1) (2s[j]-2) + s[j](s[j]-1)](b[j]*y[i])
+			return tmp.Mul(tmp1.Mul(tmp2).Add(tmp3)).(rings.Polynomial)
+		})
+	check3 := f3.Eq(
+		params.B.Row(settings.NumSplits() + 2).Copy().AsVec().
+			Dot(ps.Y.Row(0)).
+			Sub(check3Sum.Mul(c)))
+	if !check3 {
+		tst.Errorf("TestConsistency: f[n/d+3] equivalence test failed")
+	}
+
 }
 
 func TestSimple(tst *testing.T) {

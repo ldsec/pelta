@@ -72,24 +72,36 @@ func (p Prover) CommitToRelation(alpha algebra.Vector, gamma algebra.Matrix, sta
 	sum1 := CommitmentSum(p.settings.K, p.settings.NumSplits(), rings.NewPolyVec(alpha), state.Sig,
 		func(i int, j int) rings.Polynomial {
 			// (b[j] * y[i])^2
-			tmp := p.publicParams.B.Row(j).Copy().AsVec().Dot(state.Y.Row(i)).Pow(2)
-			// 3s[j] * (b[j] * y[i])^2
-			return state.SHat.Element(j).Copy().(rings.Polynomial).
-				Scale(uint64(3)).
+			tmp := p.publicParams.B.Row(j).Copy().AsVec().
+				Dot(state.Y.Row(i)).
+				Pow(2)
+			// 3s[j] - 3
+			tmp2 := state.SHat.Element(j).Copy().(rings.Polynomial).
+				Scale(3).
+				Sub(rings.NewOnePolynomial(p.settings.BaseRing).
+					Scale(3))
+			// (3s[j]-3) (b[j] * y[i])^2
+			return tmp2.
 				Mul(tmp).(rings.Polynomial)
 		})
 	sum2 := CommitmentSum(p.settings.K, p.settings.NumSplits(), rings.NewPolyVec(alpha), state.Sig,
 		func(i int, j int) rings.Polynomial {
-			// b[j] * y[i]
-			tmp := p.publicParams.B.Row(j).Copy().AsVec().Dot(state.Y.Row(i))
-			// 3s[j]^2
-			tmp2 := state.SHat.Element(j).Copy().(rings.Polynomial).
-				Pow(2).(rings.Polynomial).
-				Scale(3)
-			// (3s[j]^2-1) (b[j] * y[i])
-			return tmp2.
+			// b[j]*y[i]
+			tmp := p.publicParams.B.Row(j).Copy().AsVec().
+				Dot(state.Y.Row(i))
+			// 2s[j]-1
+			tmp1 := state.SHat.Element(j).Copy().Scale(2).Copy().
+				Sub(rings.NewOnePolynomial(p.settings.BaseRing))
+			// s[j]-2
+			tmp2 := state.SHat.Element(j).Copy().
+				Sub(rings.NewOnePolynomial(p.settings.BaseRing).
+					Scale(2))
+			// (s[j]-1)s[j]
+			tmp3 := state.SHat.Element(j).Copy().
 				Sub(rings.NewOnePolynomial(p.settings.BaseRing)).
-				Mul(tmp).(rings.Polynomial)
+				Mul(state.SHat.Element(j))
+			// [(2s[j]-1) (s[j]-2) + s[j](s[j]-1)](b[j]*y[i])
+			return tmp.Mul(tmp1.Mul(tmp2).Add(tmp3)).(rings.Polynomial)
 		})
 	sum3 := CommitmentSum(p.settings.K, p.settings.NumSplits(), rings.NewPolyVec(alpha), state.Sig,
 		func(i int, j int) rings.Polynomial {

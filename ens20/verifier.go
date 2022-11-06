@@ -69,16 +69,30 @@ func (vf Verifier) Verify(z algebra.Matrix, state VerifierState) bool {
 	// Constructing f
 	f := algebra.NewMatrixFromDimensions(vf.settings.K, vf.settings.NumSplits()).Populate(
 		func(i int, j int) algebra.Element {
+			// t[j]*sig^i(c)
 			tmp := state.T.Element(j).Copy().Mul(state.Sig.Permute(int64(i), state.c))
+			// (b[j] * z[i]) - (t[j]*sig^i(c))
 			return vf.publicParams.B.Row(j).Copy().AsVec().Dot(z.Row(i)).Sub(tmp)
 		})
-	f2 := vf.publicParams.B.Row(vf.settings.NumSplits() + 1).Copy().AsVec().Dot(z.Row(0)).Sub(state.c.Copy().Mul(state.T.Element(vf.settings.NumSplits() + 1)))
-	f3 := vf.publicParams.B.Row(vf.settings.NumSplits() + 2).Copy().AsVec().Dot(z.Row(0)).Sub(state.c.Copy().Mul(state.T.Element(vf.settings.NumSplits() + 2)))
+	// (b[n/d+2] * z[0]) - c*t[n/d+2])
+	f2 := vf.publicParams.B.Row(vf.settings.NumSplits() + 1).Copy().AsVec().
+		Dot(z.Row(0)).
+		Sub(state.c.Copy().
+			Mul(state.T.Element(vf.settings.NumSplits() + 1)))
+	// (b[n/d+3] * z[0]) - c*t[n/d+3]
+	f3 := vf.publicParams.B.Row(vf.settings.NumSplits() + 2).Copy().AsVec().
+		Dot(z.Row(0)).
+		Sub(state.c.Copy().
+			Mul(state.T.Element(vf.settings.NumSplits() + 2)))
 	vTest := CommitmentSum(vf.settings.K, vf.settings.NumSplits(), rings.NewPolyVec(state.Alpha), state.Sig,
 		func(i int, j int) rings.Polynomial {
+			// f[i][j]
 			p1 := f.Element(i, j).Copy()
+			// f[i][j] + sig^i(c)
 			p2 := f.Element(i, j).Copy().Add(state.Sig.Permute(int64(i), state.c))
-			p3 := f.Element(i, j).Copy().Sub(state.Sig.Permute(int64(i), state.c))
+			// f[i][j] + 2sig^i(c)
+			p3 := f.Element(i, j).Copy().Add(state.Sig.Permute(int64(i), state.c).Scale(2))
+			// f[i][j] * (f[i][j] + sig^i(c)) * (f[i][j] + 2sig^i(c))
 			return p1.Mul(p2).Mul(p3).(rings.Polynomial)
 		}).Add(f2).Add(f3.Copy().Mul(state.c))
 	vTestResult := vTest.Eq(state.v)
@@ -135,12 +149,6 @@ func (vf Verifier) Verify(z algebra.Matrix, state VerifierState) bool {
 			// outerSum + (b[n/d] * z[i])
 			return outerSum.Add(add)
 		})
-	//functionCommitmentTestRHS := math.NewVectorFromSize(vf.settings.K).Populate(
-	//	func(i int) math.Element {
-	//		rhsAdd := state.Sig.Permute(int64(i), state.c).Mul(
-	//			tao.Copy().Add(state.T.Element(vf.settings.NumSplits())).Sub(state.h))
-	//		return state.vp.Element(i).Copy().Add(rhsAdd)
-	//	})
 	functionCommitmentTestResult := functionCommitmentTest.All(
 		func(lhs algebra.Element, i int) bool {
 			rhsAdd := state.Sig.Permute(int64(i), state.c).Mul(
