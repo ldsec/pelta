@@ -13,7 +13,7 @@ import (
 type RLWEParameters struct {
 	BaseRing *ring.Ring
 	Q        *big.Int
-	LogD     uint64
+	LogD     int
 	Beta     uint64
 	LogBeta  int
 }
@@ -24,7 +24,7 @@ func NewRLWEParameters(ens20Settings ens20.Settings) RLWEParameters {
 	return RLWEParameters{
 		BaseRing: ens20Settings.BaseRing,
 		Q:        ens20Settings.Q,
-		LogD:     uint64(ens20Settings.LogD),
+		LogD:     ens20Settings.LogD,
 		Beta:     beta,
 		LogBeta:  logBeta,
 	}
@@ -62,47 +62,37 @@ func NewSISProblem(A algebra.Matrix, s rings.ZIntVector, u rings.ZIntVector) SIS
 // RLWEToSIS transforms an RLWE problem into an SIS one.
 func RLWEToSIS(rlweProblem RLWEProblemInstance) SISProblemInstance {
 	// Extract the NTT transform.
-	T := GenerateNTTTransform(rlweProblem.Params.BaseRing, rlweProblem.Params.Q, rlweProblem.Params.LogD)
+	T, _ := LoadNTTTransform(rlweProblem.Params.BaseRing, rlweProblem.Params.LogD)
 	// Compute the ternary decomposition of E.
 	eCoeffs := rlweProblem.E.Coeffs(rlweProblem.Params.Q)
 	eDecomp, ternaryBasis := DecomposeIntoTernary(eCoeffs, rlweProblem.Params.LogBeta)
 	eDecomp.Transpose()
 	k := ternaryBasis.Length()
-	// Compute the submatrices of A.
-	AParts := make([]algebra.Matrix, k+1)
-	AParts[0] = rlweProblem.P1.Copy().
-		Neg().(rings.Polynomial).
-		Coeffs(rlweProblem.Params.Q).
-		Diag().
-		MulMat(T)
+	// Compute the sub-transforms of A.
+	AParts := make([]NTTTransformMatrix, k+1)
+	AParts[0] = T.Extended(rlweProblem.P1.Copy().
+		Neg().(rings.Polynomial).NTT())
 	for i := 0; i < k; i++ {
 		bi := ternaryBasis.Element(i).(rings.ZInt).Uint64()
-		AParts[i+1] = T.Copy().AsMatrix().Scale(bi).AsMatrix()
+		AParts[i+1] = T.Scaled(bi)
 	}
-	// Compute the subvectors of S.
+	// Compute the sub-vectors of S.
 	sParts := make([]rings.ZIntVector, k+1)
 	sParts[0] = rlweProblem.S.Coeffs(rlweProblem.Params.Q)
 	for i := 0; i < k; i++ {
 		sParts[i+1] = rings.NewZIntVec(eDecomp.Row(i))
 	}
+	return SISProblemInstance{}
 	// Combine.
-	A := algebra.NewMatrixFromDimensions(AParts[0].Rows(), AParts[0].Cols()*(k+1))
-	for i, APart := range AParts {
-		APart.ForEachCol(
-			func(v algebra.Vector, j int) {
-				Acol := i*AParts[0].Cols() + j
-				A.SetCol(Acol, v)
-			})
-	}
-	s := algebra.NewVectorFromSize(A.Cols())
-	for i, sPart := range sParts {
-		sPart.ForEach(
-			func(el algebra.Element, j int) {
-				sCol := i*sParts[0].Length() + j
-				s.SetElementAtIndex(sCol, el)
-			})
-	}
-	// Compute U.
-	u := A.MulVec(s)
-	return NewSISProblem(A, rings.NewZIntVec(s), rings.NewZIntVec(u))
+	//A := AParts[0].AsVec()
+	//for _, APart := range AParts[1:] {
+	//	A = A.Appended(APart.AsVec())
+	//}
+	//s := sParts[0].AsVec()
+	//for _, sPart := range sParts[1:] {
+	//	s = s.Appended(sPart.AsVec())
+	//}
+	//// Compute u.
+	//u := A.MulVec(s)
+	//return NewSISProblem(A, rings.NewZIntVec(s), rings.NewZIntVec(u))
 }

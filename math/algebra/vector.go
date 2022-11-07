@@ -107,3 +107,14 @@ func (v Vector) String() string {
 	}
 	return fmt.Sprintf("(%d)[%s]", v.Length(), strings.Join(strs, ", "))
 }
+
+func (v Vector) Appended(b Vector) Vector {
+	appended := make([]Element, v.Length()+b.Length())
+	for i := 0; i < v.Length(); i++ {
+		appended[i] = v.MultiArray.Array[i]
+	}
+	for i := 0; i < b.Length(); i++ {
+		appended[v.Length()+i] = b.MultiArray.Array[i]
+	}
+	return NewVectorFromSlice(appended)
+}
