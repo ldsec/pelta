@@ -48,7 +48,7 @@ func mainfunc() {
 
 	// Ajtai Commitment Scheme: c = A1.m + A2.r mod p
 	// >> define p
-	p := uint64(1<<20 - 9) // (1<<16 - 15)
+	p := uint64(1<<20 - 3) // (1<<16 - 15) UP TO 20-BITS
 	fmt.Printf("p %v\n", p)
 	fmt.Printf("     logp %v\n\n", (math.Log2(float64(p))))
 
