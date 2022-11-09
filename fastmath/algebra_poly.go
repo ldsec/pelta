@@ -59,42 +59,55 @@ func (p *Poly) SumCoeffs(level int) uint64 {
 	return tmp.ref.Coeffs[level][0]
 }
 
-// Scale scales this polynomial with the given scalar factor.
-func (p *Poly) Scale(factor uint64) {
-	p.baseRing.MulScalar(p.ref, factor, p.ref)
-}
-
 // NTT converts this polynomial to its NTT domain.
-func (p *Poly) NTT() {
+func (p *Poly) NTT() *Poly {
 	p.baseRing.NTT(p.ref, p.ref)
+	return p
 }
 
 // InvNTT converts this polynomial back to its poly domain.
-func (p *Poly) InvNTT() {
+func (p *Poly) InvNTT() *Poly {
 	p.baseRing.InvNTT(p.ref, p.ref)
+	return p
+}
+
+// Neg negates this polynomial.
+func (p *Poly) Neg() *Poly {
+	p.baseRing.Neg(p.ref, p.ref)
+	return p
+}
+
+// Scale scales this polynomial with the given scalar factor.
+func (p *Poly) Scale(factor uint64) *Poly {
+	p.baseRing.MulScalar(p.ref, factor, p.ref)
+	return p
 }
 
 // Add adds two polynomials.
-func (p *Poly) Add(q *Poly) {
+func (p *Poly) Add(q *Poly) *Poly {
 	p.baseRing.Add(p.ref, q.ref, p.ref)
+	return p
 }
 
 // MulCoeffs multiplies the coefficients of two polynomials.
-func (p *Poly) MulCoeffs(q *Poly) {
+func (p *Poly) MulCoeffs(q *Poly) *Poly {
 	p.baseRing.MulCoeffs(p.ref, q.ref, p.ref)
+	return p
 }
 
 // Pow takes the `exp`-th power of the coefficients modulo `mod`.
-func (p *Poly) PowModCoeffs(exp uint64, mod uint64) {
+func (p *Poly) PowModCoeffs(exp uint64, mod uint64) *Poly {
 	for i := 0; i < p.baseRing.N; i++ {
 		newCoeff := ring.ModExp(p.Get(i, 0), exp, mod)
 		p.Set(i, newCoeff)
 	}
+	return p
 }
 
 // Reduce performs the appropriate coefficient reductions over all the levels.
-func (p *Poly) Reduce() {
+func (p *Poly) Reduce() *Poly {
 	p.baseRing.Reduce(p.ref, p.ref)
+	return p
 }
 
 func (p *Poly) Eq(q *Poly) bool {
@@ -147,17 +160,28 @@ func (v *PolyVec) Sum() Poly {
 }
 
 type PolyMatrix struct {
-	elems    [][]Poly
+	rows     []PolyVec
 	baseRing *ring.Ring
 }
 
-func NewPolyMatrix(rows, cols int, baseRing *ring.Ring) PolyMatrix {
-	elems := make([][]Poly, rows)
-	for i := 0; i < rows; i++ {
-		elems[i] = make([]Poly, cols)
-		for j := 0; j < cols; j++ {
-			elems[i][j] = NewZeroPoly(baseRing)
-		}
+func NewPolyMatrix(numRows, numCols int, baseRing *ring.Ring) PolyMatrix {
+	rows := make([]PolyVec, numRows)
+	for i := 0; i < numRows; i++ {
+		rows[i] = NewPolyVec(numCols, baseRing)
 	}
-	return PolyMatrix{elems, baseRing}
+	return PolyMatrix{rows, baseRing}
+}
+
+func (m *PolyMatrix) Populate(f func(int, int) Poly) {
+	for i := 0; i < len(m.rows); i++ {
+		m.rows[i].Populate(func(j int) Poly {
+			return f(i, j)
+		})
+	}
+}
+
+func (m *PolyMatrix) PopulateRows(f func(int) PolyVec) {
+	for i := 0; i < len(m.rows); i++ {
+		m.rows[i] = f(i)
+	}
 }

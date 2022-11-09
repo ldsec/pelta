@@ -6,12 +6,23 @@ import (
 
 // TernaryDecomposition computes an integer vector's ternary (0, 1, 2) decomposition.
 // Returns the ternary decomposition matrix and the basis vector.
-func TernaryDecomposition(v IntVec, logBeta int, mod uint64, baseRing *ring.Ring) (IntMatrix, IntVec) {
+func TernaryDecomposition(v IntVec, beta uint64, logBeta int, mod uint64, baseRing *ring.Ring) (IntMatrix, IntVec) {
 	base := uint64(3)
 	basis := GenerateBasis(base, logBeta, mod, baseRing)
 	decomposed := NewIntMatrix(v.Size(), logBeta, baseRing)
 	decomposed.PopulateRows(func(i int) IntVec {
-		basisRepr := IntoBasisRepr(v.Get(i), base, logBeta, baseRing)
+		num := v.Get(i)
+		// Work with the absolute value.
+		isNeg := false
+		if num > beta {
+			num = mod - num
+			isNeg = true
+		}
+		basisRepr := IntoBasisRepr(num, base, mod, logBeta, baseRing)
+		// Negate the digits in case of negativity
+		if isNeg {
+			basisRepr.Neg()
+		}
 		return basisRepr
 	})
 	return decomposed, basis
@@ -19,7 +30,7 @@ func TernaryDecomposition(v IntVec, logBeta int, mod uint64, baseRing *ring.Ring
 
 // IntoBasisRepr returns the given number's representation under the given base, where the digits are
 // encoded in the returned vector in an LSB manner.
-func IntoBasisRepr(num uint64, base uint64, numDigits int, baseRing *ring.Ring) IntVec {
+func IntoBasisRepr(num uint64, base uint64, mod uint64, numDigits int, baseRing *ring.Ring) IntVec {
 	repr := make([]uint64, 0, numDigits)
 	curr := num
 	for i := 0; i < numDigits; i++ {

@@ -33,6 +33,10 @@ func NewIntVecFromSlice(slice []uint64, baseRing *ring.Ring) IntVec {
 	return v
 }
 
+func NewIntVecFromPolys(polys []Poly, size int, baseRing *ring.Ring) IntVec {
+	return IntVec{size, polys, baseRing}
+}
+
 func (v *IntVec) Size() int {
 	return v.size
 }
@@ -50,6 +54,15 @@ func (v *IntVec) Get(index int) uint64 {
 	return v.polys[polyIndex].Get(coeffIndex, 0)
 }
 
+// UnderlyingPolys returns the polynomials that are being used to represent this vector.
+func (v *IntVec) UnderlyingPolys() []Poly {
+	return v.polys
+}
+
+func (v *IntVec) SetUnderlyingPolys(polys []Poly) {
+	v.polys = polys
+}
+
 func (v *IntVec) Set(index int, newValue uint64) {
 	polyIndex := index / v.baseRing.N
 	coeffIndex := index % v.baseRing.N
@@ -61,6 +74,24 @@ func (v *IntVec) Scale(factor uint64) {
 	for _, p := range v.polys {
 		p.Scale(factor)
 	}
+}
+
+func (v *IntVec) Neg() *IntVec {
+	for _, p := range v.polys {
+		p.Neg()
+	}
+	return v
+}
+
+// Add adds two integer vectors.
+func (v *IntVec) Add(r *IntVec) *IntVec {
+	if v.size != r.size {
+		panic("IntVec.Add sizes do not match")
+	}
+	for i, p := range v.polys {
+		p.Add(&r.polys[i])
+	}
+	return v
 }
 
 // Dot returns the dot product of the given two vectors.
@@ -92,16 +123,24 @@ func (v *IntVec) Eq(r *IntVec) bool {
 	return true
 }
 
+func (v *IntVec) Copy() IntVec {
+	polys := make([]Poly, len(v.polys))
+	for i, p := range v.polys {
+		polys[i] = p.Copy()
+	}
+	return IntVec{size: v.size, polys: polys, baseRing: v.baseRing}
+}
+
 // String returns the string representation of this integer vector.
 func (v *IntVec) String() string {
-	s := "IntVec{"
+	s := fmt.Sprintf("IntVec[%d]{", v.Size())
 	elemStrs := make([]string, 0, v.size)
 	for i := 0; i < len(v.polys); i++ {
 		for j := 0; j < v.polys[i].N(); j++ {
 			elemStrs = append(elemStrs, fmt.Sprintf("%d", v.polys[i].Get(j, 0)))
 		}
 	}
-	return s + strings.Join(elemStrs[:20], ",") + "}"
+	return s + strings.Join(elemStrs[:v.size], ",") + ",...}"
 }
 
 type IntMatrix struct {
@@ -137,8 +176,8 @@ func (m *IntMatrix) Cols() int {
 	return m.numCols
 }
 
-func (m *IntMatrix) RowView(i int) IntVec {
-	return m.rows[i]
+func (m *IntMatrix) RowView(i int) *IntVec {
+	return &m.rows[i]
 }
 
 func (m *IntMatrix) ColCopy(i int) IntVec {
@@ -161,6 +200,13 @@ func (m *IntMatrix) Set(row, col int, newValue uint64) {
 		panic("IntMatrix.Set indices incorrect")
 	}
 	m.rows[row].Set(col, newValue)
+}
+
+func (m *IntMatrix) SetRow(row int, newRow IntVec) {
+	if row >= m.Rows() {
+		panic("IntMatrix.SetRows index incorrect")
+	}
+	m.rows[row] = newRow
 }
 
 func (m *IntMatrix) Populate(f func(int, int) uint64) {
@@ -219,13 +265,21 @@ func (m *IntMatrix) Scale(factor uint64) {
 	}
 }
 
+func (m *IntMatrix) Copy() IntMatrix {
+	rows := make([]IntVec, m.numRows)
+	for i, row := range m.rows {
+		rows[i] = row.Copy()
+	}
+	return IntMatrix{m.numRows, m.numCols, rows, m.baseRing}
+}
+
 func (m *IntMatrix) Eq(b *IntMatrix) bool {
 	if m.Rows() != b.Rows() || m.Cols() != b.Cols() {
 		return false
 	}
 	for i, row := range m.rows {
 		bRow := b.RowView(i)
-		if !row.Eq(&bRow) {
+		if !row.Eq(bRow) {
 			return false
 		}
 	}
@@ -233,9 +287,9 @@ func (m *IntMatrix) Eq(b *IntMatrix) bool {
 }
 
 func (m *IntMatrix) String() string {
-	s := ""
+	s := fmt.Sprintf("IntMatrix[%d,%d]{\n", m.Rows(), m.Cols())
 	for _, row := range m.rows {
-		s += row.String() + "\n"
+		s += "\t" + row.String() + "\n"
 	}
-	return s
+	return s + ", ...}"
 }

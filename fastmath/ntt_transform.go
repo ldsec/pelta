@@ -6,7 +6,7 @@ import (
 )
 
 // GenerateNTTTransform computes and returns the integer NTT transformation matrix for the given base ring.
-func GenerateNTTTransform(baseRing *ring.Ring, q uint64, logN int) IntMatrix {
+func GenerateNTTTransform(q uint64, logN int, baseRing *ring.Ring) IntMatrix {
 	w := ring.InvMForm(baseRing.NttPsi[0][baseRing.N>>1], q, baseRing.MredParams[0])
 	mask := uint64(2*baseRing.N - 1)
 	T := NewIntMatrix(baseRing.N, baseRing.N, baseRing)
