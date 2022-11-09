@@ -23,6 +23,7 @@ func (p *Poly) Permute(exp int64, sig Automorphism) Poly {
 		gen = sig.Exponent(uint64(exp))
 	} else {
 		// Get the additive inverse of g^exp under mod d => (exp mod d) for exp < 0
+		// TODO: optimize
 		invExp := big.NewInt(0).Mod(big.NewInt(exp), big.NewInt(int64(sig.D))).Uint64()
 		gen = sig.Exponent(invExp)
 	}
@@ -45,5 +46,6 @@ func Trace(sig Automorphism, f func(int) Poly, k int, baseRing *ring.Ring) Poly 
 
 // Exponent computes the exponent multiplier g^exp
 func (sig Automorphism) Exponent(exp uint64) uint64 {
+	// TODO: optimize
 	return big.NewInt(0).Exp(big.NewInt(int64(sig.G)), big.NewInt(int64(exp)), nil).Uint64()
 }

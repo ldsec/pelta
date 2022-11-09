@@ -1,6 +1,11 @@
 package fastmath
 
-import "github.com/tuneinsight/lattigo/v4/ring"
+import (
+	"fmt"
+	"strings"
+
+	"github.com/tuneinsight/lattigo/v4/ring"
+)
 
 type IntVec struct {
 	size     int
@@ -15,6 +20,14 @@ func NewIntVec(size int, baseRing *ring.Ring) IntVec {
 		polys[i] = NewZeroPoly(baseRing)
 	}
 	return IntVec{size, polys, baseRing}
+}
+
+func NewIntVecFromSlice(slice []uint64, baseRing *ring.Ring) IntVec {
+	v := NewIntVec(len(slice), baseRing)
+	for i := 0; i < len(slice); i++ {
+		v.Set(i, slice[i])
+	}
+	return v
 }
 
 func (v *IntVec) Size() int {
@@ -56,6 +69,29 @@ func (v *IntVec) Dot(r *IntVec) uint64 {
 	return sum
 }
 
+func (v *IntVec) Eq(r *IntVec) bool {
+	if v.size != r.size {
+		return false
+	}
+	for i := 0; i < len(v.polys); i++ {
+		if !v.polys[i].Eq(&r.polys[i]) {
+			return false
+		}
+	}
+	return true
+}
+
+func (v *IntVec) String() string {
+	s := "IntVec{"
+	elemStrs := make([]string, 0, v.size)
+	for i := 0; i < len(v.polys); i++ {
+		for j := 0; j < v.polys[i].N(); j++ {
+			elemStrs = append(elemStrs, fmt.Sprintf("%d", v.polys[i].Get(j, 0)))
+		}
+	}
+	return s + strings.Join(elemStrs[:20], ",") + "}"
+}
+
 type IntMatrix struct {
 	numRows  int
 	numCols  int
@@ -69,6 +105,16 @@ func NewIntMatrix(numRows, numCols int, baseRing *ring.Ring) IntMatrix {
 		rows[i] = NewIntVec(numCols, baseRing)
 	}
 	return IntMatrix{numRows, numCols, rows, baseRing}
+}
+
+func NewIntMatrixFromSlice(elems [][]uint64, baseRing *ring.Ring) IntMatrix {
+	numRows := len(elems)
+	numCols := len(elems[0])
+	m := NewIntMatrix(numRows, numCols, baseRing)
+	m.PopulateRows(func(i int) IntVec {
+		return NewIntVecFromSlice(elems[i], baseRing)
+	})
+	return m
 }
 
 func (m *IntMatrix) Rows() int {
@@ -152,4 +198,25 @@ func (m *IntMatrix) MulMat(b *IntMatrix) IntMatrix {
 		}
 	}
 	return out
+}
+
+func (m *IntMatrix) Eq(b *IntMatrix) bool {
+	if m.Rows() != b.Rows() || m.Cols() != b.Cols() {
+		return false
+	}
+	for i, row := range m.rows {
+		bRow := b.Row(i)
+		if !row.Eq(&bRow) {
+			return false
+		}
+	}
+	return true
+}
+
+func (m *IntMatrix) String() string {
+	s := ""
+	for _, row := range m.rows {
+		s += row.String() + "\n"
+	}
+	return s
 }
