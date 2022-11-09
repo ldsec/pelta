@@ -15,6 +15,9 @@ type IntVec struct {
 
 func NewIntVec(size int, baseRing *ring.Ring) IntVec {
 	numPolys := int(size/baseRing.N) + 1
+	if size%baseRing.N == 0 {
+		numPolys -= 1
+	}
 	polys := make([]Poly, numPolys)
 	for i := 0; i < len(polys); i++ {
 		polys[i] = NewZeroPoly(baseRing)
@@ -53,6 +56,13 @@ func (v *IntVec) Set(index int, newValue uint64) {
 	v.polys[polyIndex].Set(coeffIndex, newValue)
 }
 
+// Scale scales the vector by the given amount.
+func (v *IntVec) Scale(factor uint64) {
+	for _, p := range v.polys {
+		p.Scale(factor)
+	}
+}
+
 // Dot returns the dot product of the given two vectors.
 func (v *IntVec) Dot(r *IntVec) uint64 {
 	if v.size != r.size {
@@ -69,18 +79,20 @@ func (v *IntVec) Dot(r *IntVec) uint64 {
 	return sum
 }
 
+// Eq checks the equality between two integer vectors.
 func (v *IntVec) Eq(r *IntVec) bool {
 	if v.size != r.size {
 		return false
 	}
 	for i := 0; i < len(v.polys); i++ {
-		if !v.polys[i].Eq(&r.polys[i]) {
+		if !v.polys[i].EqLevel(0, &r.polys[i]) {
 			return false
 		}
 	}
 	return true
 }
 
+// String returns the string representation of this integer vector.
 func (v *IntVec) String() string {
 	s := "IntVec{"
 	elemStrs := make([]string, 0, v.size)
@@ -125,11 +137,11 @@ func (m *IntMatrix) Cols() int {
 	return m.numCols
 }
 
-func (m *IntMatrix) Row(i int) IntVec {
+func (m *IntMatrix) RowView(i int) IntVec {
 	return m.rows[i]
 }
 
-func (m *IntMatrix) Col(i int) IntVec {
+func (m *IntMatrix) ColCopy(i int) IntVec {
 	colVec := NewIntVec(m.Rows(), m.baseRing)
 	for j, row := range m.rows {
 		colVec.Set(j, row.Get(i))
@@ -139,7 +151,7 @@ func (m *IntMatrix) Col(i int) IntVec {
 
 func (m *IntMatrix) Get(row, col int) uint64 {
 	if row >= m.Rows() || col >= m.Cols() {
-		panic("IntMatrix.Set indices incorrect")
+		panic("IntMatrix.Get indices incorrect")
 	}
 	return m.rows[row].Get(col)
 }
@@ -169,7 +181,7 @@ func (m *IntMatrix) PopulateRows(f func(int) IntVec) {
 func (m *IntMatrix) Transposed() IntMatrix {
 	newRows := make([]IntVec, m.Cols())
 	for i := 0; i < len(newRows); i++ {
-		newRows[i] = m.Col(i)
+		newRows[i] = m.ColCopy(i)
 	}
 	return IntMatrix{m.numCols, m.numRows, newRows, m.baseRing}
 }
@@ -192,12 +204,19 @@ func (m *IntMatrix) MulMat(b *IntMatrix) IntMatrix {
 	out := NewIntMatrix(m.Rows(), b.Cols(), m.baseRing)
 	for i := 0; i < out.Rows(); i++ {
 		for j := 0; j < out.Cols(); j++ {
-			p := m.Row(i)
-			q := b.Col(j)
+			p := m.RowView(i)
+			q := b.ColCopy(j)
 			out.Set(i, j, p.Dot(&q))
 		}
 	}
 	return out
+}
+
+// Scale scales the matrix by the given amount.
+func (m *IntMatrix) Scale(factor uint64) {
+	for _, row := range m.rows {
+		row.Scale(factor)
+	}
 }
 
 func (m *IntMatrix) Eq(b *IntMatrix) bool {
@@ -205,7 +224,7 @@ func (m *IntMatrix) Eq(b *IntMatrix) bool {
 		return false
 	}
 	for i, row := range m.rows {
-		bRow := b.Row(i)
+		bRow := b.RowView(i)
 		if !row.Eq(&bRow) {
 			return false
 		}

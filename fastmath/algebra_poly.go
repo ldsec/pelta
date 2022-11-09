@@ -37,8 +37,14 @@ func (p *Poly) Get(index int, level int) uint64 {
 	return p.ref.Coeffs[level][index]
 }
 
+// N returns the degree of the polynomial.
 func (p *Poly) N() int {
 	return p.ref.N()
+}
+
+// Coeffs returns a view into the coefficients of this polynomial.
+func (p *Poly) Coeffs() IntVec {
+	return IntVec{size: p.N(), polys: []Poly{*p}, baseRing: p.baseRing}
 }
 
 // SumCoeffs returns the sum of the coefficients of this polynomial.
@@ -86,8 +92,17 @@ func (p *Poly) PowModCoeffs(exp uint64, mod uint64) {
 	}
 }
 
+// Reduce performs the appropriate coefficient reductions over all the levels.
+func (p *Poly) Reduce() {
+	p.baseRing.Reduce(p.ref, p.ref)
+}
+
 func (p *Poly) Eq(q *Poly) bool {
 	return p.baseRing.Equal(p.ref, q.ref)
+}
+
+func (p *Poly) EqLevel(level int, q *Poly) bool {
+	return p.baseRing.EqualLvl(level, p.ref, q.ref)
 }
 
 func (p *Poly) String() string {
