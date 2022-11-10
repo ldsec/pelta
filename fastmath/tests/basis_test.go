@@ -26,7 +26,7 @@ func TestIntoBasis(t *testing.T) {
 	base := uint64(3)
 	num := uint64(174)
 	logNum := 5
-	basisRepr := fastmath.IntoBasisRepr(num, base, logNum, baseRing)
+	basisRepr := fastmath.IntoBasisRepr(num, base, 200, logNum, baseRing)
 	expected := fastmath.NewIntVecFromSlice([]uint64{0, 1, 1, 0, 2}, baseRing)
 	if !basisRepr.Eq(&expected) {
 		t.Errorf("TestIntoBasis: Wrong basis returned!")
@@ -37,7 +37,7 @@ func TestTernaryDecomposition(t *testing.T) {
 	baseRing := getBaseRing()
 	mod := baseRing.ModulusAtLevel[0].Uint64()
 	vec := fastmath.NewIntVecFromSlice([]uint64{23, 174, 92, 3, 0}, baseRing)
-	decomp, _ := fastmath.TernaryDecomposition(vec, 5, mod, baseRing)
+	decomp, _ := fastmath.TernaryDecomposition(vec, 200, 5, mod, baseRing)
 	expectedDecomp := fastmath.NewIntMatrixFromSlice([][]uint64{
 		{2, 1, 2, 0, 0},
 		{0, 1, 1, 0, 2},

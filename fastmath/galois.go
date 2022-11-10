@@ -1,8 +1,6 @@
 package fastmath
 
 import (
-	"math/big"
-
 	"github.com/tuneinsight/lattigo/v4/ring"
 )
 
@@ -24,7 +22,7 @@ func (p *Poly) Permute(exp int64, sig Automorphism) *Poly {
 	} else {
 		// Get the additive inverse of g^exp under mod d => (exp mod d) for exp < 0
 		// TODO: optimize
-		invExp := big.NewInt(0).Mod(big.NewInt(exp), big.NewInt(int64(sig.D))).Uint64()
+		invExp := ring.ModExp(uint64(int64(sig.D)+exp), 1, sig.D)
 		gen = sig.Exponent(invExp)
 	}
 	// Write the permuted result on out
@@ -35,17 +33,17 @@ func (p *Poly) Permute(exp int64, sig Automorphism) *Poly {
 }
 
 // Trace calculates the trace of this function: sig^0(f(0)) + sig^1(f(1)) + ... + sig^k(f(k)) and returns the result.
-func Trace(sig Automorphism, f func(int) Poly, k int, baseRing *ring.Ring) Poly {
+func Trace(sig Automorphism, f func(int) Poly, k int, baseRing *ring.Ring) *Poly {
 	out := NewPolyVec(k, baseRing)
 	out.Populate(func(v int) Poly {
 		val := f(v)
-		return val.Permute(int64(v), sig)
+		return *val.Permute(int64(v), sig)
 	})
 	return out.Sum()
 }
 
 // Exponent computes the exponent multiplier g^exp
 func (sig Automorphism) Exponent(exp uint64) uint64 {
-	// TODO: optimize
-	return big.NewInt(0).Exp(big.NewInt(int64(sig.G)), big.NewInt(int64(exp)), nil).Uint64()
+	// NOTE: 2d works up to some degree. May need to tune a bit.
+	return ring.ModExp(sig.G, exp, 2*sig.D)
 }

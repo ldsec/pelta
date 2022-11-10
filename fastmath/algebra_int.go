@@ -126,7 +126,7 @@ func (v *IntVec) Eq(r *IntVec) bool {
 func (v *IntVec) Copy() IntVec {
 	polys := make([]Poly, len(v.polys))
 	for i, p := range v.polys {
-		polys[i] = p.Copy()
+		polys[i] = *p.Copy()
 	}
 	return IntVec{size: v.size, polys: polys, baseRing: v.baseRing}
 }

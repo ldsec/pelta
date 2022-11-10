@@ -194,6 +194,15 @@ func (v *PolyVec) Add(b *PolyVec) *PolyVec {
 	return v
 }
 
+func (v *PolyVec) All(pred func(int, *Poly) bool) bool {
+	for i, p := range v.elems {
+		if !pred(i, &p) {
+			return false
+		}
+	}
+	return true
+}
+
 func (v *PolyVec) Get(i int) *Poly {
 	return &v.elems[i]
 }
@@ -226,6 +235,15 @@ func (v *PolyVec) Copy() *PolyVec {
 		newElems = append(newElems, *p.Copy())
 	}
 	return &PolyVec{newElems, v.baseRing}
+}
+
+func (v *PolyVec) Eq(r *PolyVec) bool {
+	for i, p := range v.elems {
+		if !p.Eq(r.Get(i)) {
+			return false
+		}
+	}
+	return true
 }
 
 type PolyMatrix struct {
@@ -285,22 +303,22 @@ func (m *PolyMatrix) UpdateRows(f func(int, PolyVec) PolyVec) {
 	}
 }
 
-func (m *PolyMatrix) Sum() Poly {
+func (m *PolyMatrix) Sum() *Poly {
 	out := NewZeroPoly(m.baseRing)
 	for _, row := range m.rows {
 		rowSum := row.Sum()
 		out.Add(rowSum)
 	}
-	return out
+	return &out
 }
 
-func (m *PolyMatrix) MulVec(b *PolyVec) PolyVec {
+func (m *PolyMatrix) MulVec(b *PolyVec) *PolyVec {
 	out := NewPolyVec(m.Rows(), m.baseRing)
 	for i, row := range m.rows {
 		prod := row.Dot(b)
 		out.Set(i, *prod)
 	}
-	return out
+	return &out
 }
 
 func (m *PolyMatrix) Copy() *PolyMatrix {
@@ -309,4 +327,13 @@ func (m *PolyMatrix) Copy() *PolyMatrix {
 		newRows = append(newRows, *row.Copy())
 	}
 	return &PolyMatrix{newRows, m.baseRing}
+}
+
+func (m *PolyMatrix) AllRows(pred func(int, *PolyVec) bool) bool {
+	for i, row := range m.rows {
+		if !pred(i, &row) {
+			return false
+		}
+	}
+	return true
 }

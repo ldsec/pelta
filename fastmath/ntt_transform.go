@@ -23,6 +23,7 @@ func GenerateNTTTransform(q uint64, logN int, baseRing *ring.Ring) IntMatrix {
 	return T
 }
 
+// ExtendNTTTransform extends the transformation T with p => pT with pT * q = p(Tq)
 func ExtendNTTTransform(t *IntMatrix, p *Poly) {
 	// Update the transformation matrix in-place without copying anything.
 	for row := 0; row < t.Rows(); row++ {
