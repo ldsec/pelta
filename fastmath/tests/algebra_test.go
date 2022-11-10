@@ -24,7 +24,7 @@ func TestPolySumCoeffs(t *testing.T) {
 	actual := v.SumCoeffs(0)
 	expected := uint64(1 + 2 + 3 + 4 + 5)
 	if actual != expected {
-		t.Errorf("TestPolySumCoeffs: actual=%d, expected=%d", actual, expected)
+		t.Errorf("actual=%d, expected=%d", actual, expected)
 	}
 }
 
@@ -36,10 +36,10 @@ func TestIntVecDot(t *testing.T) {
 		a.Set(i, uint64(i+1))
 		b.Set(i, uint64(i+2))
 	}
-	actual := a.Dot(&b)
+	actual := a.Dot(b)
 	expected := uint64(1*2 + 2*3 + 3*4 + 4*5 + 5*6)
 	if actual != expected {
-		t.Errorf("TestIntVecDot: actual=%d, expected=%d", actual, expected)
+		t.Errorf("actual=%d, expected=%d", actual, expected)
 	}
 }
 
@@ -54,9 +54,9 @@ func TestIntVecBigDot(t *testing.T) {
 		b.Set(i, uint64(i+2))
 		expected += uint64(i+1) * uint64(i+2)
 	}
-	actual := a.Dot(&b)
+	actual := a.Dot(b)
 	if actual != expected {
-		t.Errorf("TestIntVecBigDot: actual=%d, expected=%d", actual, expected)
+		t.Errorf("actual=%d, expected=%d", actual, expected)
 	}
 }
 
@@ -70,22 +70,22 @@ func TestIntMatrixTransposed(t *testing.T) {
 	expectedRows := 5
 	expectedCols := 3
 	if at.Rows() != expectedRows {
-		t.Errorf("TestIntMatrixTranspose: actualRows=%d, expectedRows=%d", at.Rows(), expectedRows)
+		t.Errorf("actualRows=%d, expectedRows=%d", at.Rows(), expectedRows)
 	}
 	if at.Cols() != expectedCols {
-		t.Errorf("TestIntMatrixTranspose: actualCols=%d, expectedCols=%d", at.Cols(), expectedCols)
+		t.Errorf("actualCols=%d, expectedCols=%d", at.Cols(), expectedCols)
 	}
 	expectedResult := [][]uint64{
-		[]uint64{0, 1, 2},
-		[]uint64{1, 2, 3},
-		[]uint64{2, 3, 4},
-		[]uint64{3, 4, 5},
-		[]uint64{4, 5, 6},
+		{0, 1, 2},
+		{1, 2, 3},
+		{2, 3, 4},
+		{3, 4, 5},
+		{4, 5, 6},
 	}
 	for i := 0; i < at.Rows(); i++ {
 		for j := 0; j < at.Cols(); j++ {
 			if at.Get(i, j) != expectedResult[i][j] {
-				t.Errorf("TestIntMatrixTranspose: actual[%d][%d] = %d, expected[%d][%d] = %d", i, j, at.Get(i, j), i, j, expectedResult[i][j])
+				t.Errorf("actual[%d][%d] = %d, expected[%d][%d] = %d", i, j, at.Get(i, j), i, j, expectedResult[i][j])
 			}
 		}
 	}
@@ -101,15 +101,15 @@ func TestIntMatrixMulVec(t *testing.T) {
 	v.Populate(func(i int) uint64 {
 		return uint64(2 * i)
 	})
-	c := a.MulVec(&v)
+	c := a.MulVec(v)
 	expectedSize := 3
 	if c.Size() != expectedSize {
-		t.Errorf("TestIntMatrixMulVec: actualSize=%d, expectedSize=%d", c.Size(), expectedSize)
+		t.Errorf("actualSize=%d, expectedSize=%d", c.Size(), expectedSize)
 	}
 	expectedResult := []uint64{60, 80, 100}
 	for i := 0; i < c.Size(); i++ {
 		if c.Get(i) != expectedResult[i] {
-			t.Errorf("TestIntMatrixMulVec: actual[%d]=%d, expected[%d]=%d", i, c.Get(i), i, expectedResult[i])
+			t.Errorf("actual[%d]=%d, expected[%d]=%d", i, c.Get(i), i, expectedResult[i])
 		}
 	}
 }
@@ -124,24 +124,24 @@ func TestIntMatrixMulMat(t *testing.T) {
 	b.Populate(func(i, j int) uint64 {
 		return uint64(i * j)
 	})
-	c := a.MulMat(&b)
+	c := a.MulMat(b)
 	expectedRows := 3
 	expectedCols := 3
 	if c.Rows() != expectedRows {
-		t.Errorf("TestIntMatrixMulMat: actualRows=%d, expectedRows=%d", c.Rows(), expectedRows)
+		t.Errorf("actualRows=%d, expectedRows=%d", c.Rows(), expectedRows)
 	}
 	if c.Cols() != expectedCols {
-		t.Errorf("TestIntMatrixMulMat: actualCols=%d, expectedCols=%d", c.Cols(), expectedCols)
+		t.Errorf("actualCols=%d, expectedCols=%d", c.Cols(), expectedCols)
 	}
 	expectedResult := [][]uint64{
-		[]uint64{0, 30, 60},
-		[]uint64{0, 40, 80},
-		[]uint64{0, 50, 100},
+		{0, 30, 60},
+		{0, 40, 80},
+		{0, 50, 100},
 	}
 	for i := 0; i < c.Rows(); i++ {
 		for j := 0; j < c.Cols(); j++ {
 			if c.Get(i, j) != expectedResult[i][j] {
-				t.Errorf("TestIntMatrixMulMat: actual[%d][%d]=%d, expected[%d][%d]=%d", i, j, c.Get(i, j), i, j, expectedResult[i][j])
+				t.Errorf("actual[%d][%d]=%d, expected[%d][%d]=%d", i, j, c.Get(i, j), i, j, expectedResult[i][j])
 			}
 		}
 	}

@@ -1,4 +1,4 @@
-package rlwe
+package crypto
 
 import (
 	"github.com/ldsec/codeBase/commitment/fastmath"
@@ -25,57 +25,36 @@ func NewRLWEParameters(q uint64, logD int, beta uint64, baseRing *ring.Ring) RLW
 	}
 }
 
-// RLWEProblemInstance represents an MRLWE problem, i.E., P0 = -P1 * S + E.
-type RLWEProblemInstance struct {
+// RLWEProblem represents an MRLWE problem, i.E., P0 = -P1 * S + E.
+type RLWEProblem struct {
 	Params RLWEParameters
-	P0     fastmath.Poly
-	P1     fastmath.Poly
-	S      fastmath.Poly
-	E      fastmath.Poly
-}
-
-// SISProblemInstance represents an MSIS problem, i.E., As = U for short S.
-type SISProblemInstance struct {
-	A fastmath.IntMatrix
-	S fastmath.IntVec
-	U fastmath.IntVec
+	P0     *fastmath.Poly
+	P1     *fastmath.Poly
+	S      *fastmath.Poly
+	E      *fastmath.Poly
 }
 
 // NewRLWEProblem creates a new RLWE instance s.t. p0 = -p1 * s + e where e is sampled from the given error sampler.
-func NewRLWEProblem(p1 fastmath.Poly, s fastmath.Poly, errorSampler fastmath.PolySampler, params RLWEParameters) RLWEProblemInstance {
+func NewRLWEProblem(p1 *fastmath.Poly, s *fastmath.Poly, errorSampler fastmath.PolySampler, params RLWEParameters) RLWEProblem {
 	e := fastmath.NewRandomPoly(errorSampler, params.BaseRing)
-	p1.NTT()
-	s.NTT()
-	e.NTT()
-	p0 := p1.Copy()
-	p0.Neg().MulCoeffs(&s).Add(&e)
-	e.InvNTT()
-	s.InvNTT()
-	p1.InvNTT()
-	p0.InvNTT()
-	return RLWEProblemInstance{params, p0, p1, s, e}
+	p0 := p1.Copy().NTT().Neg().Mul(s.Copy().NTT()).Add(e.Copy().NTT()).InvNTT()
+	return RLWEProblem{params, p0, p1, s, e}
 }
 
 // ErrorDecomposition returns the ternary decomposition of the error.
-func (r RLWEProblemInstance) ErrorDecomposition() (fastmath.IntMatrix, fastmath.IntVec) {
+func (r RLWEProblem) ErrorDecomposition() (*fastmath.IntMatrix, *fastmath.IntVec) {
 	eCoeffs := r.E.Coeffs()
 	eDecomp, ternaryBasis := fastmath.TernaryDecomposition(eCoeffs, r.Params.Beta, r.Params.LogBeta, r.Params.Q, r.Params.BaseRing)
 	return eDecomp.Transposed(), ternaryBasis
 }
 
-// NewSISProblem creates a new SIS instance S.t. As = u.
-func NewSISProblem(A fastmath.IntMatrix, s fastmath.IntVec) SISProblemInstance {
-	u := A.MulVec(&s)
-	return SISProblemInstance{A, s, u}
-}
-
 // RLWEToSIS transforms an RLWE problem into an SIS one.
-func RLWEToSIS(rlweProblem RLWEProblemInstance) SISProblemInstance {
+func RLWEToSIS(rlweProblem RLWEProblem) SISProblem {
 	baseRing := rlweProblem.Params.BaseRing
 	q := rlweProblem.Params.Q
 	logD := rlweProblem.Params.LogD
 	// Extract the NTT transform.
-	T := fastmath.GenerateNTTTransform(q, logD, baseRing)
+	T := fastmath.LoadNTTTransform("ntt_transform", q, logD, baseRing)
 	d := T.Rows()
 	// Compute the ternary decomposition of the error.
 	e, b := rlweProblem.ErrorDecomposition()
@@ -83,17 +62,16 @@ func RLWEToSIS(rlweProblem RLWEProblemInstance) SISProblemInstance {
 	// Compute the sub-matrices of A.
 	AParts := make([]fastmath.IntMatrix, k+1)
 	for i := range AParts {
-		AParts[i] = T.Copy()
+		AParts[i] = *T.Copy()
 	}
-	negp1 := rlweProblem.P1.Copy()
-	negp1.Neg().NTT()
-	fastmath.ExtendNTTTransform(&AParts[0], &negp1)
+	negp1 := rlweProblem.P1.Copy().Neg().NTT()
+	fastmath.ExtendNTTTransform(&AParts[0], negp1)
 	for i := 0; i < k; i++ {
 		AParts[i+1].Scale(b.Get(i))
 	}
 	// Compute the sub-vectors of S.
 	sParts := make([]fastmath.IntVec, k+1)
-	sParts[0] = rlweProblem.S.Coeffs()
+	sParts[0] = *rlweProblem.S.Coeffs()
 	for i := 0; i < k; i++ {
 		sParts[i+1] = *e.RowView(i)
 	}
@@ -106,7 +84,7 @@ func RLWEToSIS(rlweProblem RLWEProblemInstance) SISProblemInstance {
 			ARowPolys = append(ARowPolys, APartRow.UnderlyingPolys()...)
 		}
 		ARow := fastmath.NewIntVecFromPolys(ARowPolys, d*(k+1), baseRing)
-		return ARow
+		return *ARow
 	})
 	s := fastmath.NewIntVec(d*(k+1), baseRing)
 	sPolys := make([]fastmath.Poly, 0, k+1)

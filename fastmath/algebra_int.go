@@ -13,19 +13,19 @@ type IntVec struct {
 	baseRing *ring.Ring
 }
 
-func NewIntVec(size int, baseRing *ring.Ring) IntVec {
+func NewIntVec(size int, baseRing *ring.Ring) *IntVec {
 	numPolys := int(size/baseRing.N) + 1
 	if size%baseRing.N == 0 {
 		numPolys -= 1
 	}
 	polys := make([]Poly, numPolys)
 	for i := 0; i < len(polys); i++ {
-		polys[i] = NewZeroPoly(baseRing)
+		polys[i] = *NewZeroPoly(baseRing)
 	}
-	return IntVec{size, polys, baseRing}
+	return &IntVec{size, polys, baseRing}
 }
 
-func NewIntVecFromSlice(slice []uint64, baseRing *ring.Ring) IntVec {
+func NewIntVecFromSlice(slice []uint64, baseRing *ring.Ring) *IntVec {
 	v := NewIntVec(len(slice), baseRing)
 	for i := 0; i < len(slice); i++ {
 		v.Set(i, slice[i])
@@ -33,8 +33,8 @@ func NewIntVecFromSlice(slice []uint64, baseRing *ring.Ring) IntVec {
 	return v
 }
 
-func NewIntVecFromPolys(polys []Poly, size int, baseRing *ring.Ring) IntVec {
-	return IntVec{size, polys, baseRing}
+func NewIntVecFromPolys(polys []Poly, size int, baseRing *ring.Ring) *IntVec {
+	return &IntVec{size, polys, baseRing}
 }
 
 func (v *IntVec) Size() int {
@@ -123,12 +123,12 @@ func (v *IntVec) Eq(r *IntVec) bool {
 	return true
 }
 
-func (v *IntVec) Copy() IntVec {
+func (v *IntVec) Copy() *IntVec {
 	polys := make([]Poly, len(v.polys))
 	for i, p := range v.polys {
 		polys[i] = *p.Copy()
 	}
-	return IntVec{size: v.size, polys: polys, baseRing: v.baseRing}
+	return &IntVec{size: v.size, polys: polys, baseRing: v.baseRing}
 }
 
 // String returns the string representation of this integer vector.
@@ -150,20 +150,20 @@ type IntMatrix struct {
 	baseRing *ring.Ring
 }
 
-func NewIntMatrix(numRows, numCols int, baseRing *ring.Ring) IntMatrix {
+func NewIntMatrix(numRows, numCols int, baseRing *ring.Ring) *IntMatrix {
 	rows := make([]IntVec, numRows)
 	for i := 0; i < len(rows); i++ {
-		rows[i] = NewIntVec(numCols, baseRing)
+		rows[i] = *NewIntVec(numCols, baseRing)
 	}
-	return IntMatrix{numRows, numCols, rows, baseRing}
+	return &IntMatrix{numRows, numCols, rows, baseRing}
 }
 
-func NewIntMatrixFromSlice(elems [][]uint64, baseRing *ring.Ring) IntMatrix {
+func NewIntMatrixFromSlice(elems [][]uint64, baseRing *ring.Ring) *IntMatrix {
 	numRows := len(elems)
 	numCols := len(elems[0])
 	m := NewIntMatrix(numRows, numCols, baseRing)
 	m.PopulateRows(func(i int) IntVec {
-		return NewIntVecFromSlice(elems[i], baseRing)
+		return *NewIntVecFromSlice(elems[i], baseRing)
 	})
 	return m
 }
@@ -180,7 +180,7 @@ func (m *IntMatrix) RowView(i int) *IntVec {
 	return &m.rows[i]
 }
 
-func (m *IntMatrix) ColCopy(i int) IntVec {
+func (m *IntMatrix) ColCopy(i int) *IntVec {
 	colVec := NewIntVec(m.Rows(), m.baseRing)
 	for j, row := range m.rows {
 		colVec.Set(j, row.Get(i))
@@ -224,15 +224,15 @@ func (m *IntMatrix) PopulateRows(f func(int) IntVec) {
 	}
 }
 
-func (m *IntMatrix) Transposed() IntMatrix {
+func (m *IntMatrix) Transposed() *IntMatrix {
 	newRows := make([]IntVec, m.Cols())
 	for i := 0; i < len(newRows); i++ {
-		newRows[i] = m.ColCopy(i)
+		newRows[i] = *m.ColCopy(i)
 	}
-	return IntMatrix{m.numCols, m.numRows, newRows, m.baseRing}
+	return &IntMatrix{m.numCols, m.numRows, newRows, m.baseRing}
 }
 
-func (m *IntMatrix) MulVec(v *IntVec) IntVec {
+func (m *IntMatrix) MulVec(v *IntVec) *IntVec {
 	if m.Cols() != v.Size() {
 		panic("IntMatrix.MulVec sizes incorrect")
 	}
@@ -243,7 +243,7 @@ func (m *IntMatrix) MulVec(v *IntVec) IntVec {
 	return out
 }
 
-func (m *IntMatrix) MulMat(b *IntMatrix) IntMatrix {
+func (m *IntMatrix) MulMat(b *IntMatrix) *IntMatrix {
 	if m.Cols() != b.Rows() {
 		panic("IntMatrix.MulMat sizes incorrect")
 	}
@@ -252,7 +252,7 @@ func (m *IntMatrix) MulMat(b *IntMatrix) IntMatrix {
 		for j := 0; j < out.Cols(); j++ {
 			p := m.RowView(i)
 			q := b.ColCopy(j)
-			out.Set(i, j, p.Dot(&q))
+			out.Set(i, j, p.Dot(q))
 		}
 	}
 	return out
@@ -265,12 +265,12 @@ func (m *IntMatrix) Scale(factor uint64) {
 	}
 }
 
-func (m *IntMatrix) Copy() IntMatrix {
+func (m *IntMatrix) Copy() *IntMatrix {
 	rows := make([]IntVec, m.numRows)
 	for i, row := range m.rows {
-		rows[i] = row.Copy()
+		rows[i] = *row.Copy()
 	}
-	return IntMatrix{m.numRows, m.numCols, rows, m.baseRing}
+	return &IntMatrix{m.numRows, m.numCols, rows, m.baseRing}
 }
 
 func (m *IntMatrix) Eq(b *IntMatrix) bool {

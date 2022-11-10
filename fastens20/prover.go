@@ -1,185 +1,180 @@
 package fastens20
 
 import (
+	"fmt"
 	"math/big"
 
 	"github.com/ldsec/codeBase/commitment/fastmath"
 )
 
 type ProverState struct {
-	G    fastmath.Poly
-	SHat fastmath.PolyVec
-	Sig  fastmath.Automorphism
-	R    fastmath.PolyVec
-	T0   fastmath.PolyVec
-	T    fastmath.PolyVec
-	Y    fastmath.PolyMatrix
-	W    fastmath.PolyMatrix
-	V    fastmath.Poly
-	Psi  fastmath.PolyMatrix
-	H    fastmath.Poly
-	Vp   fastmath.PolyVec
-	Z    fastmath.PolyMatrix
+	G    *fastmath.PolyNTT
+	SHat *fastmath.PolyNTTVec
+	R    *fastmath.PolyNTTVec
+	T0   *fastmath.PolyNTTVec
+	T    *fastmath.PolyNTTVec
+	Y    *fastmath.PolyNTTMatrix
+	W    *fastmath.PolyNTTMatrix
+	V    *fastmath.PolyNTT
+	Psi  *fastmath.PolyNTTMatrix
+	H    *fastmath.PolyNTT
+	Vp   *fastmath.PolyNTTVec
+	Z    *fastmath.PolyNTTMatrix
 }
 
 type Prover struct {
-	settings     Settings
-	publicParams PublicParams
+	params PublicParams
 }
 
-func NewProver(publicParams PublicParams, settings Settings) Prover {
-	return Prover{settings, publicParams}
+func NewProver(params PublicParams) Prover {
+	return Prover{params}
 }
 
 // CommitToMessage commits to the given secret message s.
 // Returns t0, t, w
-func (p Prover) CommitToMessage(s fastmath.IntVec) (fastmath.PolyVec, fastmath.PolyVec, fastmath.PolyMatrix, ProverState) {
+func (p Prover) CommitToMessage(s *fastmath.IntVec) (*fastmath.PolyNTTVec, *fastmath.PolyNTTVec, *fastmath.PolyNTTMatrix, ProverState) {
 	// Split the message into polynomial space.
-	sHat := SplitInvNTT(s, p.settings.BaseRing)
-	// Sample a polynomial g s.t. g_0=...=g_{K-1}=0
-	g := fastmath.NewRandomPoly(p.settings.UniformSampler, p.settings.BaseRing)
-	for i := 0; i < p.settings.K; i++ {
-		g.Set(i, 0)
+	sHat := SplitInvNTT(s, p.params).NTT()
+	// Sample a polynomial g s.t. g_0=...=g_{k-1}=0
+	gPoly := fastmath.NewRandomPoly(p.params.config.UniformSampler, p.params.config.BaseRing)
+	for i := 0; i < p.params.config.K; i++ {
+		gPoly.Set(i, 0)
 	}
+	g := gPoly.Copy().NTT()
 	// Sample the randomness.
-	r := fastmath.NewRandomPolyVec(p.publicParams.B0.Cols(), p.settings.TernarySampler, p.settings.BaseRing)
+	r := fastmath.NewRandomPolyVec(p.params.B0.Cols(), p.params.config.TernarySampler, p.params.config.BaseRing).NTT()
 	// Compute the commitments.
-	br := fastmath.NewPolyVec(p.publicParams.B.Rows(), p.settings.BaseRing)
-	br.Populate(func(i int) fastmath.Poly {
-		return *p.publicParams.B.Row(i).Dot(&r)
+	t0 := p.params.B0.MulVec(r)
+	t := fastmath.NewPolyVec(p.params.config.NumSplits(), p.params.config.BaseRing).NTT()
+	t.Populate(func(j int) fastmath.PolyNTT {
+		return *p.params.B.Row(j).Dot(r).Add(sHat.Get(j))
 	})
-	t0 := p.publicParams.B0.MulVec(&r)
-	t := fastmath.NewPolyVec(p.settings.NumSplits(), p.settings.BaseRing)
-	t.Populate(func(j int) fastmath.Poly {
-		return *br.Get(j).Add(sHat.Get(j))
-	})
-	// t[n/d] = b[n/d] * r + g
-	t.Append(*br.Get(p.settings.NumSplits()).Add(&g))
+	// t[n/d + 1] = b[n/d + 1] * r + g
+	t.Append(*p.params.B.Row(p.params.config.NumSplits()).Dot(r).Add(g))
 	// Create the masks.
-	y := fastmath.NewRandomPolyMatrix(p.settings.K, r.Size(), p.settings.GaussianSampler, p.settings.BaseRing)
-	w := fastmath.NewPolyMatrix(p.settings.K, p.settings.Kappa, p.settings.BaseRing)
-	w.PopulateRows(func(i int) fastmath.PolyVec {
-		return p.publicParams.B0.MulVec(y.Row(i))
+	y := fastmath.NewRandomPolyMatrix(p.params.config.K, r.Size(), p.params.config.GaussianSampler, p.params.config.BaseRing).NTT()
+	w := fastmath.NewPolyMatrix(p.params.config.K, p.params.config.Kappa, p.params.config.BaseRing).NTT()
+	w.PopulateRows(func(i int) fastmath.PolyNTTVec {
+		return *p.params.B0.MulVec(y.Row(i))
 	})
-	// Create the automorphism.
-	sig := fastmath.NewAutomorphism(uint64(p.settings.D), uint64(p.settings.K))
-	return t0, t, w, ProverState{SHat: sHat, G: g, R: r, T0: t0, Sig: sig, T: t, Y: y, W: w}
+	return t0.Copy(), t.Copy(), w.Copy(), ProverState{SHat: sHat, G: g, R: r, T0: t0, T: t, Y: y, W: w}
 }
 
 // CommitToRelation commits to the ternary structure of the secret and the knowledge of the secret s, s.t. As = U.
 // Returns t, h, v, vp
-func (p Prover) CommitToRelation(alpha fastmath.PolyVec, gamma fastmath.IntMatrix, state ProverState) (fastmath.PolyVec, fastmath.Poly, fastmath.Poly, fastmath.PolyVec, ProverState) {
+func (p Prover) CommitToRelation(alpha *fastmath.PolyNTTVec, gamma *fastmath.IntMatrix, state ProverState) (*fastmath.PolyNTTVec, *fastmath.PolyNTT, *fastmath.PolyNTT, *fastmath.PolyNTTVec, ProverState) {
 	// Prover further set up.
-	sum1 := CommitmentSum(p.settings.K, p.settings.NumSplits(), alpha, state.Sig,
-		func(i int, j int) fastmath.Poly {
-			// (b[j] * y[i])^2
-			tmp := p.publicParams.B.Row(j).Dot(state.Y.Row(i))
-			tmp.PowModCoeffs(2, p.settings.Q.Uint64())
-			// 3s[j] - 3
-			tmp2 := state.SHat.Get(j).Copy()
-			three := fastmath.NewOnePoly(3, p.settings.BaseRing)
-			tmp2.Scale(3).Add(three.Neg())
-			// (3s[j]-3) (b[j] * y[i])^2
-			return *tmp2.MulCoeffs(tmp)
-		}, p.settings.BaseRing)
-	sum2 := CommitmentSum(p.settings.K, p.settings.NumSplits(), alpha, state.Sig,
-		func(i int, j int) fastmath.Poly {
+	sum1 := CommitmentSum(p.params.config.K, p.params.config.NumSplits(), alpha,
+		func(i int, j int) fastmath.PolyNTT {
+			// (b[j]*y[i])^2
+			tmp := p.params.B.Row(j).Dot(state.Y.Row(i)).
+				Pow(2, p.params.config.Q.Uint64())
+			// 3s[j]-3
+			tmp2 := state.SHat.Get(j).Copy().
+				Scale(3).
+				Add(fastmath.NewOnePoly(3, p.params.config.BaseRing).NTT().Neg())
+			// (3s[j]-3) * (b[j]*y[i])^2
+			return *tmp2.Mul(tmp)
+		}, p.params)
+	sum2 := CommitmentSum(p.params.config.K, p.params.config.NumSplits(), alpha,
+		func(i int, j int) fastmath.PolyNTT {
 			// b[j]*y[i]
-			tmp := p.publicParams.B.Row(j).Dot(state.Y.Row(i))
+			tmp := p.params.B.Row(j).Dot(state.Y.Row(i))
 			// 2s[j]-1
-			tmp1 := state.SHat.Get(j).Copy()
-			one := fastmath.NewOnePoly(1, p.settings.BaseRing)
-			tmp1.Scale(2).Add(one.Neg())
+			neg1 := fastmath.NewOnePoly(1, p.params.config.BaseRing).NTT().Neg()
+			tmp1 := state.SHat.Get(j).Copy().Scale(2).Add(neg1)
 			// s[j]-2
-			tmp2 := state.SHat.Get(j).Copy()
-			two := fastmath.NewOnePoly(2, p.settings.BaseRing)
-			tmp2.Add(two.Neg())
+			tmp2 := state.SHat.Get(j).Copy().
+				Add(fastmath.NewOnePoly(2, p.params.config.BaseRing).NTT().Neg())
 			// (s[j]-1)s[j]
-			tmp3 := state.SHat.Get(j).Copy().Add(&one).MulCoeffs(state.SHat.Get(j))
-			// [(2s[j]-1) (s[j]-2) + s[j](s[j]-1)](b[j]*y[i])
-			return *tmp.MulCoeffs(tmp1.MulCoeffs(tmp2).Add(tmp3))
-		}, p.settings.BaseRing)
-	sum3 := CommitmentSum(p.settings.K, p.settings.NumSplits(), alpha, state.Sig,
-		func(i int, j int) fastmath.Poly {
+			tmp3 := state.SHat.Get(j).Copy().Add(neg1).Mul(state.SHat.Get(j))
+			// [(2s[j]-1) * (s[j]-2) + s[j](s[j]-1)] * (b[j]*y[i])
+			return *tmp.Mul(tmp1.Mul(tmp2).Add(tmp3))
+		}, p.params)
+	sum3 := CommitmentSum(p.params.config.K, p.params.config.NumSplits(), alpha,
+		func(i int, j int) fastmath.PolyNTT {
 			// (b[j] * y[i])^3
-			by := p.publicParams.B.Row(j).Dot(state.Y.Row(i))
-			return *by.PowModCoeffs(3, p.settings.Q.Uint64())
-		}, p.settings.BaseRing)
-	state.T.Append(*p.publicParams.B.Row(p.settings.NumSplits() + 1).
-		Dot(&state.R).
-		Add(p.publicParams.B.Row(p.settings.NumSplits() + 2).
+			by := p.params.B.Row(j).Dot(state.Y.Row(i))
+			return *by.Pow(3, p.params.config.Q.Uint64())
+		}, p.params)
+	// t[n/d+2]
+	state.T.Append(*p.params.B.Row(p.params.config.NumSplits() + 1).
+		Dot(state.R).
+		Add(p.params.B.Row(p.params.config.NumSplits() + 2).
 			Dot(state.Y.Row(0))).
 		Add(sum1.Neg()))
-	state.T.Append(*p.publicParams.B.Row(p.settings.NumSplits() + 2).
-		Dot(&state.R).
-		Add(&sum2))
-	v := *p.publicParams.B.Row(p.settings.NumSplits() + 1).Dot(state.Y.Row(0)).Add(&sum3)
-	At := p.publicParams.A.Transposed()
-	psi := fastmath.NewPolyMatrix(p.settings.K, p.settings.NumSplits(), p.settings.BaseRing)
-	psi.PopulateRows(func(mu int) fastmath.PolyVec {
+	// t[n/d+3]
+	state.T.Append(*p.params.B.Row(p.params.config.NumSplits() + 2).
+		Dot(state.R).
+		Add(sum2))
+	v := p.params.B.Row(p.params.config.NumSplits() + 1).Dot(state.Y.Row(0)).Add(sum3)
+	At := p.params.A.Transposed()
+	psi := fastmath.NewPolyMatrix(p.params.config.K, p.params.config.NumSplits(), p.params.config.BaseRing).NTT()
+	psi.PopulateRows(func(mu int) fastmath.PolyNTTVec {
 		tmp := At.MulVec(gamma.RowView(mu))
-		return SplitInvNTT(tmp, p.settings.BaseRing)
+		return *SplitInvNTT(tmp, p.params).NTT()
 	})
-	invk := big.NewInt(0).ModInverse(big.NewInt(int64(p.settings.K)), p.settings.Q).Uint64()
-	gMask := LmuSum(p.settings.K, invk, state.Sig,
-		func(mu int, v int) fastmath.Poly {
-			// (u * gamma_mu)
-			mul := p.publicParams.U.Dot(gamma.RowView(mu))
-			dec := fastmath.NewOnePoly(mul, p.settings.BaseRing)
-			presum := fastmath.NewPolyVec(p.settings.NumSplits(), p.settings.BaseRing)
-			presum.Populate(func(j int) fastmath.Poly {
-				return *psi.Get(mu, j).
-					MulCoeffs(state.SHat.Get(j)).
-					Scale(uint64(p.settings.D))
+	invk := big.NewInt(0).ModInverse(big.NewInt(int64(p.params.config.K)), p.params.config.Q).Uint64()
+	gMask := LmuSum(p.params.config.K, invk,
+		func(mu int, v int) fastmath.PolyNTT {
+			presum := fastmath.NewPolyVec(p.params.config.NumSplits(), p.params.config.BaseRing).NTT()
+			presum.Populate(func(j int) fastmath.PolyNTT {
+				return *psi.Get(mu, j).Copy().
+					Mul(state.SHat.Get(j)).
+					Scale(uint64(p.params.config.D))
 			})
+			// (u * gamma_mu)
+			dec := fastmath.NewOnePoly(p.params.U.Dot(gamma.RowView(mu)), p.params.config.BaseRing).NTT()
 			return *presum.Sum().Add(dec.Neg())
-		}, p.settings.BaseRing)
-	h := state.G.Copy().Add(&gMask)
-	vp := fastmath.NewPolyVec(p.settings.K, p.settings.BaseRing)
-	vp.Populate(func(i int) fastmath.Poly {
-		// b[n/d] * y[i]
-		add := p.publicParams.B.Row(p.settings.NumSplits()).Dot(state.Y.Row(i))
-		outerSum := LmuSumOuter(p.settings.K, p.settings.NumSplits(), invk, state.Sig,
-			func(mu int, v int, j int) fastmath.Poly {
+		}, p.params)
+	fmt.Println(state.G.Copy().InvNTT().String())
+	fmt.Println(gMask.Copy().InvNTT().String())
+	h := state.G.Copy().Add(gMask)
+	vp := fastmath.NewPolyVec(p.params.config.K, p.params.config.BaseRing).NTT()
+	vp.Populate(func(i int) fastmath.PolyNTT {
+		// b[n/d + 1] * y[i]
+		add := p.params.B.Row(p.params.config.NumSplits()).Dot(state.Y.Row(i))
+		outerSum := LmuSumOuter(p.params.config.K, p.params.config.NumSplits(), invk,
+			func(mu int, v int, j int) fastmath.PolyNTT {
 				index := big.NewInt(0).
 					Mod(big.NewInt(int64(i-v)),
-						big.NewInt(int64(p.settings.K))).
-					Uint64()
-				return *p.publicParams.B.Row(j).
+						big.NewInt(int64(p.params.config.K))).
+					Int64()
+				return *p.params.B.Row(j).Copy().
 					MulAll(psi.Get(mu, j)).
-					ScaleAll(uint64(p.settings.D)).
+					ScaleAll(uint64(p.params.config.D)).
 					Dot(state.Y.Row(int(index)))
-			}, p.settings.BaseRing)
+			}, p.params)
 		return *outerSum.Add(add)
 	})
 	// Update the state.
 	state.V = v
 	state.Psi = psi
-	state.H = *h
+	state.H = h
 	state.Vp = vp
-	return state.T, state.H, v, vp, state
+	return state.T.Copy(), state.H.Copy(), v.Copy(), vp.Copy(), state
 }
 
 // MaskedOpening returns the masked openings to the commitments.
 // Returns z
-func (p Prover) MaskedOpening(c fastmath.Poly, state ProverState) (fastmath.PolyMatrix, ProverState, error) {
+func (p Prover) MaskedOpening(c *fastmath.Poly, state ProverState) (*fastmath.PolyNTTMatrix, ProverState, error) {
 	// Masked openings.
-	z := fastmath.NewPolyMatrix(p.settings.K, state.R.Size(), p.settings.BaseRing)
-	z.PopulateRows(func(i int) fastmath.PolyVec {
-		sigc := c.Permute(int64(i), state.Sig)
-		tmp := state.R.Copy().MulAll(&sigc)
-		return *state.Y.Row(i).Copy().Add(tmp)
+	z := fastmath.NewPolyMatrix(p.params.config.K, state.R.Size(), p.params.config.BaseRing).NTT()
+	z.PopulateRows(func(i int) fastmath.PolyNTTVec {
+		sigc := c.Permute(int64(i), p.params.Sig).NTT()
+		tmp := state.R.Copy().MulAll(sigc)
+		return *tmp.Add(state.Y.Row(i))
 	})
 	//normInBounds := z.AllRows(
 	//	func(zi math.Vector, i int) bool {
-	//		infNorm := zi.NewPolyVec().InfNorm(p.settings.Q)
+	//		infNorm := zi.NewPolyVec().InfNorm(p.params.config.Q)
 	//		fmt.Println(infNorm)
-	//		return float64(infNorm) < p.settings.Beta
+	//		return float64(infNorm) < p.params.config.Beta
 	//	})
 	//if !normInBounds {
 	//	return math.Matrix{}, state, errors.New("infinity norm exceeds the requested bound")
 	//}
 	// Update the state.
 	state.Z = z
-	return z, state, nil
+	return z.Copy(), state, nil
 }

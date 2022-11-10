@@ -23,7 +23,7 @@ func TestPolyPerm(t *testing.T) {
 		for i := 0; i < int(uint64(p.N())/newExpMult); i++ {
 			newExp := int(uint64(i) * newExpMult % uint64(p.N()))
 			if p0.Get(i, 0) != (p0.Get(newExp, 0) % baseRing.ModulusAtLevel[0].Uint64()) {
-				t.Errorf("TestPolyPerm: Inconsistency at p[%d] = %d, p'[%d] = %d", i, p0.Get(i, 0), newExp, p.Get(newExp, 0))
+				t.Errorf("inconsistency at p[%d] = %d, p'[%d] = %d", i, p0.Get(i, 0), newExp, p.Get(newExp, 0))
 			}
 		}
 	}
@@ -42,8 +42,8 @@ func TestPolyPermInv(t *testing.T) {
 		p := p0.Permute(-int64(exp), sig)
 		p = p.Permute(int64(exp), sig)
 		// Check that p = p0
-		if !p.Eq(&p0) {
-			t.Errorf("TestPolyPermInv: Equivalence violated at exp=%d", exp)
+		if !p.Eq(p0) {
+			t.Errorf("equivalence violated at exp=%d", exp)
 		}
 	}
 }

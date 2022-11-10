@@ -1,6 +1,8 @@
 package ens20
 
 import (
+	"fmt"
+
 	"github.com/ldsec/codeBase/commitment/math"
 	"github.com/ldsec/codeBase/commitment/math/algebra"
 	"github.com/ldsec/codeBase/commitment/math/rings"

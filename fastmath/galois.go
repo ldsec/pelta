@@ -28,15 +28,15 @@ func (p *Poly) Permute(exp int64, sig Automorphism) *Poly {
 	out := NewZeroPoly(p.baseRing)
 	p.baseRing.Permute(p.ref, gen, out.ref)
 	p.baseRing.Reduce(out.ref, out.ref)
-	return &out
+	return out
 }
 
-// Trace calculates the trace of this function: sig^0(f(0)) + sig^1(f(1)) + ... + sig^k(f(k)) and returns the result.
+// Trace calculates the trace of this function: sig^0(f(0)) + sig^1(f(1)) + ... + sig^{k-1}(f(k-1)) and returns the result.
 func Trace(sig Automorphism, f func(int) Poly, k int, baseRing *ring.Ring) *Poly {
 	out := NewPolyVec(k, baseRing)
 	out.Populate(func(v int) Poly {
-		val := f(v)
-		return *val.Permute(int64(v), sig)
+		fOut := f(v)
+		return *fOut.Permute(int64(v), sig)
 	})
 	return out.Sum()
 }

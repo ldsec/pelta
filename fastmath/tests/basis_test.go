@@ -16,7 +16,7 @@ func TestComputeBasis(t *testing.T) {
 	for i := 0; i < n; i++ {
 		expected := uint64(math.Pow(float64(base), float64(i)))
 		if basis.Get(i) != expected {
-			t.Errorf("TestComputeBasis: %d^%d != %d", base, i, expected)
+			t.Errorf("%d^%d != %d", base, i, expected)
 		}
 	}
 }
@@ -28,8 +28,8 @@ func TestIntoBasis(t *testing.T) {
 	logNum := 5
 	basisRepr := fastmath.IntoBasisRepr(num, base, 200, logNum, baseRing)
 	expected := fastmath.NewIntVecFromSlice([]uint64{0, 1, 1, 0, 2}, baseRing)
-	if !basisRepr.Eq(&expected) {
-		t.Errorf("TestIntoBasis: Wrong basis returned!")
+	if !basisRepr.Eq(expected) {
+		t.Errorf("wrong basis returned!")
 	}
 }
 
@@ -45,7 +45,7 @@ func TestTernaryDecomposition(t *testing.T) {
 		{0, 1, 0, 0, 0},
 		{0, 0, 0, 0, 0},
 	}, baseRing)
-	if !decomp.Eq(&expectedDecomp) {
-		t.Errorf("TestTernaryDecomposition: Wrong decomposition returned!")
+	if !decomp.Eq(expectedDecomp) {
+		t.Errorf("wrong decomposition returned!")
 	}
 }

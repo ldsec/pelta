@@ -73,5 +73,5 @@ func LoadIntMatrix(name string, baseRing *ring.Ring) (*IntMatrix, error) {
 		}
 	}
 	loadedMatrix := NewIntMatrixFromSlice(loadedRows, baseRing)
-	return &loadedMatrix, nil
+	return loadedMatrix, nil
 }

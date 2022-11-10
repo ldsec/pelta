@@ -12,13 +12,13 @@ type PolySampler interface {
 }
 
 // NewRandomPoly returns a random polynomial sampled from the given `sampler`.
-func NewRandomPoly(sampler PolySampler, baseRing *ring.Ring) Poly {
+func NewRandomPoly(sampler PolySampler, baseRing *ring.Ring) *Poly {
 	g := NewZeroPoly(baseRing)
 	sampler.Read(g.ref)
 	return g
 }
 
-func NewRandomTernaryPoly(baseRing *ring.Ring) Poly {
+func NewRandomTernaryPoly(baseRing *ring.Ring) *Poly {
 	g := NewZeroPoly(baseRing)
 	for i := 0; i < g.N(); i++ {
 		rand := ring.RandInt(big.NewInt(3)).Uint64()
@@ -28,25 +28,25 @@ func NewRandomTernaryPoly(baseRing *ring.Ring) Poly {
 }
 
 // NewRandomPolyVec constructs a vector, whose elements sampled from the given `sampler`.
-func NewRandomPolyVec(size int, sampler PolySampler, baseRing *ring.Ring) PolyVec {
+func NewRandomPolyVec(size int, sampler PolySampler, baseRing *ring.Ring) *PolyVec {
 	v := NewPolyVec(size, baseRing)
 	v.Populate(func(i int) Poly {
-		return NewRandomPoly(sampler, baseRing)
+		return *NewRandomPoly(sampler, baseRing)
 	})
 	return v
 }
 
 // NewRandomPolyMatrix constructs a 2D matrix, whose elements sampled from the given `sampler`.
-func NewRandomPolyMatrix(rows int, cols int, sampler PolySampler, baseRing *ring.Ring) PolyMatrix {
+func NewRandomPolyMatrix(rows int, cols int, sampler PolySampler, baseRing *ring.Ring) *PolyMatrix {
 	A := NewPolyMatrix(rows, cols, baseRing)
 	A.PopulateRows(func(_ int) PolyVec {
-		return NewRandomPolyVec(cols, sampler, baseRing)
+		return *NewRandomPolyVec(cols, sampler, baseRing)
 	})
 	return A
 }
 
 // NewRandomIntVec constructs a random vector of integers mod n.
-func NewRandomIntVec(size int, n *big.Int, baseRing *ring.Ring) IntVec {
+func NewRandomIntVec(size int, n *big.Int, baseRing *ring.Ring) *IntVec {
 	v := NewIntVec(size, baseRing)
 	v.Populate(func(_ int) uint64 {
 		return ring.RandInt(n).Uint64()
@@ -55,15 +55,15 @@ func NewRandomIntVec(size int, n *big.Int, baseRing *ring.Ring) IntVec {
 }
 
 // NewRandomTernaryIntVec constructs a random vector of integers where each element \in {0, 1, 2}.
-func NewRandomTernaryIntVec(size int, baseRing *ring.Ring) IntVec {
+func NewRandomTernaryIntVec(size int, baseRing *ring.Ring) *IntVec {
 	return NewRandomIntVec(size, big.NewInt(3), baseRing)
 }
 
 // NewRandomIntMatrix constructs a random 2D matrix of integers mod n.
-func NewRandomIntMatrix(rows int, cols int, n *big.Int, baseRing *ring.Ring) IntMatrix {
+func NewRandomIntMatrix(rows int, cols int, n *big.Int, baseRing *ring.Ring) *IntMatrix {
 	A := NewIntMatrix(rows, cols, baseRing)
 	A.PopulateRows(func(_ int) IntVec {
-		return NewRandomIntVec(cols, n, baseRing)
+		return *NewRandomIntVec(cols, n, baseRing)
 	})
 	return A
 }
