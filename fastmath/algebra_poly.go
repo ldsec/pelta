@@ -128,8 +128,8 @@ func (p *Poly) String() string {
 }
 
 // Copy returns a copy of this polynomial.
-func (p *Poly) Copy() Poly {
-	return Poly{p.ref.CopyNew(), p.baseRing}
+func (p *Poly) Copy() *Poly {
+	return &Poly{p.ref.CopyNew(), p.baseRing}
 }
 
 type PolyVec struct {
@@ -145,18 +145,87 @@ func NewPolyVec(size int, baseRing *ring.Ring) PolyVec {
 	return PolyVec{elems, baseRing}
 }
 
+func (v *PolyVec) Size() int {
+	return len(v.elems)
+}
+
 func (v *PolyVec) Populate(f func(int) Poly) {
-	for i := 0; i < len(v.elems); i++ {
+	for i := range v.elems {
 		v.elems[i] = f(i)
 	}
 }
 
-func (v *PolyVec) Sum() Poly {
+func (v *PolyVec) Dot(r *PolyVec) *Poly {
+	if v.Size() != r.Size() {
+		panic("PolyVec.Dot incorrect sizes")
+	}
+	out := NewZeroPoly(v.baseRing)
+	for i, p := range v.elems {
+		v.baseRing.MulCoeffsAndAdd(p.ref, r.elems[i].ref, out.ref)
+	}
+	return &out
+}
+
+func (v *PolyVec) MulAll(q *Poly) *PolyVec {
+	for _, p := range v.elems {
+		p.MulCoeffs(q)
+	}
+	return v
+}
+
+func (v *PolyVec) AddAll(q *Poly) *PolyVec {
+	for _, p := range v.elems {
+		p.Add(q)
+	}
+	return v
+}
+
+func (v *PolyVec) ScaleAll(factor uint64) *PolyVec {
+	for _, p := range v.elems {
+		p.Scale(factor)
+	}
+	return v
+}
+
+func (v *PolyVec) Add(b *PolyVec) *PolyVec {
+	for i, p := range v.elems {
+		p.Add(b.Get(i))
+	}
+	return v
+}
+
+func (v *PolyVec) Get(i int) *Poly {
+	return &v.elems[i]
+}
+
+func (v *PolyVec) Set(i int, newElement Poly) {
+	v.elems[i] = newElement
+}
+
+func (v *PolyVec) Update(f func(int, Poly) Poly) {
+	for i, vOld := range v.elems {
+		v.elems[i] = f(i, vOld)
+	}
+}
+
+func (v *PolyVec) Sum() *Poly {
 	out := NewZeroPoly(v.baseRing)
 	for _, el := range v.elems {
 		out.Add(&el)
 	}
-	return out
+	return &out
+}
+
+func (v *PolyVec) Append(p Poly) {
+	v.elems = append(v.elems, p)
+}
+
+func (v *PolyVec) Copy() *PolyVec {
+	newElems := make([]Poly, 0, len(v.elems))
+	for _, p := range v.elems {
+		newElems = append(newElems, *p.Copy())
+	}
+	return &PolyVec{newElems, v.baseRing}
 }
 
 type PolyMatrix struct {
@@ -172,6 +241,22 @@ func NewPolyMatrix(numRows, numCols int, baseRing *ring.Ring) PolyMatrix {
 	return PolyMatrix{rows, baseRing}
 }
 
+func (m *PolyMatrix) Rows() int {
+	return len(m.rows)
+}
+
+func (m *PolyMatrix) Cols() int {
+	return m.rows[0].Size()
+}
+
+func (m *PolyMatrix) Row(i int) *PolyVec {
+	return &m.rows[i]
+}
+
+func (m *PolyMatrix) Get(i, j int) *Poly {
+	return m.rows[i].Get(j)
+}
+
 func (m *PolyMatrix) Populate(f func(int, int) Poly) {
 	for i := 0; i < len(m.rows); i++ {
 		m.rows[i].Populate(func(j int) Poly {
@@ -180,8 +265,48 @@ func (m *PolyMatrix) Populate(f func(int, int) Poly) {
 	}
 }
 
+func (m *PolyMatrix) Update(f func(int, int, Poly) Poly) {
+	for i := range m.rows {
+		m.rows[i].Update(func(j int, old Poly) Poly {
+			return f(i, j, old)
+		})
+	}
+}
+
 func (m *PolyMatrix) PopulateRows(f func(int) PolyVec) {
-	for i := 0; i < len(m.rows); i++ {
+	for i := range m.rows {
 		m.rows[i] = f(i)
 	}
+}
+
+func (m *PolyMatrix) UpdateRows(f func(int, PolyVec) PolyVec) {
+	for i, old := range m.rows {
+		m.rows[i] = f(i, old)
+	}
+}
+
+func (m *PolyMatrix) Sum() Poly {
+	out := NewZeroPoly(m.baseRing)
+	for _, row := range m.rows {
+		rowSum := row.Sum()
+		out.Add(rowSum)
+	}
+	return out
+}
+
+func (m *PolyMatrix) MulVec(b *PolyVec) PolyVec {
+	out := NewPolyVec(m.Rows(), m.baseRing)
+	for i, row := range m.rows {
+		prod := row.Dot(b)
+		out.Set(i, *prod)
+	}
+	return out
+}
+
+func (m *PolyMatrix) Copy() *PolyMatrix {
+	newRows := make([]PolyVec, 0, len(m.rows))
+	for _, row := range m.rows {
+		newRows = append(newRows, *row.Copy())
+	}
+	return &PolyMatrix{newRows, m.baseRing}
 }

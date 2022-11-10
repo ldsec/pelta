@@ -17,7 +17,7 @@ func NewAutomorphism(d, k uint64) Automorphism {
 }
 
 // Permute returns the permutation of this polynomial, i.e, sig^exp(p).
-func (p *Poly) Permute(exp int64, sig Automorphism) Poly {
+func (p *Poly) Permute(exp int64, sig Automorphism) *Poly {
 	var gen uint64
 	if exp >= 0 {
 		gen = sig.Exponent(uint64(exp))
@@ -31,7 +31,7 @@ func (p *Poly) Permute(exp int64, sig Automorphism) Poly {
 	out := NewZeroPoly(p.baseRing)
 	p.baseRing.Permute(p.ref, gen, out.ref)
 	p.baseRing.Reduce(out.ref, out.ref)
-	return out
+	return &out
 }
 
 // Trace calculates the trace of this function: sig^0(f(0)) + sig^1(f(1)) + ... + sig^k(f(k)) and returns the result.
