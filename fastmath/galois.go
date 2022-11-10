@@ -21,7 +21,6 @@ func (p *Poly) Permute(exp int64, sig Automorphism) *Poly {
 		gen = sig.Exponent(uint64(exp))
 	} else {
 		// Get the additive inverse of g^exp under mod d => (exp mod d) for exp < 0
-		// TODO: optimize
 		invExp := ring.ModExp(uint64(int64(sig.D)+exp), 1, sig.D)
 		gen = sig.Exponent(invExp)
 	}

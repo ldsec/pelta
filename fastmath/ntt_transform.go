@@ -1,12 +1,35 @@
 package fastmath
 
 import (
+	"errors"
+	"fmt"
+	"os"
+
 	"github.com/tuneinsight/lattigo/v4/ring"
 	"github.com/tuneinsight/lattigo/v4/utils"
 )
 
+// LoadNTTTransform gets the NTT transform associated with the given name. Either reads from the saved matrix file or generates anew.
+func LoadNTTTransform(name string, q uint64, logN int, baseRing *ring.Ring) *IntMatrix {
+	var T *IntMatrix
+	if _, err := os.Stat(name); errors.Is(err, os.ErrNotExist) {
+		T = GenerateNTTTransform(q, logN, baseRing)
+		err := SaveIntMatrix(T, name)
+		if err != nil {
+			fmt.Printf("couldn't save the NTT transform %s: %s\n", name, err.Error())
+		}
+	} else {
+		T, err = LoadIntMatrix(name, baseRing)
+		if err != nil {
+			fmt.Printf("couldn't load the NTT transform %s, regenerating: %s\n", name, err.Error())
+			T = GenerateNTTTransform(q, logN, baseRing)
+		}
+	}
+	return T
+}
+
 // GenerateNTTTransform computes and returns the integer NTT transformation matrix for the given base ring.
-func GenerateNTTTransform(q uint64, logN int, baseRing *ring.Ring) IntMatrix {
+func GenerateNTTTransform(q uint64, logN int, baseRing *ring.Ring) *IntMatrix {
 	w := ring.InvMForm(baseRing.NttPsi[0][baseRing.N>>1], q, baseRing.MredParams[0])
 	mask := uint64(2*baseRing.N - 1)
 	T := NewIntMatrix(baseRing.N, baseRing.N, baseRing)
@@ -20,7 +43,7 @@ func GenerateNTTTransform(q uint64, logN int, baseRing *ring.Ring) IntMatrix {
 		})
 		return tRow
 	})
-	return T
+	return &T
 }
 
 // ExtendNTTTransform extends the transformation T with p => pT with pT * q = p(Tq)
