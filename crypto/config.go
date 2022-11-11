@@ -13,6 +13,7 @@ type Config struct {
 	D               int      // deg(X^D + 1), a power of two
 	LogD            int      // log(D)
 	Q               *big.Int // Prime mod
+	P               *big.Int // Ajtai prime mod
 	M               int      // # rows
 	N               int      // # cols, must be >= D
 	K               int      // Repetition rate
@@ -54,6 +55,7 @@ func GetDefaultConfig() Config {
 		D:             ringParams.N(),
 		LogD:          ringParams.LogN(),
 		Q:             ringParams.RingQP().RingQ.ModulusAtLevel[0],
+		P:             big.NewInt(5857),
 		N:             ringParams.N(),
 		M:             16,
 		K:             1,

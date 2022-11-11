@@ -209,3 +209,12 @@ func (p *PolyNTT) Copy() *PolyNTT {
 func (p *PolyNTT) Eq(q *PolyNTT) bool {
 	return p.actual.baseRing.EqualLvl(0, p.actual.ref, q.actual.ref)
 }
+
+// Coeffs returns a view into the coefficients of this polynomial.
+func (p *PolyNTT) Coeffs() *IntVec {
+	return &IntVec{
+		size:     p.actual.N(),
+		polys:    []Poly{*p.actual},
+		baseRing: p.actual.baseRing,
+	}
+}

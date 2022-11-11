@@ -77,10 +77,11 @@ func (v *IntVec) Set(index int, newValue uint64) {
 }
 
 // Scale scales the vector by the given amount.
-func (v *IntVec) Scale(factor uint64) {
+func (v *IntVec) Scale(factor uint64) *IntVec {
 	for _, p := range v.polys {
 		p.Scale(factor)
 	}
+	return v
 }
 
 // Neg negates the polynomial.
@@ -131,10 +132,16 @@ func (v *IntVec) MulAddElems(r *IntVec, out *Poly) {
 
 // Eq checks the equality between two integer vectors.
 func (v *IntVec) Eq(r *IntVec) bool {
-	if v.size != r.size {
+	if v.Size() != r.Size() {
 		return false
 	}
-	for i := 0; i < len(v.polys); i++ {
+	// The underlying polynomial # might change even when the sizes are equal.
+	// Take the minimum.
+	minPolySize := len(v.polys)
+	if len(r.polys) < minPolySize {
+		minPolySize = len(r.polys)
+	}
+	for i := 0; i < minPolySize; i++ {
 		if !v.polys[i].EqLevel(0, &r.polys[i]) {
 			return false
 		}
@@ -154,19 +161,20 @@ func (v *IntVec) Copy() *IntVec {
 // String returns the string representation of this integer vector.
 func (v *IntVec) String() string {
 	s := fmt.Sprintf("IntVec[%d]{", v.Size())
-	elemStrs := make([]string, 0, v.size)
+	elemStrs := make([]string, 0, v.Size())
 	for i := 0; i < len(v.polys); i++ {
 		for j := 0; j < v.polys[i].N(); j++ {
 			elemStrs = append(elemStrs, fmt.Sprintf("%d", v.polys[i].Get(j, 0)))
 		}
 	}
-	return s + strings.Join(elemStrs[:v.size], ",") + ",...}"
+	return s + strings.Join(elemStrs[:v.Size()], ",") + ",...}"
 }
 
 // Append appends the contents of the given vector into this one.
-func (v *IntVec) Append(r *IntVec) {
+func (v *IntVec) Append(r *IntVec) *IntVec {
 	v.size = v.size + r.size
 	v.polys = append(v.polys, r.polys...)
+	return v
 }
 
 // Reduce reduces the elements of this vector by the given mod.
@@ -252,6 +260,37 @@ func (m *IntMatrix) SetRow(row int, newRow IntVec) {
 		panic("IntMatrix.SetRows index incorrect")
 	}
 	m.rows[row] = newRow
+}
+
+// AppendRow appends a row into the vector.
+func (m *IntMatrix) AppendRow(v IntVec) {
+	if m.Cols() != v.Size() {
+		panic("IntMatrix.AppendRow cannot append row, invalid size")
+	}
+	m.rows = append(m.rows, v)
+	m.numRows += 1
+}
+
+// ExtendRows concatenates the matrices vertically.
+func (m *IntMatrix) ExtendRows(b *IntMatrix) *IntMatrix {
+	if m.Cols() != b.Cols() {
+		panic("IntMatrix.ExtendRows cannot extend, invalid size")
+	}
+	m.rows = append(m.rows, b.rows...)
+	m.numRows += b.Rows()
+	return m
+}
+
+// ExtendCols concatentes the matrices horizontally.
+func (m *IntMatrix) ExtendCols(b *IntMatrix) *IntMatrix {
+	if m.Rows() != b.Rows() {
+		panic("IntMatrix.ExtendCols cannot extend, invalid size")
+	}
+	for i := 0; i < m.Rows(); i++ {
+		m.rows[i].Append(b.RowView(i))
+	}
+	m.numCols += b.Cols()
+	return m
 }
 
 // Populate is used to initialize the elements of this matrix.
