@@ -55,42 +55,33 @@ func RLWEToSIS(rlweProblem RLWEProblem) SISProblem {
 	logD := rlweProblem.Params.LogD
 	// Extract the NTT transform.
 	T := fastmath.LoadNTTTransform("ntt_transform", q, logD, baseRing)
-	d := T.Rows()
 	// Compute the ternary decomposition of the error.
 	e, b := rlweProblem.ErrorDecomposition()
 	k := b.Size()
 	// Compute the sub-matrices of A.
-	AParts := make([]fastmath.IntMatrix, k+1)
-	for i := range AParts {
-		AParts[i] = *T.Copy()
+	aParts := make([]*fastmath.IntMatrix, k+1)
+	for i := range aParts {
+		aParts[i] = T.Copy()
 	}
-	negp1 := rlweProblem.P1.Copy().Neg().NTT()
-	fastmath.ExtendNTTTransform(&AParts[0], negp1)
+	negP1 := rlweProblem.P1.Copy().Neg().NTT()
+	fastmath.ExtendNTTTransform(aParts[0], negP1)
 	for i := 0; i < k; i++ {
-		AParts[i+1].Scale(b.Get(i))
+		aParts[i+1].Scale(b.Get(i))
 	}
 	// Compute the sub-vectors of S.
-	sParts := make([]fastmath.IntVec, k+1)
-	sParts[0] = *rlweProblem.S.Coeffs()
+	sParts := make([]*fastmath.IntVec, k+1)
+	sParts[0] = rlweProblem.S.Coeffs()
 	for i := 0; i < k; i++ {
-		sParts[i+1] = *e.RowView(i)
+		sParts[i+1] = e.RowView(i)
 	}
 	// Combine.
-	A := fastmath.NewIntMatrix(d, d*(k+1), baseRing)
-	A.PopulateRows(func(i int) fastmath.IntVec {
-		ARowPolys := make([]fastmath.Poly, 0, k+1)
-		for _, APart := range AParts {
-			APartRow := APart.RowView(i)
-			ARowPolys = append(ARowPolys, APartRow.UnderlyingPolys()...)
-		}
-		ARow := fastmath.NewIntVecFromPolys(ARowPolys, d*(k+1), baseRing)
-		return *ARow
-	})
-	s := fastmath.NewIntVec(d*(k+1), baseRing)
-	sPolys := make([]fastmath.Poly, 0, k+1)
-	for _, sPart := range sParts {
-		sPolys = append(sPolys, sPart.UnderlyingPolys()...)
+	A := aParts[0]
+	for _, aPart := range aParts[1:] {
+		A.ExtendCols(aPart)
 	}
-	s.SetUnderlyingPolys(sPolys)
+	s := sParts[0]
+	for _, sPart := range sParts[1:] {
+		s.Append(sPart)
+	}
 	return NewSISProblem(A, s)
 }
