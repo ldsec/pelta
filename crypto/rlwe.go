@@ -25,7 +25,7 @@ func NewRLWEParameters(q uint64, logD int, beta uint64, baseRing *ring.Ring) RLW
 	}
 }
 
-// RLWEProblem represents an MRLWE problem, i.E., P0 = -P1 * S + E.
+// RLWEProblem represents an MRLWE problem, i.e., p0 = -p1 * s + e.
 type RLWEProblem struct {
 	Params RLWEParameters
 	P0     *fastmath.Poly
@@ -48,7 +48,7 @@ func (r RLWEProblem) ErrorDecomposition() (*fastmath.IntMatrix, *fastmath.IntVec
 	return eDecomp.Transposed(), ternaryBasis
 }
 
-// RLWEToSIS transforms an RLWE problem into an SIS one.
+// RLWEToSIS transforms an RLWE problem into an equivalent SIS one.
 func RLWEToSIS(rlweProblem RLWEProblem) SISProblem {
 	baseRing := rlweProblem.Params.BaseRing
 	q := rlweProblem.Params.Q

@@ -147,7 +147,6 @@ func TestConsistency(tst *testing.T) {
 
 func TestSimple(t *testing.T) {
 	config := crypto.GetDefaultConfig()
-	// Create a simple SIS problem instance & its solution.
 	A := fastmath.NewRandomIntMatrix(config.M, config.N, config.Q, config.BaseRing)
 	s := fastmath.NewRandomTernaryIntVec(config.N, config.BaseRing)
 	sisProblem := crypto.NewSISProblem(A, s)
@@ -158,7 +157,6 @@ func TestSimple(t *testing.T) {
 func TestMultiReplication(t *testing.T) {
 	config := crypto.GetDefaultConfig()
 	config.K = 4
-	// Create a simple SIS problem instance & its solution.
 	A := fastmath.NewRandomIntMatrix(config.M, config.N, config.Q, config.BaseRing)
 	s := fastmath.NewRandomTernaryIntVec(config.N, config.BaseRing)
 	sisProblem := crypto.NewSISProblem(A, s)
@@ -169,7 +167,6 @@ func TestMultiReplication(t *testing.T) {
 func TestMultiSplit(t *testing.T) {
 	config := crypto.GetDefaultConfig()
 	config.N *= 4
-	// Create a simple SIS problem instance & its solution.
 	A := fastmath.NewRandomIntMatrix(config.M, config.N, config.Q, config.BaseRing)
 	s := fastmath.NewRandomTernaryIntVec(config.N, config.BaseRing)
 	sisProblem := crypto.NewSISProblem(A, s)
@@ -181,9 +178,21 @@ func TestMultiSplitMultiReplication(t *testing.T) {
 	config := crypto.GetDefaultConfig()
 	config.N *= 4
 	config.K = 4
-	// Create a simple SIS problem instance & its solution.
 	A := fastmath.NewRandomIntMatrix(config.M, config.N, config.Q, config.BaseRing)
 	s := fastmath.NewRandomTernaryIntVec(config.N, config.BaseRing)
+	sisProblem := crypto.NewSISProblem(A, s)
+	params := fastens20.NewPublicParameters(sisProblem, config)
+	ExecuteAndTestCorrectness(t, s, params)
+}
+
+func TestSubTernaryLength(t *testing.T) {
+	config := crypto.GetDefaultConfig()
+	// Let only half of the secret s have ternary structure.
+	config.N *= 4
+	config.TernaryLength *= 2
+	A := fastmath.NewRandomIntMatrix(config.M, config.N, config.Q, config.BaseRing)
+	s := fastmath.NewRandomTernaryIntVec(config.TernaryLength, config.BaseRing)
+	s.Append(fastmath.NewRandomIntVec(config.N-config.TernaryLength, config.Q, config.BaseRing))
 	sisProblem := crypto.NewSISProblem(A, s)
 	params := fastens20.NewPublicParameters(sisProblem, config)
 	ExecuteAndTestCorrectness(t, s, params)

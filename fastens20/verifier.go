@@ -96,7 +96,7 @@ func (vf Verifier) Verify(z *fastmath.PolyNTTMatrix, state VerifierState) bool {
 		Add(state.c.Copy().NTT().
 			Mul(state.T.Get(vf.params.config.NumSplits() + 2)).
 			Neg())
-	vTest := CommitmentSum(vf.params.config.K, vf.params.config.NumSplits(), state.Alpha,
+	vTest := CommitmentSum(vf.params.config.K, vf.params.config.NumTernarySplits(), state.Alpha,
 		func(i int, j int) fastmath.PolyNTT {
 			// f[i][j]
 			p1 := f.Get(i, j).Copy()

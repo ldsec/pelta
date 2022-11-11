@@ -23,6 +23,8 @@ type Config struct {
 	UniformSampler  fastmath.PolySampler
 	TernarySampler  fastmath.PolySampler
 	GaussianSampler fastmath.PolySampler
+
+	TernaryLength int // Length of the ternary prefix of the M-SIS secret
 }
 
 // NumSplits returns n/d
@@ -35,6 +37,11 @@ func (c Config) Beta() int {
 	return c.Delta1
 }
 
+// NumTernarySplits returns the number of splits that are in ternary.
+func (c Config) NumTernarySplits() int {
+	return c.TernaryLength / c.D
+}
+
 func GetDefaultConfig() Config {
 	// Initialize the ring parameters.
 	ringParamDef := bfv.PN13QP218
@@ -44,15 +51,16 @@ func GetDefaultConfig() Config {
 		panic("could not initialize the ring parameters: %s")
 	}
 	settings := Config{
-		D:      ringParams.N(),
-		LogD:   ringParams.LogN(),
-		Q:      ringParams.RingQP().RingQ.ModulusAtLevel[0],
-		N:      ringParams.N(),
-		M:      16,
-		K:      1,
-		Delta1: 16,
-		Lambda: 1,
-		Kappa:  1,
+		D:             ringParams.N(),
+		LogD:          ringParams.LogN(),
+		Q:             ringParams.RingQP().RingQ.ModulusAtLevel[0],
+		N:             ringParams.N(),
+		M:             16,
+		K:             1,
+		Delta1:        16,
+		Lambda:        1,
+		Kappa:         1,
+		TernaryLength: ringParams.N(),
 	}
 	// Initialize the ring.
 	settings.BaseRing = ringParams.RingQP().RingQ

@@ -39,10 +39,12 @@ func NewIntVecFromPolys(polys []Poly, size int, baseRing *ring.Ring) *IntVec {
 	return &IntVec{size, polys, baseRing.ModulusAtLevel[0], baseRing}
 }
 
+// Size returns the size of this vector.
 func (v *IntVec) Size() int {
 	return v.size
 }
 
+// Populate is used to initialize the elements of this vector.
 func (v *IntVec) Populate(f func(int) uint64) {
 	for i := 0; i < v.size; i++ {
 		val := f(i)
@@ -50,6 +52,7 @@ func (v *IntVec) Populate(f func(int) uint64) {
 	}
 }
 
+// Get returns the element at the given index.
 func (v *IntVec) Get(index int) uint64 {
 	polyIndex := index / v.baseRing.N
 	coeffIndex := index % v.baseRing.N
@@ -61,10 +64,12 @@ func (v *IntVec) UnderlyingPolys() []Poly {
 	return v.polys
 }
 
+// SetUnderlyingPolys can be used to update the polynomials that are used to represent this vector.
 func (v *IntVec) SetUnderlyingPolys(polys []Poly) {
 	v.polys = polys
 }
 
+// Set updates the given element of this vector.
 func (v *IntVec) Set(index int, newValue uint64) {
 	polyIndex := index / v.baseRing.N
 	coeffIndex := index % v.baseRing.N
@@ -78,6 +83,7 @@ func (v *IntVec) Scale(factor uint64) {
 	}
 }
 
+// Neg negates the polynomial.
 func (v *IntVec) Neg() *IntVec {
 	for _, p := range v.polys {
 		p.Neg()
@@ -136,12 +142,13 @@ func (v *IntVec) Eq(r *IntVec) bool {
 	return true
 }
 
+// Copy copies the vector.
 func (v *IntVec) Copy() *IntVec {
 	polys := make([]Poly, len(v.polys))
 	for i, p := range v.polys {
 		polys[i] = *p.Copy()
 	}
-	return &IntVec{size: v.size, polys: polys, baseRing: v.baseRing}
+	return &IntVec{v.size, polys, v.mod, v.baseRing}
 }
 
 // String returns the string representation of this integer vector.
@@ -154,6 +161,23 @@ func (v *IntVec) String() string {
 		}
 	}
 	return s + strings.Join(elemStrs[:v.size], ",") + ",...}"
+}
+
+// Append appends the contents of the given vector into this one.
+func (v *IntVec) Append(r *IntVec) {
+	v.size = v.size + r.size
+	v.polys = append(v.polys, r.polys...)
+}
+
+// Reduce reduces the elements of this vector by the given mod.
+func (v *IntVec) Reduce(mod *big.Int) *IntVec {
+	for _, p := range v.polys {
+		for i := 0; i < p.N(); i++ {
+			reducedVal := big.NewInt(0).Mod(big.NewInt(int64(p.Get(i, 0))), mod)
+			p.Set(i, reducedVal.Uint64())
+		}
+	}
+	return v
 }
 
 type IntMatrix struct {
@@ -182,18 +206,22 @@ func NewIntMatrixFromSlice(elems [][]uint64, baseRing *ring.Ring) *IntMatrix {
 	return m
 }
 
+// Rows returns the number of rows.
 func (m *IntMatrix) Rows() int {
 	return m.numRows
 }
 
+// Cols returns the number of cols.
 func (m *IntMatrix) Cols() int {
 	return m.numCols
 }
 
+// RowView returns a refernce to the i-th row.
 func (m *IntMatrix) RowView(i int) *IntVec {
 	return &m.rows[i]
 }
 
+// ColCopy returns a copy of the i-th col.
 func (m *IntMatrix) ColCopy(i int) *IntVec {
 	colVec := NewIntVec(m.Rows(), m.baseRing)
 	for j, row := range m.rows {
@@ -202,6 +230,7 @@ func (m *IntMatrix) ColCopy(i int) *IntVec {
 	return colVec
 }
 
+// Get returns the element at the given coordinates.
 func (m *IntMatrix) Get(row, col int) uint64 {
 	if row >= m.Rows() || col >= m.Cols() {
 		panic("IntMatrix.Get indices incorrect")
@@ -209,6 +238,7 @@ func (m *IntMatrix) Get(row, col int) uint64 {
 	return m.rows[row].Get(col)
 }
 
+// Set updates the given element of this matrix.
 func (m *IntMatrix) Set(row, col int, newValue uint64) {
 	if row >= m.Rows() || col >= m.Cols() {
 		panic("IntMatrix.Set indices incorrect")
@@ -216,6 +246,7 @@ func (m *IntMatrix) Set(row, col int, newValue uint64) {
 	m.rows[row].Set(col, newValue)
 }
 
+// SetRow updates the given row of this matrix.
 func (m *IntMatrix) SetRow(row int, newRow IntVec) {
 	if row >= m.Rows() {
 		panic("IntMatrix.SetRows index incorrect")
@@ -223,6 +254,7 @@ func (m *IntMatrix) SetRow(row int, newRow IntVec) {
 	m.rows[row] = newRow
 }
 
+// Populate is used to initialize the elements of this matrix.
 func (m *IntMatrix) Populate(f func(int, int) uint64) {
 	for i, row := range m.rows {
 		row.Populate(
@@ -232,12 +264,14 @@ func (m *IntMatrix) Populate(f func(int, int) uint64) {
 	}
 }
 
+// PopulateRows is used to initialize the rows of this matrix.
 func (m *IntMatrix) PopulateRows(f func(int) IntVec) {
 	for i := 0; i < m.Rows(); i++ {
 		m.rows[i] = f(i)
 	}
 }
 
+// Transposed returns the transposed version of this matrix.
 func (m *IntMatrix) Transposed() *IntMatrix {
 	newRows := make([]IntVec, m.Cols())
 	for i := 0; i < len(newRows); i++ {
@@ -246,6 +280,7 @@ func (m *IntMatrix) Transposed() *IntMatrix {
 	return &IntMatrix{m.numCols, m.numRows, newRows, m.mod, m.baseRing}
 }
 
+// MulVec performs a matrix-vector multiplication.
 func (m *IntMatrix) MulVec(v *IntVec) *IntVec {
 	if m.Cols() != v.Size() {
 		panic("IntMatrix.MulVec sizes incorrect")
@@ -260,6 +295,7 @@ func (m *IntMatrix) MulVec(v *IntVec) *IntVec {
 	return out
 }
 
+// MulMat performs a matrix-matrix multiplication.
 func (m *IntMatrix) MulMat(b *IntMatrix) *IntMatrix {
 	if m.Cols() != b.Rows() {
 		panic("IntMatrix.MulMat sizes incorrect")
@@ -282,6 +318,7 @@ func (m *IntMatrix) Scale(factor uint64) {
 	}
 }
 
+// Copy returns a copy of this matrix.
 func (m *IntMatrix) Copy() *IntMatrix {
 	rows := make([]IntVec, m.numRows)
 	for i, row := range m.rows {
@@ -290,6 +327,7 @@ func (m *IntMatrix) Copy() *IntMatrix {
 	return &IntMatrix{m.numRows, m.numCols, rows, m.mod, m.baseRing}
 }
 
+// Eq returns true iff two matrices are equal in their elements.
 func (m *IntMatrix) Eq(b *IntMatrix) bool {
 	if m.Rows() != b.Rows() || m.Cols() != b.Cols() {
 		return false
@@ -303,6 +341,7 @@ func (m *IntMatrix) Eq(b *IntMatrix) bool {
 	return true
 }
 
+// String returns a string representation of the matrix.
 func (m *IntMatrix) String() string {
 	s := fmt.Sprintf("IntMatrix[%d,%d]{\n", m.Rows(), m.Cols())
 	for _, row := range m.rows {

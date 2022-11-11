@@ -73,13 +73,6 @@ func (p *Poly) SumCoeffsLimited(level, limit int, mod *big.Int) uint64 {
 	return out.Uint64()
 }
 
-func (p *Poly) SubShift(amount, length, level int, out *Poly) {
-	p.baseRing.Shift(p.ref, amount, out.ref)
-	for i := 0; i < amount; i++ {
-		out.Set(length-1-i, out.Get(out.N()-1-i, level))
-	}
-}
-
 // NTT converts this polynomial to its NTT domain.
 func (p *Poly) NTT() *PolyNTT {
 	c := p.Copy()
