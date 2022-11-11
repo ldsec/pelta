@@ -2,6 +2,7 @@ package fastmath
 
 import (
 	"fmt"
+	"math/big"
 	"strings"
 
 	"github.com/tuneinsight/lattigo/v4/ring"
@@ -10,6 +11,7 @@ import (
 type IntVec struct {
 	size     int
 	polys    []Poly
+	mod      *big.Int
 	baseRing *ring.Ring
 }
 
@@ -22,7 +24,7 @@ func NewIntVec(size int, baseRing *ring.Ring) *IntVec {
 	for i := 0; i < len(polys); i++ {
 		polys[i] = *NewZeroPoly(baseRing)
 	}
-	return &IntVec{size, polys, baseRing}
+	return &IntVec{size, polys, baseRing.ModulusAtLevel[0], baseRing}
 }
 
 func NewIntVecFromSlice(slice []uint64, baseRing *ring.Ring) *IntVec {
@@ -34,7 +36,7 @@ func NewIntVecFromSlice(slice []uint64, baseRing *ring.Ring) *IntVec {
 }
 
 func NewIntVecFromPolys(polys []Poly, size int, baseRing *ring.Ring) *IntVec {
-	return &IntVec{size, polys, baseRing}
+	return &IntVec{size, polys, baseRing.ModulusAtLevel[0], baseRing}
 }
 
 func (v *IntVec) Size() int {
@@ -99,15 +101,26 @@ func (v *IntVec) Dot(r *IntVec) uint64 {
 	if v.size != r.size {
 		panic("IntVec.Dot sizes do not match")
 	}
-	sum := uint64(0)
+	preSum := NewZeroPoly(v.baseRing)
 	for i := 0; i < len(v.polys); i++ {
 		a := v.polys[i]
 		b := r.polys[i]
-		c := NewZeroPoly(v.baseRing)
-		v.baseRing.MulCoeffsAndAdd(a.ref, b.ref, c.ref)
-		sum += c.SumCoeffs(0)
+		v.baseRing.MulCoeffsAndAdd(a.ref, b.ref, preSum.ref)
 	}
-	return sum
+	return preSum.SumCoeffsLimited(0, v.size, v.mod)
+}
+
+// MulAddElems multiplies the elements and adds it to the coefficients of the
+// given `out` polynomial.
+func (v *IntVec) MulAddElems(r *IntVec, out *Poly) {
+	if v.size != r.size {
+		panic("IntVec.Dot sizes do not match")
+	}
+	for i := 0; i < len(v.polys); i++ {
+		a := v.polys[i]
+		b := r.polys[i]
+		v.baseRing.MulCoeffsAndAdd(a.ref, b.ref, out.ref)
+	}
 }
 
 // Eq checks the equality between two integer vectors.
@@ -147,6 +160,7 @@ type IntMatrix struct {
 	numRows  int
 	numCols  int
 	rows     []IntVec
+	mod      *big.Int
 	baseRing *ring.Ring
 }
 
@@ -155,7 +169,7 @@ func NewIntMatrix(numRows, numCols int, baseRing *ring.Ring) *IntMatrix {
 	for i := 0; i < len(rows); i++ {
 		rows[i] = *NewIntVec(numCols, baseRing)
 	}
-	return &IntMatrix{numRows, numCols, rows, baseRing}
+	return &IntMatrix{numRows, numCols, rows, baseRing.ModulusAtLevel[0], baseRing}
 }
 
 func NewIntMatrixFromSlice(elems [][]uint64, baseRing *ring.Ring) *IntMatrix {
@@ -229,7 +243,7 @@ func (m *IntMatrix) Transposed() *IntMatrix {
 	for i := 0; i < len(newRows); i++ {
 		newRows[i] = *m.ColCopy(i)
 	}
-	return &IntMatrix{m.numCols, m.numRows, newRows, m.baseRing}
+	return &IntMatrix{m.numCols, m.numRows, newRows, m.mod, m.baseRing}
 }
 
 func (m *IntMatrix) MulVec(v *IntVec) *IntVec {
@@ -237,8 +251,11 @@ func (m *IntMatrix) MulVec(v *IntVec) *IntVec {
 		panic("IntMatrix.MulVec sizes incorrect")
 	}
 	out := NewIntVec(m.Rows(), m.baseRing)
+	dotResult := NewZeroPoly(m.baseRing)
 	for i, row := range m.rows {
-		out.Set(i, row.Dot(v))
+		row.MulAddElems(v, dotResult)
+		out.Set(i, dotResult.SumCoeffsLimited(0, row.Size(), m.mod))
+		dotResult.ref.Zero()
 	}
 	return out
 }
@@ -270,7 +287,7 @@ func (m *IntMatrix) Copy() *IntMatrix {
 	for i, row := range m.rows {
 		rows[i] = *row.Copy()
 	}
-	return &IntMatrix{m.numRows, m.numCols, rows, m.baseRing}
+	return &IntMatrix{m.numRows, m.numCols, rows, m.mod, m.baseRing}
 }
 
 func (m *IntMatrix) Eq(b *IntMatrix) bool {

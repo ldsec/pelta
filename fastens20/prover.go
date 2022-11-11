@@ -1,7 +1,6 @@
 package fastens20
 
 import (
-	"fmt"
 	"math/big"
 
 	"github.com/ldsec/codeBase/commitment/fastmath"
@@ -40,7 +39,7 @@ func (p Prover) CommitToMessage(s *fastmath.IntVec) (*fastmath.PolyNTTVec, *fast
 	for i := 0; i < p.params.config.K; i++ {
 		gPoly.Set(i, 0)
 	}
-	g := gPoly.Copy().NTT()
+	g := gPoly.NTT()
 	// Sample the randomness.
 	r := fastmath.NewRandomPolyVec(p.params.B0.Cols(), p.params.config.TernarySampler, p.params.config.BaseRing).NTT()
 	// Compute the commitments.
@@ -86,7 +85,7 @@ func (p Prover) CommitToRelation(alpha *fastmath.PolyNTTVec, gamma *fastmath.Int
 			// s[j]-2
 			tmp2 := state.SHat.Get(j).Copy().
 				Add(fastmath.NewOnePoly(2, p.params.config.BaseRing).NTT().Neg())
-			// (s[j]-1)s[j]
+			// (s[j]-1)*s[j]
 			tmp3 := state.SHat.Get(j).Copy().Add(neg1).Mul(state.SHat.Get(j))
 			// [(2s[j]-1) * (s[j]-2) + s[j](s[j]-1)] * (b[j]*y[i])
 			return *tmp.Mul(tmp1.Mul(tmp2).Add(tmp3))
@@ -127,8 +126,6 @@ func (p Prover) CommitToRelation(alpha *fastmath.PolyNTTVec, gamma *fastmath.Int
 			dec := fastmath.NewOnePoly(p.params.U.Dot(gamma.RowView(mu)), p.params.config.BaseRing).NTT()
 			return *presum.Sum().Add(dec.Neg())
 		}, p.params)
-	fmt.Println(state.G.Copy().InvNTT().String())
-	fmt.Println(gMask.Copy().InvNTT().String())
 	h := state.G.Copy().Add(gMask)
 	vp := fastmath.NewPolyVec(p.params.config.K, p.params.config.BaseRing).NTT()
 	vp.Populate(func(i int) fastmath.PolyNTT {

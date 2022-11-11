@@ -3,6 +3,7 @@ package fastmath
 import (
 	"fmt"
 	"math"
+	"math/big"
 	"strings"
 
 	"github.com/tuneinsight/lattigo/v4/ring"
@@ -52,18 +53,38 @@ func (p *Poly) Coeffs() *IntVec {
 func (p *Poly) SumCoeffs(level int) uint64 {
 	logN := int(math.Log2(float64(p.baseRing.N)))
 	tmp := p.Copy()
+	tmp2 := NewZeroPoly(p.baseRing)
 	for i := 0; i < logN; i++ {
-		tmp2 := NewZeroPoly(p.baseRing)
 		p.baseRing.Shift(tmp.ref, 1<<i, tmp2.ref)
 		p.baseRing.Add(tmp.ref, tmp2.ref, tmp.ref)
 	}
 	return tmp.ref.Coeffs[level][0]
 }
 
-// TryNTT converts this polynomial to its NTT domain.
+// SumCoeffsLimited returns the sum of the first `limit` coefficients of this polynomial.
+func (p *Poly) SumCoeffsLimited(level, limit int, mod *big.Int) uint64 {
+	if limit >= p.N() {
+		return p.SumCoeffs(level)
+	}
+	out := big.NewInt(0)
+	for i := 0; i < limit; i++ {
+		out.Add(out, big.NewInt(int64(p.Get(i, level)))).Mod(out, mod)
+	}
+	return out.Uint64()
+}
+
+func (p *Poly) SubShift(amount, length, level int, out *Poly) {
+	p.baseRing.Shift(p.ref, amount, out.ref)
+	for i := 0; i < amount; i++ {
+		out.Set(length-1-i, out.Get(out.N()-1-i, level))
+	}
+}
+
+// NTT converts this polynomial to its NTT domain.
 func (p *Poly) NTT() *PolyNTT {
-	p.baseRing.NTT(p.ref, p.ref)
-	return &PolyNTT{p}
+	c := p.Copy()
+	p.baseRing.NTT(c.ref, c.ref)
+	return &PolyNTT{c}
 }
 
 // Neg negates this polynomial.
@@ -90,7 +111,7 @@ func (p *Poly) MulCoeffs(q *Poly) *Poly {
 	return p
 }
 
-// Pow takes the `exp`-th power of the coefficients modulo `mod`.
+// PowCoeffs takes the `exp`-th power of the coefficients modulo `mod`.
 func (p *Poly) PowCoeffs(exp uint64, mod uint64) *Poly {
 	for i := 0; i < p.baseRing.N; i++ {
 		newCoeff := ring.ModExp(p.Get(i, 0), exp, mod)

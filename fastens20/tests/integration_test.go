@@ -176,3 +176,15 @@ func TestMultiSplit(t *testing.T) {
 	params := fastens20.NewPublicParameters(sisProblem, config)
 	ExecuteAndTestCorrectness(t, s, params)
 }
+
+func TestMultiSplitMultiReplication(t *testing.T) {
+	config := crypto.GetDefaultConfig()
+	config.N *= 4
+	config.K = 4
+	// Create a simple SIS problem instance & its solution.
+	A := fastmath.NewRandomIntMatrix(config.M, config.N, config.Q, config.BaseRing)
+	s := fastmath.NewRandomTernaryIntVec(config.N, config.BaseRing)
+	sisProblem := crypto.NewSISProblem(A, s)
+	params := fastens20.NewPublicParameters(sisProblem, config)
+	ExecuteAndTestCorrectness(t, s, params)
+}
