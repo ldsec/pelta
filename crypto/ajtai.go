@@ -1,9 +1,8 @@
 package crypto
 
 import (
-	"math/big"
-
 	"github.com/ldsec/codeBase/commitment/fastmath"
+	"github.com/tuneinsight/lattigo/v4/ring"
 )
 
 type AjtaiCommitment struct {
@@ -13,7 +12,7 @@ type AjtaiCommitment struct {
 	R     *fastmath.IntVec
 	Kappa *fastmath.IntVec
 	ComP  *fastmath.IntVec
-	P     *big.Int
+	P     uint64
 }
 
 func NewAjtaiCommitment(s, r *fastmath.IntVec, comSize int, config Config) AjtaiCommitment {
@@ -30,44 +29,45 @@ func NewAjtaiCommitment(s, r *fastmath.IntVec, comSize int, config Config) Ajtai
 	kappa.Populate(func(i int) uint64 {
 		return diff.Get(i) / config.P.Uint64()
 	})
-	return AjtaiCommitment{A, B, s, r, kappa, comP, config.P}
+	return AjtaiCommitment{A, B, s, r, kappa, comP, config.P.Uint64()}
 }
 
-func (aj *AjtaiCommitment) EmbedIntoSIS(sis *SISProblem, config Config) {
-	k := sis.S.Size()/config.D - 1
+// EmbedIntoSIS embeds this Ajitai commitment into the given SIS problem.
+func (aj *AjtaiCommitment) EmbedIntoSIS(sis *SISProblem, d int, q uint64, baseRing *ring.Ring) {
+	k := sis.S.Size()/d - 1
 	l := aj.ComP.Size()
 	// Extend u and s.
 	uExtension := aj.ComP.Copy()
 	sExtension := aj.R.Copy()
 	sExtension.Append(aj.Kappa)
 	// Pad the extensions.
-	padLength := config.D - l
-	padding := fastmath.NewIntVec(padLength, config.BaseRing)
+	padLength := d - l
+	padding := fastmath.NewIntVec(padLength, baseRing)
 	uExtension.Append(padding.Copy())
 	sExtension.Append(padding)
 	sis.U.Append(uExtension)
 	sis.S.Append(sExtension)
 	// Extend SIS A horizontally.
-	zeroHorExt := fastmath.NewIntMatrix(config.D, 2*config.D, config.BaseRing)
+	zeroHorExt := fastmath.NewIntMatrix(d, 2*d, baseRing)
 	sis.A.ExtendCols(zeroHorExt)
 	// Extend SIS A vertically.
 	aExtensionParts := make([]fastmath.IntMatrix, k+3)
 	aExtensionParts[0] = *aj.A.Copy()
 	aExtensionParts[k+1] = *aj.B.Copy()
 	// Pad the embedded A and B (# rows = l) to D rows
-	zeroVerExt := fastmath.NewIntMatrix(config.D-l, config.D, config.BaseRing)
+	zeroVerExt := fastmath.NewIntMatrix(d-l, d, baseRing)
 	aExtensionParts[0].ExtendRows(zeroVerExt.Copy())
 	aExtensionParts[k+1].ExtendRows(zeroVerExt)
 	for i := 0; i < k; i++ {
-		aExtensionParts[i+1] = *fastmath.NewIntMatrix(config.D, config.D, config.BaseRing)
+		aExtensionParts[i+1] = *fastmath.NewIntMatrix(d, d, baseRing)
 	}
-	negP := config.Q.Uint64() - aj.P.Uint64()
-	negPDiag := fastmath.NewIntMatrix(config.D, config.D, config.BaseRing)
+	negP := q - aj.P
+	negPDiag := fastmath.NewIntMatrix(d, d, baseRing)
 	for i := 0; i < negPDiag.Rows(); i++ {
 		negPDiag.Set(i, i, negP)
 	}
 	aExtensionParts[k+2] = *negPDiag
-	aVertExtension := fastmath.NewIntMatrix(config.D, 7*config.D, config.BaseRing)
+	aVertExtension := fastmath.NewIntMatrix(d, 7*d, baseRing)
 	for i := 0; i < aVertExtension.Rows(); i++ {
 		aExtensionRow := aExtensionParts[0].RowView(i)
 		for _, aExtPart := range aExtensionParts[1:] {

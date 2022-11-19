@@ -11,7 +11,7 @@ func TestAjtaiConstruction(t *testing.T) {
 	config := crypto.GetDefaultConfig()
 	comSize := 4
 	s := fastmath.NewRandomTernaryIntVec(config.D, config.BaseRing)
-	r := fastmath.NewRandomIntVec(config.D, config.P, config.BaseRing)
+	r := fastmath.NewRandomTernaryIntVec(config.D, config.BaseRing)
 	aj := crypto.NewAjtaiCommitment(s, r, comSize, config)
 	comQ := aj.A.MulVec(aj.S).
 		Add(aj.B.MulVec(aj.R))
@@ -32,16 +32,16 @@ func TestAjtaiEmbedding(t *testing.T) {
 	// Create the Ajtai commitment.
 	comSize := 4
 	s := fastmath.NewRandomTernaryIntVec(config.D, config.BaseRing)
-	r := fastmath.NewRandomIntVec(config.D, config.P, config.BaseRing)
+	r := fastmath.NewRandomTernaryIntVec(config.D, config.BaseRing)
 	aj := crypto.NewAjtaiCommitment(s, r, comSize, config)
 	// Create the RLWE problem.
 	p1 := fastmath.NewRandomPoly(config.UniformSampler, config.BaseRing)
-	rlweParams := crypto.NewRLWEParameters(config.Q.Uint64(), config.LogD, uint64(config.Beta()), config.BaseRing)
+	rlweParams := crypto.NewRLWEParameters(config.Q.Uint64(), config.D, uint64(config.Beta()), config.BaseRing)
 	rlweProblem := crypto.NewRLWEProblem(p1, s.UnderlyingPolys()[0].Copy(), config.GaussianSampler, rlweParams)
 	// Convert into an SIS problem.
 	sisProblem := crypto.RLWEToSIS(rlweProblem)
 	// Embed Ajtai into the problem.
-	aj.EmbedIntoSIS(&sisProblem, config)
+	aj.EmbedIntoSIS(&sisProblem, config.D, config.Q, config.BaseRing)
 	// Make sure that the embedding results in a valid SIS problem.
 	u := sisProblem.A.MulVec(sisProblem.S)
 	if !sisProblem.U.Eq(u) {

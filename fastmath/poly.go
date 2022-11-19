@@ -73,6 +73,17 @@ func (p *Poly) SumCoeffsLimited(level, limit int, mod *big.Int) uint64 {
 	return out.Uint64()
 }
 
+// MaxCoeff returns the maximum coefficient at the given level.
+func (p *Poly) MaxCoeff(level int) uint64 {
+	max := p.ref.Coeffs[level][0]
+	for _, coeff := range p.ref.Coeffs[level][1:] {
+		if coeff > max {
+			max = coeff
+		}
+	}
+	return max
+}
+
 // NTT converts this polynomial to its NTT domain.
 func (p *Poly) NTT() *PolyNTT {
 	c := p.Copy()
@@ -217,4 +228,15 @@ func (p *PolyNTT) Coeffs() *IntVec {
 		polys:    []Poly{*p.actual},
 		baseRing: p.actual.baseRing,
 	}
+}
+
+// MaxCoeff returns the maximum coefficient at the given level.
+func (p *PolyNTT) MaxCoeff(level int) uint64 {
+	max := p.actual.ref.Coeffs[level][0]
+	for _, coeff := range p.actual.ref.Coeffs[level][1:] {
+		if coeff > max {
+			max = coeff
+		}
+	}
+	return max
 }

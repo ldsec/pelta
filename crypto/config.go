@@ -13,7 +13,7 @@ type Config struct {
 	D               int      // deg(X^D + 1), a power of two
 	LogD            int      // log(D)
 	Q               *big.Int // Prime mod
-	P               *big.Int // Ajtai prime mod
+	P               *big.Int // Ajtai prime mod (~20 bit prime)
 	M               int      // # rows
 	N               int      // # cols, must be >= D
 	K               int      // Repetition rate

@@ -177,6 +177,18 @@ func (v *IntVec) Append(r *IntVec) *IntVec {
 	return v
 }
 
+// Max returns the largest element of the vector.
+func (v *IntVec) Max() uint64 {
+	max := v.polys[0].MaxCoeff(0)
+	for _, p := range v.polys[1:] {
+		pMax := p.MaxCoeff(0)
+		if pMax > max {
+			max = pMax
+		}
+	}
+	return max
+}
+
 // Reduce reduces the elements of this vector by the given mod.
 func (v *IntVec) Reduce(mod *big.Int) *IntVec {
 	for _, p := range v.polys {
@@ -281,7 +293,7 @@ func (m *IntMatrix) ExtendRows(b *IntMatrix) *IntMatrix {
 	return m
 }
 
-// ExtendCols concatentes the matrices horizontally.
+// ExtendCols concatenates the matrices horizontally.
 func (m *IntMatrix) ExtendCols(b *IntMatrix) *IntMatrix {
 	if m.Rows() != b.Rows() {
 		panic("IntMatrix.ExtendCols cannot extend, invalid size")

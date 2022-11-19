@@ -12,7 +12,7 @@ func TestRLWEConstruction(t *testing.T) {
 	// Create the RLWE problem.
 	s := fastmath.NewRandomTernaryPoly(config.BaseRing)
 	p1 := fastmath.NewRandomPoly(config.UniformSampler, config.BaseRing)
-	rlweParams := crypto.NewRLWEParameters(config.Q.Uint64(), config.LogD, uint64(config.Beta()), config.BaseRing)
+	rlweParams := crypto.NewRLWEParameters(config.Q.Uint64(), config.D, uint64(config.Beta()), config.BaseRing)
 	rlweProblem := crypto.NewRLWEProblem(p1, s, config.GaussianSampler, rlweParams)
 	// Check that p0 = -p1 * s + e
 	p0 := rlweProblem.P1.Copy().NTT().Neg().Mul(rlweProblem.S.NTT()).Add(rlweProblem.E.NTT()).InvNTT()
@@ -26,7 +26,7 @@ func TestRLWEErrorDecomposition(t *testing.T) {
 	// Create the RLWE problem.
 	s := fastmath.NewRandomTernaryPoly(config.BaseRing)
 	p1 := fastmath.NewRandomPoly(config.UniformSampler, config.BaseRing)
-	rlweParams := crypto.NewRLWEParameters(config.Q.Uint64(), config.LogD, uint64(config.Beta()), config.BaseRing)
+	rlweParams := crypto.NewRLWEParameters(config.Q.Uint64(), config.D, uint64(config.Beta()), config.BaseRing)
 	rlweProblem := crypto.NewRLWEProblem(p1, s, config.GaussianSampler, rlweParams)
 	// Decompose error.
 	e, b := rlweProblem.ErrorDecomposition()
@@ -48,7 +48,7 @@ func TestRLWEToSIS(t *testing.T) {
 	// Create the RLWE problem.
 	s := fastmath.NewRandomTernaryPoly(config.BaseRing)
 	p1 := fastmath.NewRandomPoly(config.UniformSampler, config.BaseRing)
-	rlweParams := crypto.NewRLWEParameters(config.Q.Uint64(), config.LogD, uint64(config.Beta()), config.BaseRing)
+	rlweParams := crypto.NewRLWEParameters(config.Q.Uint64(), config.D, uint64(config.Beta()), config.BaseRing)
 	rlweProblem := crypto.NewRLWEProblem(p1, s, config.GaussianSampler, rlweParams)
 	// Convert into an SIS problem.
 	sisProblem := crypto.RLWEToSIS(rlweProblem)

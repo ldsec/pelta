@@ -1,9 +1,10 @@
 package crypto
 
 import (
+	"math"
+
 	"github.com/ldsec/codeBase/commitment/fastmath"
 	"github.com/tuneinsight/lattigo/v4/ring"
-	"math"
 )
 
 type RLWEParameters struct {
@@ -14,8 +15,9 @@ type RLWEParameters struct {
 	LogBeta  int
 }
 
-func NewRLWEParameters(q uint64, logD int, beta uint64, baseRing *ring.Ring) RLWEParameters {
+func NewRLWEParameters(q uint64, d int, beta uint64, baseRing *ring.Ring) RLWEParameters {
 	logBeta := int(math.Log2(float64(beta)))
+	logD := int(math.Log2(float64(d)))
 	return RLWEParameters{
 		BaseRing: baseRing,
 		Q:        q,
