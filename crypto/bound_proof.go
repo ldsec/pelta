@@ -1,6 +1,7 @@
 package crypto
 
 import (
+	"errors"
 	"math/big"
 
 	"github.com/ldsec/codeBase/commitment/fastmath"
@@ -24,10 +25,12 @@ type BoundProof struct {
 }
 
 // NewBoundProof constructs a new bound proof
-func NewBoundProof(x *fastmath.IntVec, params BoundProofParams) BoundProof {
+func NewBoundProof(x *fastmath.IntVec, rejSamplingBound uint64, params BoundProofParams) (BoundProof, error) {
 	z := params.B.MulVec(x).Add(params.y)
-	// TODO add rejection sampling
-	return BoundProof{params, z}
+	if !fastmath.AcceptENS20(z, rejSamplingBound) {
+		return BoundProof{}, errors.New("rejection sampling")
+	}
+	return BoundProof{params, z}, nil
 }
 
 // Verify verifies the bound proof.
