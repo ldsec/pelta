@@ -27,14 +27,14 @@ func ExecuteAndTestCorrectness(tst *testing.T, s *fastmath.IntVec, params fasten
 }
 
 func TestConsistency(tst *testing.T) {
-	bfvRing := crypto.BFVZeroLevelRing()
+	bfvRing := fastmath.BFVZeroLevelRing()
 	m := 16
 	n := bfvRing.D
 	A := fastmath.NewRandomIntMatrix(m, n, bfvRing.Q, bfvRing.BaseRing)
 	s := fastmath.NewRandomTernaryIntVec(n, bfvRing.BaseRing)
 	sisProblem := crypto.NewSISProblem(A, s)
 	config := fastens20.DefaultConfig(bfvRing, m, n)
-	params := fastens20.NewPublicParameters(sisProblem, config)
+	params := fastens20.GeneratePublicParameters(sisProblem, config)
 	ACopy := params.A.Copy()
 	BCopy := params.B.Copy()
 	B0Copy := params.B0.Copy()
@@ -147,19 +147,19 @@ func TestConsistency(tst *testing.T) {
 }
 
 func TestSimple(t *testing.T) {
-	bfvRing := crypto.BFVZeroLevelRing()
+	bfvRing := fastmath.BFVZeroLevelRing()
 	m := 16
 	n := bfvRing.D
 	A := fastmath.NewRandomIntMatrix(m, n, bfvRing.Q, bfvRing.BaseRing)
 	s := fastmath.NewRandomTernaryIntVec(n, bfvRing.BaseRing)
 	sisProblem := crypto.NewSISProblem(A, s)
 	config := fastens20.DefaultConfig(bfvRing, m, n)
-	params := fastens20.NewPublicParameters(sisProblem, config)
+	params := fastens20.GeneratePublicParameters(sisProblem, config)
 	ExecuteAndTestCorrectness(t, s, params)
 }
 
 func TestMultiReplication(t *testing.T) {
-	bfvRing := crypto.BFVZeroLevelRing()
+	bfvRing := fastmath.BFVZeroLevelRing()
 	m := 16
 	n := bfvRing.D
 	A := fastmath.NewRandomIntMatrix(m, n, bfvRing.Q, bfvRing.BaseRing)
@@ -167,24 +167,24 @@ func TestMultiReplication(t *testing.T) {
 	sisProblem := crypto.NewSISProblem(A, s)
 	config := fastens20.DefaultConfig(bfvRing, m, n).
 		WithReplication(4)
-	params := fastens20.NewPublicParameters(sisProblem, config)
+	params := fastens20.GeneratePublicParameters(sisProblem, config)
 	ExecuteAndTestCorrectness(t, s, params)
 }
 
 func TestMultiSplit(t *testing.T) {
-	bfvRing := crypto.BFVZeroLevelRing()
+	bfvRing := fastmath.BFVZeroLevelRing()
 	m := 16
 	n := bfvRing.D * 4
 	A := fastmath.NewRandomIntMatrix(m, n, bfvRing.Q, bfvRing.BaseRing)
 	s := fastmath.NewRandomTernaryIntVec(n, bfvRing.BaseRing)
 	sisProblem := crypto.NewSISProblem(A, s)
 	config := fastens20.DefaultConfig(bfvRing, m, n)
-	params := fastens20.NewPublicParameters(sisProblem, config)
+	params := fastens20.GeneratePublicParameters(sisProblem, config)
 	ExecuteAndTestCorrectness(t, s, params)
 }
 
 func TestMultiSplitMultiReplication(t *testing.T) {
-	bfvRing := crypto.BFVZeroLevelRing()
+	bfvRing := fastmath.BFVZeroLevelRing()
 	m := 16
 	n := bfvRing.D * 4
 	A := fastmath.NewRandomIntMatrix(m, n, bfvRing.Q, bfvRing.BaseRing)
@@ -192,12 +192,12 @@ func TestMultiSplitMultiReplication(t *testing.T) {
 	sisProblem := crypto.NewSISProblem(A, s)
 	config := fastens20.DefaultConfig(bfvRing, m, n).
 		WithReplication(4)
-	params := fastens20.NewPublicParameters(sisProblem, config)
+	params := fastens20.GeneratePublicParameters(sisProblem, config)
 	ExecuteAndTestCorrectness(t, s, params)
 }
 
 func TestTernaryPrefix(t *testing.T) {
-	bfvRing := crypto.BFVZeroLevelRing()
+	bfvRing := fastmath.BFVZeroLevelRing()
 	m := 16
 	n := bfvRing.D * 4
 	A := fastmath.NewRandomIntMatrix(m, n, bfvRing.Q, bfvRing.BaseRing)
@@ -205,6 +205,21 @@ func TestTernaryPrefix(t *testing.T) {
 	sisProblem := crypto.NewSISProblem(A, s)
 	config := fastens20.DefaultConfig(bfvRing, m, n).
 		WithTernaryPrefix(n / 2)
-	params := fastens20.NewPublicParameters(sisProblem, config)
+	params := fastens20.GeneratePublicParameters(sisProblem, config)
 	ExecuteAndTestCorrectness(t, s, params)
+}
+
+func TestShortRing(t *testing.T) {
+	// Create the SIS problem on the BFV ring.
+	// bfvRing := fastmath.BFVZeroLevelRing()
+	// m := 16
+	// n := bfvRing.D
+	// A := fastmath.NewRandomIntMatrix(m, n, bfvRing.Q, bfvRing.BaseRing)
+	// s := fastmath.NewRandomTernaryIntVec(n, bfvRing.BaseRing)
+	// sisProblem := crypto.NewSISProblem(A, s)
+	// // Run the protocol over a ring of degree 2^7.
+	// commitmentRing := fastmath.ShortCommitmentRing(7)
+	// config := fastens20.DefaultConfig(commitmentRing, m, n)
+	// params := fastens20.GeneratePublicParameters(sisProblem, config)
+	// ExecuteAndTestCorrectness(t, s, params)
 }

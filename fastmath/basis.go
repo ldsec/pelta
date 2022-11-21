@@ -10,7 +10,7 @@ func TernaryDecomposition(v *IntVec, beta uint64, logBeta int, mod uint64, baseR
 	base := uint64(3)
 	basis := GenerateBasis(base, logBeta, mod, baseRing)
 	decomposed := NewIntMatrix(v.Size(), logBeta, baseRing)
-	decomposed.PopulateRows(func(i int) IntVec {
+	decomposed.PopulateRows(func(i int) *IntVec {
 		num := v.Get(i)
 		// Work with the absolute value.
 		isNeg := false
@@ -23,7 +23,7 @@ func TernaryDecomposition(v *IntVec, beta uint64, logBeta int, mod uint64, baseR
 		if isNeg {
 			basisRepr.Neg()
 		}
-		return *basisRepr
+		return basisRepr
 	})
 	return decomposed, basis
 }

@@ -3,6 +3,7 @@ package crypto
 import (
 	"github.com/ldsec/codeBase/commitment/fastmath"
 	"github.com/tuneinsight/lattigo/v4/ring"
+	"math/big"
 )
 
 type AjtaiCommitment struct {
@@ -12,7 +13,7 @@ type AjtaiCommitment struct {
 	R     *fastmath.IntVec
 	Kappa *fastmath.IntVec
 	ComP  *fastmath.IntVec
-	P     uint64
+	P     *big.Int
 }
 
 func NewAjtaiCommitment(s, r *fastmath.IntVec, comSize int, config Config) AjtaiCommitment {
@@ -29,11 +30,11 @@ func NewAjtaiCommitment(s, r *fastmath.IntVec, comSize int, config Config) Ajtai
 	kappa.Populate(func(i int) uint64 {
 		return diff.Get(i) / config.P.Uint64()
 	})
-	return AjtaiCommitment{A, B, s, r, kappa, comP, config.P.Uint64()}
+	return AjtaiCommitment{A, B, s, r, kappa, comP, config.P}
 }
 
 // EmbedIntoSIS embeds this Ajitai commitment into the given SIS problem.
-func (aj *AjtaiCommitment) EmbedIntoSIS(sis *SISProblem, d int, q uint64, baseRing *ring.Ring) {
+func (aj *AjtaiCommitment) EmbedIntoSIS(sis *SISProblem, d int, q *big.Int, baseRing *ring.Ring) {
 	k := sis.S.Size()/d - 1
 	l := aj.ComP.Size()
 	// Extend u and s.
@@ -61,7 +62,7 @@ func (aj *AjtaiCommitment) EmbedIntoSIS(sis *SISProblem, d int, q uint64, baseRi
 	for i := 0; i < k; i++ {
 		aExtensionParts[i+1] = *fastmath.NewIntMatrix(d, d, baseRing)
 	}
-	negP := q - aj.P
+	negP := q.Uint64() - aj.P.Uint64()
 	negPDiag := fastmath.NewIntMatrix(d, d, baseRing)
 	for i := 0; i < negPDiag.Rows(); i++ {
 		negPDiag.Set(i, i, negP)
@@ -73,7 +74,7 @@ func (aj *AjtaiCommitment) EmbedIntoSIS(sis *SISProblem, d int, q uint64, baseRi
 		for _, aExtPart := range aExtensionParts[1:] {
 			aExtensionRow.Append(aExtPart.RowView(i))
 		}
-		aVertExtension.SetRow(i, *aExtensionRow)
+		aVertExtension.SetRow(i, aExtensionRow)
 	}
 	sis.A.ExtendRows(aVertExtension)
 }

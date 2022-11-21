@@ -33,7 +33,7 @@ func GenerateNTTTransform(q uint64, logN int, baseRing *ring.Ring) *IntMatrix {
 	w := ring.InvMForm(baseRing.NttPsi[0][baseRing.N>>1], q, baseRing.MredParams[0])
 	mask := uint64(2*baseRing.N - 1)
 	T := NewIntMatrix(baseRing.N, baseRing.N, baseRing)
-	T.PopulateRows(func(i int) IntVec {
+	T.PopulateRows(func(i int) *IntVec {
 		// Construct the transform row by row.
 		twoirev := 2*utils.BitReverse64(uint64(i), uint64(logN)) + 1
 		tRow := NewIntVec(baseRing.N, baseRing)
@@ -41,7 +41,7 @@ func GenerateNTTTransform(q uint64, logN int, baseRing *ring.Ring) *IntMatrix {
 			gen := uint64(j) * twoirev & mask
 			return ring.ModExp(w, gen, q)
 		})
-		return *tRow
+		return tRow
 	})
 	return T
 }

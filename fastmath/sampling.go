@@ -62,8 +62,8 @@ func NewRandomTernaryIntVec(size int, baseRing *ring.Ring) *IntVec {
 // NewRandomIntMatrix constructs a random 2D matrix of integers mod n.
 func NewRandomIntMatrix(rows int, cols int, n *big.Int, baseRing *ring.Ring) *IntMatrix {
 	A := NewIntMatrix(rows, cols, baseRing)
-	A.PopulateRows(func(_ int) IntVec {
-		return *NewRandomIntVec(cols, n, baseRing)
+	A.PopulateRows(func(_ int) *IntVec {
+		return NewRandomIntVec(cols, n, baseRing)
 	})
 	return A
 }

@@ -46,7 +46,7 @@ func (p *Poly) N() int {
 
 // Coeffs returns a view into the coefficients of this polynomial.
 func (p *Poly) Coeffs() *IntVec {
-	return &IntVec{size: p.N(), polys: []Poly{*p}, baseRing: p.baseRing}
+	return &IntVec{size: p.N(), polys: []*Poly{p}, baseRing: p.baseRing}
 }
 
 // SumCoeffs returns the sum of the coefficients of this polynomial.
@@ -130,14 +130,31 @@ func (p *Poly) Reduce() *Poly {
 	return p
 }
 
+// Rebased moves this polynomial to the given ring, copying the old rings coefficients
+// at the given level. If the new ring has smaller degree, the polynomial is truncated.
+func (p *Poly) Rebased(newRing *RingParams, level int) *Poly {
+	minSize := p.N()
+	if newRing.D < minSize {
+		minSize = newRing.D
+	}
+	newPoly := NewZeroPoly(newRing.BaseRing)
+	for i := 0; i < minSize; i++ {
+		newPoly.Set(i, p.Get(i, level))
+	}
+	return newPoly
+}
+
+// Eq checks the equality of the coefficients of the two rings.
 func (p *Poly) Eq(q *Poly) bool {
 	return p.baseRing.Equal(p.ref, q.ref)
 }
 
+// EqLevel checks the equality of the coefficients of the two rings at the given level.
 func (p *Poly) EqLevel(level int, q *Poly) bool {
 	return p.baseRing.EqualLvl(level, p.ref, q.ref)
 }
 
+// String returns a string representation of the polynomial.
 func (p *Poly) String() string {
 	s := fmt.Sprintf("Poly{")
 	coeffStrings := make([]string, 0)
@@ -225,7 +242,7 @@ func (p *PolyNTT) Eq(q *PolyNTT) bool {
 func (p *PolyNTT) Coeffs() *IntVec {
 	return &IntVec{
 		size:     p.actual.N(),
-		polys:    []Poly{*p.actual},
+		polys:    []*Poly{p.actual},
 		baseRing: p.actual.baseRing,
 	}
 }

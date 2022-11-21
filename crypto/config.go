@@ -4,15 +4,12 @@ import (
 	"math/big"
 
 	"github.com/ldsec/codeBase/commitment/fastmath"
-	"github.com/tuneinsight/lattigo/v4/bfv"
 	"github.com/tuneinsight/lattigo/v4/ring"
 	"github.com/tuneinsight/lattigo/v4/utils"
 )
 
 type Config struct {
-	D               int      // deg(X^D + 1), a power of two
-	LogD            int      // log(D)
-	Q               *big.Int // Prime mod
+	fastmath.RingParams
 	P               *big.Int // Ajtai prime mod (~20 bit prime)
 	M               int      // # rows
 	N               int      // # cols, must be >= D
@@ -20,7 +17,6 @@ type Config struct {
 	Delta1          int      // Width of the uniform distribution
 	Lambda          int      // M-LWE dimension
 	Kappa           int      // M-SIS dimension
-	BaseRing        *ring.Ring
 	UniformSampler  fastmath.PolySampler
 	TernarySampler  fastmath.PolySampler
 	GaussianSampler fastmath.PolySampler
@@ -45,34 +41,28 @@ func (c Config) NumTernarySplits() int {
 
 func GetDefaultConfig() Config {
 	// Initialize the ring parameters.
-	ringParamDef := bfv.PN13QP218
-	ringParamDef.T = 0x3ee0001
-	ringParams, err := bfv.NewParametersFromLiteral(ringParamDef)
-	if err != nil {
-		panic("could not initialize the ring parameters: %s")
-	}
-	settings := Config{
-		D:             ringParams.N(),
-		LogD:          ringParams.LogN(),
-		Q:             ringParams.RingQP().RingQ.ModulusAtLevel[0],
-		P:             big.NewInt(5857),
-		N:             ringParams.N(),
-		M:             16,
-		K:             1,
-		Delta1:        16,
-		Lambda:        1,
-		Kappa:         1,
-		TernaryLength: ringParams.N(),
-	}
-	// Initialize the ring.
-	settings.BaseRing = ringParams.RingQP().RingQ
+	defaultRing := fastmath.BFVZeroLevelRing()
+	delta1 := 16
 	// Create the samplers.
 	prng, err := utils.NewPRNG()
 	if err != nil {
 		panic("could not initialize the prng: %s")
 	}
-	settings.UniformSampler = ring.NewUniformSampler(prng, settings.BaseRing)
-	settings.TernarySampler = ring.NewTernarySampler(prng, settings.BaseRing, 1.0/3.0, false)
-	settings.GaussianSampler = ring.NewGaussianSampler(prng, settings.BaseRing, ringParams.Sigma(), settings.Delta1)
-	return settings
+	uniformSampler := ring.NewUniformSampler(prng, defaultRing.BaseRing)
+	ternarySampler := ring.NewTernarySampler(prng, defaultRing.BaseRing, 1.0/3.0, false)
+	gaussianSampler := ring.NewGaussianSampler(prng, defaultRing.BaseRing, defaultRing.Sigma, delta1)
+	return Config{
+		RingParams:      defaultRing,
+		P:               big.NewInt(5857),
+		N:               defaultRing.D,
+		M:               16,
+		K:               1,
+		Delta1:          delta1,
+		Lambda:          1,
+		Kappa:           1,
+		TernaryLength:   defaultRing.D,
+		UniformSampler:  uniformSampler,
+		TernarySampler:  ternarySampler,
+		GaussianSampler: gaussianSampler,
+	}
 }

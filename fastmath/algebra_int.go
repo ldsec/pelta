@@ -10,7 +10,7 @@ import (
 
 type IntVec struct {
 	size     int
-	polys    []Poly
+	polys    []*Poly
 	mod      *big.Int
 	baseRing *ring.Ring
 }
@@ -20,9 +20,9 @@ func NewIntVec(size int, baseRing *ring.Ring) *IntVec {
 	if size%baseRing.N == 0 {
 		numPolys -= 1
 	}
-	polys := make([]Poly, numPolys)
+	polys := make([]*Poly, numPolys)
 	for i := 0; i < len(polys); i++ {
-		polys[i] = *NewZeroPoly(baseRing)
+		polys[i] = NewZeroPoly(baseRing)
 	}
 	return &IntVec{size, polys, baseRing.ModulusAtLevel[0], baseRing}
 }
@@ -35,7 +35,7 @@ func NewIntVecFromSlice(slice []uint64, baseRing *ring.Ring) *IntVec {
 	return v
 }
 
-func NewIntVecFromPolys(polys []Poly, size int, baseRing *ring.Ring) *IntVec {
+func NewIntVecFromPolys(polys []*Poly, size int, baseRing *ring.Ring) *IntVec {
 	return &IntVec{size, polys, baseRing.ModulusAtLevel[0], baseRing}
 }
 
@@ -60,12 +60,12 @@ func (v *IntVec) Get(index int) uint64 {
 }
 
 // UnderlyingPolys returns the polynomials that are being used to represent this vector.
-func (v *IntVec) UnderlyingPolys() []Poly {
+func (v *IntVec) UnderlyingPolys() []*Poly {
 	return v.polys
 }
 
 // SetUnderlyingPolys can be used to update the polynomials that are used to represent this vector.
-func (v *IntVec) SetUnderlyingPolys(polys []Poly) {
+func (v *IntVec) SetUnderlyingPolys(polys []*Poly) {
 	v.polys = polys
 }
 
@@ -98,7 +98,7 @@ func (v *IntVec) Add(r *IntVec) *IntVec {
 		panic("IntVec.Add sizes do not match")
 	}
 	for i, p := range v.polys {
-		p.Add(&r.polys[i])
+		p.Add(r.polys[i])
 	}
 	return v
 }
@@ -142,7 +142,7 @@ func (v *IntVec) Eq(r *IntVec) bool {
 		minPolySize = len(r.polys)
 	}
 	for i := 0; i < minPolySize; i++ {
-		if !v.polys[i].EqLevel(0, &r.polys[i]) {
+		if !v.polys[i].EqLevel(0, r.polys[i]) {
 			return false
 		}
 	}
@@ -151,9 +151,9 @@ func (v *IntVec) Eq(r *IntVec) bool {
 
 // Copy copies the vector.
 func (v *IntVec) Copy() *IntVec {
-	polys := make([]Poly, len(v.polys))
+	polys := make([]*Poly, len(v.polys))
 	for i, p := range v.polys {
-		polys[i] = *p.Copy()
+		polys[i] = p.Copy()
 	}
 	return &IntVec{v.size, polys, v.mod, v.baseRing}
 }
@@ -200,28 +200,55 @@ func (v *IntVec) Reduce(mod *big.Int) *IntVec {
 	return v
 }
 
+// RebaseLossless rebases every underlying polynomial, splitting them when necessary so that
+// no coefficient will be discarded.
+func (v *IntVec) RebaseLossless(newRing RingParams, level int) *IntVec {
+	if v.baseRing.N <= newRing.D || v.baseRing.N%newRing.D != 0 {
+		panic("cannto rebase lossless")
+	}
+	v.baseRing = newRing.BaseRing
+	splitsPerPoly := v.baseRing.N / newRing.D
+	newPolys := []*Poly{}
+	for _, p := range v.polys {
+		for i := 0; i < splitsPerPoly; i++ {
+			newCoeffs := p.ref.Coeffs[level][i*newRing.D : (i+1)*newRing.D]
+			newPoly := NewZeroPoly(newRing.BaseRing)
+			for j := 0; j < newPoly.N(); j++ {
+				newPoly.Set(j, newCoeffs[j])
+			}
+			newPolys = append(newPolys, newPoly)
+		}
+	}
+	v.SetUnderlyingPolys(newPolys)
+	return v
+}
+
 type IntMatrix struct {
 	numRows  int
 	numCols  int
-	rows     []IntVec
+	rows     []*IntVec
 	mod      *big.Int
 	baseRing *ring.Ring
 }
 
 func NewIntMatrix(numRows, numCols int, baseRing *ring.Ring) *IntMatrix {
-	rows := make([]IntVec, numRows)
+	rows := make([]*IntVec, numRows)
 	for i := 0; i < len(rows); i++ {
-		rows[i] = *NewIntVec(numCols, baseRing)
+		rows[i] = NewIntVec(numCols, baseRing)
 	}
 	return &IntMatrix{numRows, numCols, rows, baseRing.ModulusAtLevel[0], baseRing}
+}
+
+func NewIntMatrixFromRows(rows []*IntVec, baseRing *ring.Ring) *IntMatrix {
+	return &IntMatrix{len(rows), rows[0].Size(), rows, baseRing.ModulusAtLevel[0], baseRing}
 }
 
 func NewIntMatrixFromSlice(elems [][]uint64, baseRing *ring.Ring) *IntMatrix {
 	numRows := len(elems)
 	numCols := len(elems[0])
 	m := NewIntMatrix(numRows, numCols, baseRing)
-	m.PopulateRows(func(i int) IntVec {
-		return *NewIntVecFromSlice(elems[i], baseRing)
+	m.PopulateRows(func(i int) *IntVec {
+		return NewIntVecFromSlice(elems[i], baseRing)
 	})
 	return m
 }
@@ -236,9 +263,14 @@ func (m *IntMatrix) Cols() int {
 	return m.numCols
 }
 
-// RowView returns a refernce to the i-th row.
+// RowsView returns a list of references to the rows of this matrix.
+func (m *IntMatrix) RowsView() []*IntVec {
+	return m.rows
+}
+
+// RowView returns a reference to the i-th row.
 func (m *IntMatrix) RowView(i int) *IntVec {
-	return &m.rows[i]
+	return m.rows[i]
 }
 
 // ColCopy returns a copy of the i-th col.
@@ -267,7 +299,7 @@ func (m *IntMatrix) Set(row, col int, newValue uint64) {
 }
 
 // SetRow updates the given row of this matrix.
-func (m *IntMatrix) SetRow(row int, newRow IntVec) {
+func (m *IntMatrix) SetRow(row int, newRow *IntVec) {
 	if row >= m.Rows() {
 		panic("IntMatrix.SetRows index incorrect")
 	}
@@ -275,7 +307,7 @@ func (m *IntMatrix) SetRow(row int, newRow IntVec) {
 }
 
 // AppendRow appends a row into the vector.
-func (m *IntMatrix) AppendRow(v IntVec) {
+func (m *IntMatrix) AppendRow(v *IntVec) {
 	if m.Cols() != v.Size() {
 		panic("IntMatrix.AppendRow cannot append row, invalid size")
 	}
@@ -316,7 +348,7 @@ func (m *IntMatrix) Populate(f func(int, int) uint64) {
 }
 
 // PopulateRows is used to initialize the rows of this matrix.
-func (m *IntMatrix) PopulateRows(f func(int) IntVec) {
+func (m *IntMatrix) PopulateRows(f func(int) *IntVec) {
 	for i := 0; i < m.Rows(); i++ {
 		m.rows[i] = f(i)
 	}
@@ -324,9 +356,9 @@ func (m *IntMatrix) PopulateRows(f func(int) IntVec) {
 
 // Transposed returns the transposed version of this matrix.
 func (m *IntMatrix) Transposed() *IntMatrix {
-	newRows := make([]IntVec, m.Cols())
+	newRows := make([]*IntVec, m.Cols())
 	for i := 0; i < len(newRows); i++ {
-		newRows[i] = *m.ColCopy(i)
+		newRows[i] = m.ColCopy(i)
 	}
 	return &IntMatrix{m.numCols, m.numRows, newRows, m.mod, m.baseRing}
 }
@@ -371,9 +403,9 @@ func (m *IntMatrix) Scale(factor uint64) {
 
 // Copy returns a copy of this matrix.
 func (m *IntMatrix) Copy() *IntMatrix {
-	rows := make([]IntVec, m.numRows)
+	rows := make([]*IntVec, m.numRows)
 	for i, row := range m.rows {
-		rows[i] = *row.Copy()
+		rows[i] = row.Copy()
 	}
 	return &IntMatrix{m.numRows, m.numCols, rows, m.mod, m.baseRing}
 }
@@ -399,4 +431,13 @@ func (m *IntMatrix) String() string {
 		s += "\t" + row.String() + "\n"
 	}
 	return s + ", ...}"
+}
+
+// RebaseRowsLossless rebases each row.
+func (m *IntMatrix) RebaseRowsLossless(newRing RingParams, level int) *IntMatrix {
+	m.baseRing = newRing.BaseRing
+	for _, row := range m.rows {
+		row.RebaseLossless(newRing, level)
+	}
+	return m
 }
