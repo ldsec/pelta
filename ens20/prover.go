@@ -34,7 +34,7 @@ func NewProver(publicParams PublicParams, settings Settings) Prover {
 // CommitToMessage commits to the given secret message s.
 // Returns t0, t, w
 func (p Prover) CommitToMessage(s rings.ZIntVector) (algebra.Vector, algebra.Vector, algebra.Matrix, ProverState) {
-	// Split the message into polynomial space.
+	// Rebase the message into polynomial space.
 	sHat := SplitInvNTT(s, p.settings.NumSplits(), p.settings.Q, p.settings.BaseRing)
 	// Sample a polynomial g s.t. g_0=...=g_{K-1}=0
 	g := math.NewRandomPolynomial(p.settings.BaseRing, p.settings.UniformSampler)

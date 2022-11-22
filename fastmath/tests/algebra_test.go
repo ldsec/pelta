@@ -28,6 +28,26 @@ func TestPolySumCoeffs(t *testing.T) {
 	}
 }
 
+func TestIntVecRebaseLossless(t *testing.T) {
+	largeRing := fastmath.ShortCommitmentRing(8)
+	v := fastmath.NewIntVec(largeRing.D, largeRing.BaseRing)
+	for i := 0; i < v.Size(); i++ {
+		v.Set(i, uint64(i+1))
+	}
+	v.RebaseLossless(fastmath.ShortCommitmentRing(4), 0)
+	if len(v.UnderlyingPolys()) != 16 {
+		t.Errorf("actual=%d, expected=%d", len(v.UnderlyingPolys()), 16)
+	}
+	if v.Size() != 256 {
+		t.Errorf("actual=%d, expected=%d", v.Size(), 256)
+	}
+	for i := 0; i < v.Size(); i++ {
+		if v.Get(i) != uint64(i+1) {
+			t.Errorf("actual=%d, expected=%d", v.Get(i), i+1)
+		}
+	}
+}
+
 func TestIntVecDot(t *testing.T) {
 	baseRing := getBaseRing()
 	a := fastmath.NewIntVec(5, baseRing)

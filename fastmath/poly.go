@@ -84,6 +84,16 @@ func (p *Poly) MaxCoeff(level int) uint64 {
 	return max
 }
 
+// IsZero returns true if all the coefficients of this polynomial are zero.
+func (p *Poly) IsZero() bool {
+	for _, coeff := range p.ref.Coeffs[0] {
+		if coeff != 0 {
+			return false
+		}
+	}
+	return true
+}
+
 // NTT converts this polynomial to its NTT domain.
 func (p *Poly) NTT() *PolyNTT {
 	c := p.Copy()

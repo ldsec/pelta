@@ -32,7 +32,7 @@ func NewProver(params PublicParams) Prover {
 // CommitToMessage commits to the given secret message s.
 // Returns t0, t, w
 func (p Prover) CommitToMessage(s *fastmath.IntVec) (*fastmath.PolyNTTVec, *fastmath.PolyNTTVec, *fastmath.PolyNTTMatrix, ProverState) {
-	// Split the message into polynomial space.
+	// Rebase the message into polynomial space.
 	sHat := SplitInvNTT(s, p.params).NTT()
 	// Sample a polynomial g s.t. g_0=...=g_{k-1}=0
 	gPoly := fastmath.NewRandomPoly(p.params.config.UniformSampler, p.params.config.BaseRing)

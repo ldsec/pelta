@@ -200,17 +200,31 @@ func (v *IntVec) Reduce(mod *big.Int) *IntVec {
 	return v
 }
 
+// SliceCopy returns a (copied) slice of this vector.
+func (v *IntVec) SliceCopy(start, end int) *IntVec {
+	subVec := NewIntVec(end-start, v.baseRing)
+	for i := 0; i < end-start; i++ {
+		subVec.Set(i, v.Get(start+i))
+	}
+	return subVec
+}
+
 // RebaseLossless rebases every underlying polynomial, splitting them when necessary so that
 // no coefficient will be discarded.
 func (v *IntVec) RebaseLossless(newRing RingParams, level int) *IntVec {
 	if v.baseRing.N <= newRing.D || v.baseRing.N%newRing.D != 0 {
-		panic("cannto rebase lossless")
+		panic(fmt.Sprintf("cannot rebase lossless %d to %d", v.baseRing.N, newRing.D))
 	}
-	v.baseRing = newRing.BaseRing
+	// Clean up the redundant polynomials.
+	// for len(v.polys) > 0 && v.polys[len(v.polys)-1].IsZero() {
+	// 	v.polys = v.polys[0 : len(v.polys)-1]
+	// }
+	// Each underlying polynomial will be represented by this many rebased polynomials.
 	splitsPerPoly := v.baseRing.N / newRing.D
 	newPolys := []*Poly{}
 	for _, p := range v.polys {
 		for i := 0; i < splitsPerPoly; i++ {
+			// Extract d (i.e., degree of new base ring) many coefficients.
 			newCoeffs := p.ref.Coeffs[level][i*newRing.D : (i+1)*newRing.D]
 			newPoly := NewZeroPoly(newRing.BaseRing)
 			for j := 0; j < newPoly.N(); j++ {
@@ -219,7 +233,10 @@ func (v *IntVec) RebaseLossless(newRing RingParams, level int) *IntVec {
 			newPolys = append(newPolys, newPoly)
 		}
 	}
+	// Set the underlying polynomials.
 	v.SetUnderlyingPolys(newPolys)
+	// Update the base ring pointer.
+	v.baseRing = newRing.BaseRing
 	return v
 }
 
@@ -271,6 +288,15 @@ func (m *IntMatrix) RowsView() []*IntVec {
 // RowView returns a reference to the i-th row.
 func (m *IntMatrix) RowView(i int) *IntVec {
 	return m.rows[i]
+}
+
+// SubsectionCopy returns a subsection (copied) of this matrix.
+func (m *IntMatrix) SubsectionCopy(rowStart, rowEnd int, colStart, colEnd int) *IntMatrix {
+	subMatrix := NewIntMatrix(rowEnd-rowStart, colEnd-colStart, m.baseRing)
+	for i := 0; i < rowEnd-rowStart; i++ {
+		subMatrix.SetRow(i, m.RowView(rowStart+i).SliceCopy(colStart, colEnd))
+	}
+	return subMatrix
 }
 
 // ColCopy returns a copy of the i-th col.
