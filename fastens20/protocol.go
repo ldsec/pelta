@@ -28,13 +28,16 @@ type Config struct {
 }
 
 // DefaultConfig returns the default configuration for an ENS20 execution.
-func DefaultConfig(ringParams fastmath.RingParams, numRows int, numCols int) Config {
+// `ringParams` denotes the ring over which `relation` is defined.
+func DefaultConfig(ringParams fastmath.RingParams, rel crypto.LinearRelation) Config {
 	// Create the samplers.
 	prng, err := utils.NewPRNG()
 	if err != nil {
 		panic("could not initialize the prng: %s")
 	}
 	delta1 := 16
+	numRows := rel.A.Rows()
+	numCols := rel.A.Cols()
 	return Config{
 		RingParams:      ringParams,
 		D:               ringParams.D,
@@ -94,18 +97,18 @@ type PublicParams struct {
 	Sig    fastmath.Automorphism
 }
 
-func GeneratePublicParameters(sis crypto.SISProblem, protocolConfig Config) PublicParams {
-	bSize := protocolConfig.NumSplits() + 3
-	B0 := fastmath.NewRandomPolyMatrix(protocolConfig.Kappa,
-		protocolConfig.Lambda+protocolConfig.Kappa+bSize,
-		protocolConfig.UniformSampler,
-		protocolConfig.BaseRing)
-	b := fastmath.NewRandomPolyMatrix(bSize, B0.Cols(), protocolConfig.UniformSampler, protocolConfig.BaseRing)
-	sig := fastmath.NewAutomorphism(uint64(protocolConfig.D), uint64(protocolConfig.K))
+func GeneratePublicParameters(rel crypto.LinearRelation, config Config) PublicParams {
+	bSize := config.NumSplits() + 3
+	B0 := fastmath.NewRandomPolyMatrix(config.Kappa,
+		config.Lambda+config.Kappa+bSize,
+		config.UniformSampler,
+		config.BaseRing)
+	b := fastmath.NewRandomPolyMatrix(bSize, B0.Cols(), config.UniformSampler, config.BaseRing)
+	sig := fastmath.NewAutomorphism(uint64(config.D), uint64(config.K))
 	return PublicParams{
-		config: protocolConfig,
-		A:      sis.A,
-		U:      sis.U,
+		config: config,
+		A:      rel.A,
+		U:      rel.U,
 		B0:     B0.NTT(),
 		B:      b.NTT(),
 		Sig:    sig,

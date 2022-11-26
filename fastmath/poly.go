@@ -140,20 +140,6 @@ func (p *Poly) Reduce() *Poly {
 	return p
 }
 
-// Rebased moves this polynomial to the given ring, copying the old rings coefficients
-// at the given level. If the new ring has smaller degree, the polynomial is truncated.
-func (p *Poly) Rebased(newRing *RingParams, level int) *Poly {
-	minSize := p.N()
-	if newRing.D < minSize {
-		minSize = newRing.D
-	}
-	newPoly := NewZeroPoly(newRing.BaseRing)
-	for i := 0; i < minSize; i++ {
-		newPoly.Set(i, p.Get(i, level))
-	}
-	return newPoly
-}
-
 // Eq checks the equality of the coefficients of the two rings.
 func (p *Poly) Eq(q *Poly) bool {
 	return p.baseRing.Equal(p.ref, q.ref)

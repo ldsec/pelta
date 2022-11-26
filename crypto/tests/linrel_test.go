@@ -1,40 +1,42 @@
 package tests
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/ldsec/codeBase/commitment/crypto"
 	"github.com/ldsec/codeBase/commitment/fastmath"
 )
 
-func verifySIS(t *testing.T, sis crypto.SISProblem) {
-	u := sis.A.MulVec(sis.S)
-	if !sis.U.Eq(u) {
-		t.Errorf("SIS construction failed")
-		fmt.Println(sis.U.String())
-		fmt.Println(u.String())
+func verifyRelation(t *testing.T, rel crypto.LinearRelation) {
+	u := rel.A.MulVec(rel.S)
+	if !rel.U.Eq(u) {
+		t.Errorf("Linrel construction failed")
+		t.Logf(rel.U.String())
+		t.Logf(u.String())
 	}
 }
 
-func TestSISConstruction(t *testing.T) {
+func TestLinRelConstruction(t *testing.T) {
 	config := crypto.GetDefaultConfig()
 	n := 200
 	m := 300
 	A := fastmath.NewRandomIntMatrix(m, n, config.Q, config.BaseRing)
 	s := fastmath.NewRandomIntVec(n, config.Q, config.BaseRing)
-	sisProblem := crypto.NewSISProblem(A, s)
-	verifySIS(t, sisProblem)
+	rel := crypto.NewLinearRelation(A, s)
+	verifyRelation(t, rel)
 }
 
-func TestSISRebase(t *testing.T) {
+func TestLinRelRebase(t *testing.T) {
 	largeRing := fastmath.ShortCommitmentRing(8)
 	smallRing := fastmath.ShortCommitmentRing(4)
 	n := largeRing.D
 	m := largeRing.D
 	A := fastmath.NewRandomIntMatrix(m, n, largeRing.Q, largeRing.BaseRing)
 	s := fastmath.NewRandomIntVec(n, largeRing.Q, largeRing.BaseRing)
-	sisProblem := crypto.NewSISProblem(A, s)
-	rebasedProblem := sisProblem.Rebase(smallRing)
-	verifySIS(t, rebasedProblem)
+	rel := crypto.NewLinearRelation(A, s)
+	t.Logf("testing over original ring...")
+	verifyRelation(t, rel)
+	rebasedRel := rel.Rebase(smallRing)
+	t.Logf("testing over small ring...")
+	verifyRelation(t, rebasedRel)
 }

@@ -240,6 +240,11 @@ func (v *IntVec) RebaseLossless(newRing RingParams, level int) *IntVec {
 	return v
 }
 
+// BaseRing returns the polynomial ring over which this integer vector is defined.
+func (v *IntVec) BaseRing() *ring.Ring {
+	return v.baseRing
+}
+
 type IntMatrix struct {
 	numRows  int
 	numCols  int

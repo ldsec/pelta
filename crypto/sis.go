@@ -4,24 +4,23 @@ import (
 	"github.com/ldsec/codeBase/commitment/fastmath"
 )
 
-// SISProblem represents an MSIS problem, i.e., As = u for short s.
-type SISProblem struct {
+// LinearRelation represents a linear relation, i.e., As = u for some s.
+type LinearRelation struct {
 	A *fastmath.IntMatrix
 	S *fastmath.IntVec
 	U *fastmath.IntVec
 }
 
-// NewSISProblem creates a new SIS instance s.t. As = u.
-func NewSISProblem(A *fastmath.IntMatrix, s *fastmath.IntVec) SISProblem {
+// NewLinearRelation creates a new linear relation instance s.t. As = u.
+func NewLinearRelation(A *fastmath.IntMatrix, s *fastmath.IntVec) LinearRelation {
 	u := A.MulVec(s)
-	return SISProblem{A, s, u}
+	return LinearRelation{A, s, u}
 }
 
-// Rebase splits an SIS problem into multiple SIS problems over a smaller ring.
-func (s SISProblem) Rebase(newRing fastmath.RingParams) SISProblem {
-	return SISProblem{
-		A: s.A.Copy().RebaseRowsLossless(newRing, 0),
-		S: s.S.Copy().RebaseLossless(newRing, 0),
-		U: s.U.Copy().RebaseLossless(newRing, 0),
+func (r LinearRelation) Rebase(newRing fastmath.RingParams) LinearRelation {
+	return LinearRelation{
+		A: r.A.Copy().RebaseRowsLossless(newRing, 0),
+		S: r.S.Copy().RebaseLossless(newRing, 0),
+		U: r.U.Copy().RebaseLossless(newRing, 0),
 	}
 }

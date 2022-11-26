@@ -34,13 +34,23 @@ func TestIntVecRebaseLossless(t *testing.T) {
 	for i := 0; i < v.Size(); i++ {
 		v.Set(i, uint64(i+1))
 	}
+	// Before rebase.
+	// t.Logf(v.String())
+	if len(v.UnderlyingPolys()) != 1 {
+		t.Errorf("actual=%d, expected=%d", len(v.UnderlyingPolys()), 1)
+	}
+	if v.Size() != 256 {
+		t.Errorf("actual=%d, expected=%d", v.Size(), 256)
+	}
 	v.RebaseLossless(fastmath.ShortCommitmentRing(4), 0)
+	// After rebase.
 	if len(v.UnderlyingPolys()) != 16 {
 		t.Errorf("actual=%d, expected=%d", len(v.UnderlyingPolys()), 16)
 	}
 	if v.Size() != 256 {
 		t.Errorf("actual=%d, expected=%d", v.Size(), 256)
 	}
+	// t.Logf(v.String())
 	for i := 0; i < v.Size(); i++ {
 		if v.Get(i) != uint64(i+1) {
 			t.Errorf("actual=%d, expected=%d", v.Get(i), i+1)
@@ -162,6 +172,44 @@ func TestIntMatrixMulMat(t *testing.T) {
 		for j := 0; j < c.Cols(); j++ {
 			if c.Get(i, j) != expectedResult[i][j] {
 				t.Errorf("actual[%d][%d]=%d, expected[%d][%d]=%d", i, j, c.Get(i, j), i, j, expectedResult[i][j])
+			}
+		}
+	}
+}
+
+func TestIntMatrixRebaseRowsLossless(t *testing.T) {
+	largeRing := fastmath.ShortCommitmentRing(8)
+	m := fastmath.NewIntMatrix(largeRing.D, largeRing.D, largeRing.BaseRing)
+	for i := 0; i < m.Rows(); i++ {
+		for j := 0; j < m.Cols(); j++ {
+			m.Set(i, j, uint64(i+1))
+		}
+	}
+	// Before rebase.
+	// t.Logf(m.String())
+	for _, v := range m.RowsView() {
+		if len(v.UnderlyingPolys()) != 1 {
+			t.Errorf("actual=%d, expected=%d", len(v.UnderlyingPolys()), 1)
+		}
+		if v.Size() != 256 {
+			t.Errorf("actual=%d, expected=%d", v.Size(), 256)
+		}
+	}
+	m.RebaseRowsLossless(fastmath.ShortCommitmentRing(4), 0)
+	// After rebase.
+	for _, v := range m.RowsView() {
+		if len(v.UnderlyingPolys()) != 16 {
+			t.Errorf("actual=%d, expected=%d", len(v.UnderlyingPolys()), 16)
+		}
+		if v.Size() != 256 {
+			t.Errorf("actual=%d, expected=%d", v.Size(), 256)
+		}
+	}
+	// t.Logf(m.String())
+	for i := 0; i < m.Rows(); i++ {
+		for j := 0; j < m.Cols(); j++ {
+			if m.Get(i, j) != uint64(i+1) {
+				t.Errorf("actual=%d, expected=%d", m.Get(i, j), i+1)
 			}
 		}
 	}

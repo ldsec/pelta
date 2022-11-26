@@ -33,9 +33,9 @@ func NewAjtaiCommitment(s, r *fastmath.IntVec, comSize int, config Config) Ajtai
 	return AjtaiCommitment{A, B, s, r, kappa, comP, config.P}
 }
 
-// EmbedIntoSIS embeds this Ajitai commitment into the given SIS problem.
-func (aj *AjtaiCommitment) EmbedIntoSIS(sis *SISProblem, d int, q *big.Int, baseRing *ring.Ring) {
-	k := sis.S.Size()/d - 1
+// EmbedIntoLinearRelation embeds this Ajitai commitment into the given linear relation.
+func (aj *AjtaiCommitment) EmbedIntoLinearRelation(rel *LinearRelation, d int, q *big.Int, baseRing *ring.Ring) {
+	k := rel.S.Size()/d - 1
 	l := aj.ComP.Size()
 	// Extend u and s.
 	uExtension := aj.ComP.Copy()
@@ -46,11 +46,11 @@ func (aj *AjtaiCommitment) EmbedIntoSIS(sis *SISProblem, d int, q *big.Int, base
 	padding := fastmath.NewIntVec(padLength, baseRing)
 	uExtension.Append(padding.Copy())
 	sExtension.Append(padding)
-	sis.U.Append(uExtension)
-	sis.S.Append(sExtension)
+	rel.U.Append(uExtension)
+	rel.S.Append(sExtension)
 	// Extend SIS A horizontally.
 	zeroHorExt := fastmath.NewIntMatrix(d, 2*d, baseRing)
-	sis.A.ExtendCols(zeroHorExt)
+	rel.A.ExtendCols(zeroHorExt)
 	// Extend SIS A vertically.
 	aExtensionParts := make([]fastmath.IntMatrix, k+3)
 	aExtensionParts[0] = *aj.A.Copy()
@@ -76,5 +76,5 @@ func (aj *AjtaiCommitment) EmbedIntoSIS(sis *SISProblem, d int, q *big.Int, base
 		}
 		aVertExtension.SetRow(i, aExtensionRow)
 	}
-	sis.A.ExtendRows(aVertExtension)
+	rel.A.ExtendRows(aVertExtension)
 }

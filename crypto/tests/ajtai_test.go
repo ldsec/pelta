@@ -37,11 +37,11 @@ func TestAjtaiEmbedding(t *testing.T) {
 	// Create the RLWE problem.
 	p1 := fastmath.NewRandomPoly(config.UniformSampler, config.BaseRing)
 	rlweParams := crypto.NewRLWEParameters(config.Q.Uint64(), config.D, uint64(config.Beta()), config.BaseRing)
-	rlweProblem := crypto.NewRLWEProblem(p1, s.UnderlyingPolys()[0].Copy(), config.GaussianSampler, rlweParams)
+	rlweProblem := crypto.NewRLWERelation(p1, s.UnderlyingPolys()[0].Copy(), config.GaussianSampler, rlweParams)
 	// Convert into an SIS problem.
-	sisProblem := crypto.RLWEToSIS(rlweProblem)
+	sisProblem := crypto.RLWEToLinearRelation(rlweProblem)
 	// Embed Ajtai into the problem.
-	aj.EmbedIntoSIS(&sisProblem, config.D, config.Q, config.BaseRing)
+	aj.EmbedIntoLinearRelation(&sisProblem, config.D, config.Q, config.BaseRing)
 	// Make sure that the embedding results in a valid SIS problem.
 	u := sisProblem.A.MulVec(sisProblem.S)
 	if !sisProblem.U.Eq(u) {
