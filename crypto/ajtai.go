@@ -16,21 +16,19 @@ type AjtaiCommitment struct {
 	P     *big.Int
 }
 
-func NewAjtaiCommitment(s, r *fastmath.IntVec, comSize int, config Config) AjtaiCommitment {
-	A := fastmath.NewRandomIntMatrix(comSize, s.Size(), config.P, config.BaseRing)
-	B := fastmath.NewRandomIntMatrix(comSize, s.Size(), config.P, config.BaseRing)
+func NewAjtaiCommitment(A, B *fastmath.IntMatrix, s, r *fastmath.IntVec, p *big.Int, baseRing *ring.Ring) AjtaiCommitment {
 	// Compute kappa.
 	comQ := A.MulVec(s).Add(B.MulVec(r))
-	comP := comQ.Copy().Reduce(config.P)
+	comP := comQ.Copy().Reduce(p)
 	// comQ - comP = (As + Br) - [(As + Br) mod p]
 	diff := comQ.Copy().Add(comP.Copy().Neg())
 	// kappa := (comQ - comP) / p s.t. kappa * p is the difference between
-	// pInv := big.NewInt(0).ModInverse(config.P, config.Q).Uint64()
-	kappa := fastmath.NewIntVec(diff.Size(), config.BaseRing)
+	// pInv := big.NewInt(0).ModInverse(p, config.Q).Uint64()
+	kappa := fastmath.NewIntVec(diff.Size(), baseRing)
 	kappa.Populate(func(i int) uint64 {
-		return diff.Get(i) / config.P.Uint64()
+		return diff.Get(i) / p.Uint64()
 	})
-	return AjtaiCommitment{A, B, s, r, kappa, comP, config.P}
+	return AjtaiCommitment{A, B, s, r, kappa, comP, p}
 }
 
 // EmbedIntoLinearRelation embeds this Ajitai commitment into the given linear relation.

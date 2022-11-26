@@ -12,7 +12,9 @@ func TestAjtaiConstruction(t *testing.T) {
 	comSize := 4
 	s := fastmath.NewRandomTernaryIntVec(config.D, config.BaseRing)
 	r := fastmath.NewRandomTernaryIntVec(config.D, config.BaseRing)
-	aj := crypto.NewAjtaiCommitment(s, r, comSize, config)
+	A := fastmath.NewRandomIntMatrix(comSize, s.Size(), config.P, config.BaseRing)
+	B := fastmath.NewRandomIntMatrix(comSize, s.Size(), config.P, config.BaseRing)
+	aj := crypto.NewAjtaiCommitment(A, B, s, r, config.P, config.BaseRing)
 	comQ := aj.A.MulVec(aj.S).
 		Add(aj.B.MulVec(aj.R))
 	if !aj.ComP.Eq(comQ.Copy().Reduce(aj.P)) {
@@ -33,13 +35,16 @@ func TestAjtaiEmbedding(t *testing.T) {
 	comSize := 4
 	s := fastmath.NewRandomTernaryIntVec(config.D, config.BaseRing)
 	r := fastmath.NewRandomTernaryIntVec(config.D, config.BaseRing)
-	aj := crypto.NewAjtaiCommitment(s, r, comSize, config)
+	A := fastmath.NewRandomIntMatrix(comSize, s.Size(), config.P, config.BaseRing)
+	B := fastmath.NewRandomIntMatrix(comSize, s.Size(), config.P, config.BaseRing)
+	aj := crypto.NewAjtaiCommitment(A, B, s, r, config.P, config.BaseRing)
 	// Create the RLWE problem.
 	p1 := fastmath.NewRandomPoly(config.UniformSampler, config.BaseRing)
-	rlweParams := crypto.NewRLWEParameters(config.Q.Uint64(), config.D, uint64(config.Beta()), config.BaseRing)
-	rlweProblem := crypto.NewRLWERelation(p1, s.UnderlyingPolys()[0].Copy(), config.GaussianSampler, rlweParams)
+	e := fastmath.NewRandomPoly(config.GaussianSampler, config.BaseRing)
+	rlweParams := crypto.NewRLWEParameters(config.Q, config.D, uint64(config.Beta()), config.BaseRing)
+	rlweProblem := crypto.NewRLWERelation(p1, s.UnderlyingPolys()[0].Copy(), e, rlweParams)
 	// Convert into an SIS problem.
-	sisProblem := crypto.RLWEToLinearRelation(rlweProblem)
+	sisProblem := rlweProblem.ToLinearRelation()
 	// Embed Ajtai into the problem.
 	aj.EmbedIntoLinearRelation(&sisProblem, config.D, config.Q, config.BaseRing)
 	// Make sure that the embedding results in a valid SIS problem.

@@ -12,11 +12,12 @@ func TestRLWEConstruction(t *testing.T) {
 	// Create the RLWE problem.
 	s := fastmath.NewRandomTernaryPoly(config.BaseRing)
 	p1 := fastmath.NewRandomPoly(config.UniformSampler, config.BaseRing)
-	rlweParams := crypto.NewRLWEParameters(config.Q.Uint64(), config.D, uint64(config.Beta()), config.BaseRing)
-	rlweProblem := crypto.NewRLWERelation(p1, s, config.GaussianSampler, rlweParams)
+	e := fastmath.NewRandomPoly(config.GaussianSampler, config.BaseRing)
+	rlweParams := crypto.NewRLWEParameters(config.Q, config.D, uint64(config.Beta()), config.BaseRing)
+	rlweRel := crypto.NewRLWERelation(p1, s, e, rlweParams)
 	// Check that p0 = -p1 * s + e
-	p0 := rlweProblem.P1.Copy().NTT().Neg().Mul(rlweProblem.S.NTT()).Add(rlweProblem.E.NTT()).InvNTT()
-	if !p0.Eq(rlweProblem.P0) {
+	p0 := rlweRel.P1.Copy().NTT().Neg().Mul(rlweRel.S.NTT()).Add(rlweRel.E.NTT()).InvNTT()
+	if !p0.Eq(rlweRel.P0) {
 		t.Errorf("RLWE construction is invalid")
 	}
 }
@@ -26,10 +27,11 @@ func TestRLWEErrorDecomposition(t *testing.T) {
 	// Create the RLWE problem.
 	s := fastmath.NewRandomTernaryPoly(config.BaseRing)
 	p1 := fastmath.NewRandomPoly(config.UniformSampler, config.BaseRing)
-	rlweParams := crypto.NewRLWEParameters(config.Q.Uint64(), config.D, uint64(config.Beta()), config.BaseRing)
-	rlweProblem := crypto.NewRLWERelation(p1, s, config.GaussianSampler, rlweParams)
+	err := fastmath.NewRandomPoly(config.GaussianSampler, config.BaseRing)
+	rlweParams := crypto.NewRLWEParameters(config.Q, config.D, uint64(config.Beta()), config.BaseRing)
+	rlweRel := crypto.NewRLWERelation(p1, s, err, rlweParams)
 	// Decompose error.
-	e, b := rlweProblem.ErrorDecomposition()
+	e, b := rlweRel.ErrorDecomposition()
 	// Make sure that error = sum{e_i * b_i}
 	reconstructedError := fastmath.NewIntVec(config.D, config.BaseRing)
 	for i := 0; i < b.Size(); i++ {
@@ -37,7 +39,7 @@ func TestRLWEErrorDecomposition(t *testing.T) {
 		eRow.Scale(b.Get(i))
 		reconstructedError.Add(eRow)
 	}
-	expectedError := rlweProblem.E.Coeffs()
+	expectedError := rlweRel.E.Coeffs()
 	if !reconstructedError.Eq(expectedError) {
 		t.Errorf("invalid decomposition")
 	}
@@ -48,13 +50,14 @@ func TestRLWEToLinearRelation(t *testing.T) {
 	// Create the RLWE problem.
 	s := fastmath.NewRandomTernaryPoly(config.BaseRing)
 	p1 := fastmath.NewRandomPoly(config.UniformSampler, config.BaseRing)
-	rlweParams := crypto.NewRLWEParameters(config.Q.Uint64(), config.D, uint64(config.Beta()), config.BaseRing)
-	rlweProblem := crypto.NewRLWERelation(p1, s, config.GaussianSampler, rlweParams)
+	err := fastmath.NewRandomPoly(config.GaussianSampler, config.BaseRing)
+	rlweParams := crypto.NewRLWEParameters(config.Q, config.D, uint64(config.Beta()), config.BaseRing)
+	rlweRel := crypto.NewRLWERelation(p1, s, err, rlweParams)
 	// Convert into an SIS problem.
-	sisProblem := crypto.RLWEToLinearRelation(rlweProblem)
+	sisProblem := rlweRel.ToLinearRelation()
 	// Test that the equivalence p0 = -p1 * s + e holds.
 	p0Coeffs1 := sisProblem.A.MulVec(sisProblem.S)
-	p0 := rlweProblem.P0.Copy().NTT()
+	p0 := rlweRel.P0.Copy().NTT()
 	p0Coeffs2 := p0.Coeffs()
 	if !p0Coeffs1.Eq(p0Coeffs2) {
 		t.Errorf("RLWE equivalence doesn't hold after the transformation")
