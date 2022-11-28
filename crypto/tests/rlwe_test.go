@@ -54,7 +54,9 @@ func TestRLWEToLinearRelation(t *testing.T) {
 	rlweParams := crypto.NewRLWEParameters(config.Q, config.D, uint64(config.Beta()), config.BaseRing)
 	rlweRel := crypto.NewRLWERelation(p1, s, err, rlweParams)
 	// Convert into an SIS problem.
-	sisProblem := rlweRel.ToLinearRelation()
+	T := fastmath.LoadNTTTransform("ntt_transform", config.Q, config.LogD, config.BaseRing)
+	e, b := rlweRel.ErrorDecomposition()
+	sisProblem := rlweRel.ToLinearRelation(e, b, T)
 	// Test that the equivalence p0 = -p1 * s + e holds.
 	p0Coeffs1 := sisProblem.A.MulVec(sisProblem.S)
 	p0 := rlweRel.P0.Copy().NTT()

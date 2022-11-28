@@ -14,16 +14,16 @@ func ExecuteAndTestCorrectness(tst *testing.T, s *fastmath.IntVec, params fasten
 	verifier := fastens20.NewVerifier(params)
 	// Commit to the message.
 	start_t := time.Now()
-	t0, t, w, ps := prover.CommitToMessage(s)
-	alpha, gamma, vs := verifier.CreateMasks(t0, t, w)
-	t, h, v, vp, ps := prover.CommitToRelation(alpha, gamma, ps)
+	t0, t, ts, w, ps := prover.CommitToMessage(s)
+	alpha, gamma, omega, vs := verifier.CreateMasks(t0, t, ts, w)
+	t, h, v, vp, ps := prover.CommitToRelation(alpha, gamma, omega, ps)
 	c, vs := verifier.CreateChallenge(t, h, v, vp, vs)
 	// Recreate the masked opening until it satisfies the shortness condition.
-	z, ps, err := prover.MaskedOpening(c, ps)
+	z, zs, ps, err := prover.MaskedOpening(c, ps)
 	for err != nil {
-		z, ps, err = prover.MaskedOpening(c, ps)
+		z, zs, ps, err = prover.MaskedOpening(c, ps)
 	}
-	if !verifier.Verify(z, vs) {
+	if !verifier.Verify(z, zs, vs) {
 		tst.Errorf("verification failed")
 	}
 	end_t := time.Now()
@@ -46,7 +46,7 @@ func TestConsistency(tst *testing.T) {
 	prover := fastens20.NewProver(params)
 	verifier := fastens20.NewVerifier(params)
 	// Commit to the message.
-	t0, t, w, ps := prover.CommitToMessage(s)
+	t0, t, ts, w, ps := prover.CommitToMessage(s)
 	// Check consistency in the state.
 	if !ps.T0.Eq(t0) || !ps.T.Eq(t) || !ps.W.Eq(w) {
 		tst.Errorf("CommitToMessage state consistency check failed")
@@ -59,13 +59,13 @@ func TestConsistency(tst *testing.T) {
 	if !t.Get(config.NumSplits()).Copy().Add(params.B.Row(config.NumSplits()).Copy().Dot(ps.R).Neg()).Eq(ps.G) {
 		tst.Errorf("CommitToMessage t[n/d] != b[n/d] * r + g")
 	}
-	alpha, gamma, vs := verifier.CreateMasks(t0, t, w)
-	t, h, v, vp, ps := prover.CommitToRelation(alpha, gamma, ps)
+	alpha, gamma, omega, vs := verifier.CreateMasks(t0, t, ts, w)
+	t, h, v, vp, ps := prover.CommitToRelation(alpha, gamma, omega, ps)
 	c, vs := verifier.CreateChallenge(t, h, v, vp, vs)
 	// Recreate the masked opening until it satisfies the shortness condition.
-	z, ps, err := prover.MaskedOpening(c, ps)
+	z, _, ps, err := prover.MaskedOpening(c, ps)
 	for err != nil {
-		z, ps, err = prover.MaskedOpening(c, ps)
+		z, _, ps, err = prover.MaskedOpening(c, ps)
 	}
 	// End of the protocol.
 	// Check that the parameters are not changed.

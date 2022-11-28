@@ -51,14 +51,8 @@ func (r RLWERelation) ErrorDecomposition() (*fastmath.IntMatrix, *fastmath.IntVe
 }
 
 // ToLinearRelation transforms an RLWE relation into an equivalent linear relation.
-func (r RLWERelation) ToLinearRelation() LinearRelation {
-	baseRing := r.Params.BaseRing
-	q := r.Params.Q
-	logD := r.Params.LogD
+func (r RLWERelation) ToLinearRelation(e *fastmath.IntMatrix, b *fastmath.IntVec, T *fastmath.IntMatrix) LinearRelation {
 	// Extract the NTT transform.
-	T := fastmath.LoadNTTTransform("ntt_transform", q, logD, baseRing)
-	// Compute the ternary decomposition of the error.
-	e, b := r.ErrorDecomposition()
 	k := b.Size()
 	// Compute the sub-matrices of A.
 	aParts := make([]*fastmath.IntMatrix, k+1)

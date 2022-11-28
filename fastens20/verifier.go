@@ -10,9 +10,11 @@ import (
 type VerifierState struct {
 	T0    *fastmath.PolyNTTVec
 	T     *fastmath.PolyNTTVec
+	Ts    *fastmath.PolyNTT
 	W     *fastmath.PolyNTTMatrix
 	Alpha *fastmath.PolyNTTVec
 	Gamma *fastmath.IntMatrix
+	Omega *fastmath.IntMatrix
 	c     *fastmath.Poly
 	h     *fastmath.PolyNTT
 	v     *fastmath.PolyNTT
@@ -29,10 +31,11 @@ func NewVerifier(params PublicParams) Verifier {
 
 // CreateMasks returns the relation masks in response to a message commitment.
 // Returns alpha, gamma
-func (vf Verifier) CreateMasks(t0 *fastmath.PolyNTTVec, t *fastmath.PolyNTTVec, w *fastmath.PolyNTTMatrix) (*fastmath.PolyNTTVec, *fastmath.IntMatrix, VerifierState) {
+func (vf Verifier) CreateMasks(t0 *fastmath.PolyNTTVec, t *fastmath.PolyNTTVec, ts *fastmath.PolyNTT, w *fastmath.PolyNTTMatrix) (*fastmath.PolyNTTVec, *fastmath.IntMatrix, *fastmath.IntMatrix, VerifierState) {
 	alpha := fastmath.NewRandomPolyVec(vf.params.config.K*vf.params.config.NumSplits(), vf.params.config.UniformSampler, vf.params.config.BaseRing).NTT()
 	gamma := fastmath.NewRandomIntMatrix(vf.params.config.K, vf.params.config.M, vf.params.config.Q, vf.params.config.BaseRing)
-	return alpha.Copy(), gamma.Copy(), VerifierState{T0: t0, T: t, W: w, Alpha: alpha, Gamma: gamma}
+	omega := fastmath.NewRandomBinaryIntMatrix(vf.params.config.N, vf.params.config.N, vf.params.config.BaseRing)
+	return alpha.Copy(), gamma.Copy(), omega.Copy(), VerifierState{T0: t0, T: t, Ts: ts, W: w, Alpha: alpha, Gamma: gamma, Omega: omega}
 }
 
 // CreateChallenge returns a challenge for the relation commitment.
@@ -51,7 +54,7 @@ func (vf Verifier) CreateChallenge(t *fastmath.PolyNTTVec, h, v *fastmath.PolyNT
 
 // Verify verifies a masked opening for the commitment to the message, verifying the proof.
 // Returns true iff the proof is valid
-func (vf Verifier) Verify(z *fastmath.PolyNTTMatrix, state VerifierState) bool {
+func (vf Verifier) Verify(z *fastmath.PolyNTTMatrix, zs *fastmath.IntVec, state VerifierState) bool {
 	// Masked opening check
 	maskedOpeningTestResult := z.AllRows(
 		func(i int, zi *fastmath.PolyNTTVec) bool {

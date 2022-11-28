@@ -40,16 +40,18 @@ func TestAjtaiEmbedding(t *testing.T) {
 	aj := crypto.NewAjtaiCommitment(A, B, s, r, config.P, config.BaseRing)
 	// Create the RLWE problem.
 	p1 := fastmath.NewRandomPoly(config.UniformSampler, config.BaseRing)
-	e := fastmath.NewRandomPoly(config.GaussianSampler, config.BaseRing)
+	err := fastmath.NewRandomPoly(config.GaussianSampler, config.BaseRing)
 	rlweParams := crypto.NewRLWEParameters(config.Q, config.D, uint64(config.Beta()), config.BaseRing)
-	rlweProblem := crypto.NewRLWERelation(p1, s.UnderlyingPolys()[0].Copy(), e, rlweParams)
+	rlweRel := crypto.NewRLWERelation(p1, s.UnderlyingPolys()[0].Copy(), err, rlweParams)
 	// Convert into an SIS problem.
-	sisProblem := rlweProblem.ToLinearRelation()
+	T := fastmath.LoadNTTTransform("ntt_transform", config.Q, config.LogD, config.BaseRing)
+	e, b := rlweRel.ErrorDecomposition()
+	linRel := rlweRel.ToLinearRelation(e, b, T)
 	// Embed Ajtai into the problem.
-	aj.EmbedIntoLinearRelation(&sisProblem, config.D, config.Q, config.BaseRing)
+	aj.EmbedIntoLinearRelation(&linRel, config.D, config.Q, config.BaseRing)
 	// Make sure that the embedding results in a valid SIS problem.
-	u := sisProblem.A.MulVec(sisProblem.S)
-	if !sisProblem.U.Eq(u) {
+	u := linRel.A.MulVec(linRel.S)
+	if !linRel.U.Eq(u) {
 		t.Errorf("embedded SIS has invalid construction")
 	}
 }
