@@ -10,12 +10,14 @@ import (
 
 func TestABPSimple(t *testing.T) {
 	bfvRing := fastmath.BFVZeroLevelRing()
-	m := 16
-	n := 16
+	m := bfvRing.D
+	n := bfvRing.D
 	A := fastmath.NewRandomIntMatrix(m, n, bfvRing.Q, bfvRing.BaseRing)
 	s := fastmath.NewRandomTernaryIntVec(n, bfvRing.BaseRing)
 	rel := crypto.NewLinearRelation(A, s)
-	if !fastens20.ExecuteWithBoundProof(rel, 2) {
-		t.Errorf("Protocol failed!")
+	config := fastens20.DefaultConfig(bfvRing, rel)
+	params := fastens20.GeneratePublicParameters(rel, config)
+	if !fastens20.Execute(s, params) {
+		t.Errorf("execution failed!")
 	}
 }
