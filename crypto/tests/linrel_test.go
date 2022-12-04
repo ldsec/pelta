@@ -1,7 +1,6 @@
 package tests
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/ldsec/codeBase/commitment/crypto"
@@ -42,20 +41,20 @@ func TestLinRelRebase(t *testing.T) {
 	verifyRelation(t, rebasedRel)
 }
 
-func TestLinRelAppend(t *testing.T) {
+func TestLinRelEmbedSecondary(t *testing.T) {
 	config := crypto.GetDefaultConfig()
-	n := 5
-	m := 5
+	n := 8
+	m := 16
 	// First relation: As = u
 	A := fastmath.NewRandomIntMatrix(m, n, config.Q, config.BaseRing)
 	s := fastmath.NewRandomIntVec(n, config.Q, config.BaseRing)
 	rel := crypto.NewLinearRelation(A, s)
 	verifyRelation(t, rel)
 	// Second relation: Bs + y = z
-	B := fastmath.NewRandomIntMatrix(m, n, config.Q, config.BaseRing)
+	B := fastmath.NewRandomIntMatrix(n, n, config.Q, config.BaseRing)
 	y := fastmath.NewRandomIntVec(n, config.Q, config.BaseRing)
 	z := B.MulVec(s).Add(y)
 	// Verify the appended version.
-	rel.EmbedLin(B, y, z)
+	rel.EmbedSecondary(B, y, z)
 	verifyRelation(t, rel)
 }

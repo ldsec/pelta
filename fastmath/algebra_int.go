@@ -130,6 +130,18 @@ func (v *IntVec) MulAddElems(r *IntVec, out *Poly) {
 	}
 }
 
+// Hadamard performs coefficient-wise multiplication.
+func (v *IntVec) Hadamard(r *IntVec) {
+	if v.size != r.size {
+		panic("IntVec.Dot sizes do not match")
+	}
+	for i := 0; i < len(v.polys); i++ {
+		a := v.polys[i]
+		b := r.polys[i]
+		v.baseRing.MulCoeffs(a.ref, b.ref, a.ref)
+	}
+}
+
 // Eq checks the equality between two integer vectors.
 func (v *IntVec) Eq(r *IntVec) bool {
 	if v.Size() != r.Size() {
@@ -147,6 +159,18 @@ func (v *IntVec) Eq(r *IntVec) bool {
 		}
 	}
 	return true
+}
+
+// InfNorm returns the infinity norm of this vector.
+func (v *IntVec) InfNorm() uint64 {
+	max := v.polys[0].MaxCoeff(0)
+	for _, p := range v.polys[1:] {
+		c := p.MaxCoeff(0)
+		if c > max {
+			max = c
+		}
+	}
+	return max
 }
 
 // Copy copies the vector.
@@ -172,8 +196,28 @@ func (v *IntVec) String() string {
 
 // Append appends the contents of the given vector into this one.
 func (v *IntVec) Append(r *IntVec) *IntVec {
-	v.size = v.size + r.size
-	v.polys = append(v.polys, r.polys...)
+	// Update the size.
+	newSize := v.size + r.size
+	// Optimization.
+	if v.Size()%v.baseRing.N == 0 {
+		v.size = newSize
+		v.polys = append(v.polys, r.polys...)
+		return v
+	}
+	// Extend the number of underlying polynomials.
+	numPolys := int(newSize/v.baseRing.N) + 1
+	if newSize%v.baseRing.N == 0 {
+		numPolys -= 1
+	}
+	oldSize := v.size
+	v.size = newSize
+	for i := len(v.polys); i < numPolys; i++ {
+		v.polys = append(v.polys, NewZeroPoly(v.baseRing))
+	}
+	// Move the elements in.
+	for i := 0; i < r.Size(); i++ {
+		v.Set(oldSize+i, r.Get(i))
+	}
 	return v
 }
 
@@ -259,6 +303,15 @@ func NewIntMatrix(numRows, numCols int, baseRing *ring.Ring) *IntMatrix {
 		rows[i] = NewIntVec(numCols, baseRing)
 	}
 	return &IntMatrix{numRows, numCols, rows, baseRing.ModulusAtLevel[0], baseRing}
+}
+
+// NewIdIntMatrix returns an n by n identity matrix.
+func NewIdIntMatrix(numRows int, baseRing *ring.Ring) *IntMatrix {
+	m := NewIntMatrix(numRows, numRows, baseRing)
+	for i, r := range m.RowsView() {
+		r.Set(i, 1)
+	}
+	return m
 }
 
 func NewIntMatrixFromRows(rows []*IntVec, baseRing *ring.Ring) *IntMatrix {
@@ -425,11 +478,19 @@ func (m *IntMatrix) MulMat(b *IntMatrix) *IntMatrix {
 	return out
 }
 
+func (m *IntMatrix) Hadamard(b *IntMatrix) *IntMatrix {
+	for i, r := range m.rows {
+		r.Hadamard(b.RowView(i))
+	}
+	return m
+}
+
 // Scale scales the matrix by the given amount.
-func (m *IntMatrix) Scale(factor uint64) {
+func (m *IntMatrix) Scale(factor uint64) *IntMatrix {
 	for _, row := range m.rows {
 		row.Scale(factor)
 	}
+	return m
 }
 
 // Copy returns a copy of this matrix.

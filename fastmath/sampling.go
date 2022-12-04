@@ -73,7 +73,16 @@ func NewRandomIntMatrix(rows int, cols int, n *big.Int, baseRing *ring.Ring) *In
 	return A
 }
 
-// NewRandomIntMatrix constructs a random 2D matrix of integers mod n.
+// NewRandomTernaryIntMatrix constructs a random 2D matrix of integers mod 3.
+func NewRandomTernaryIntMatrix(rows int, cols int, baseRing *ring.Ring) *IntMatrix {
+	A := NewIntMatrix(rows, cols, baseRing)
+	A.PopulateRows(func(_ int) *IntVec {
+		return NewRandomTernaryIntVec(cols, baseRing)
+	})
+	return A
+}
+
+// NewRandomBinaryIntMatrix constructs a random 2D matrix of integers mod 2.
 func NewRandomBinaryIntMatrix(rows int, cols int, baseRing *ring.Ring) *IntMatrix {
 	A := NewIntMatrix(rows, cols, baseRing)
 	A.PopulateRows(func(_ int) *IntVec {

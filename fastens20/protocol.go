@@ -21,7 +21,6 @@ type Config struct {
 	Lambda          int
 	Kappa           int
 	TernaryLength   int
-	NormCheck       bool
 	BaseRing        *ring.Ring
 	UniformSampler  fastmath.PolySampler
 	TernarySampler  fastmath.PolySampler
@@ -50,7 +49,6 @@ func DefaultConfig(ringParams fastmath.RingParams, rel crypto.LinearRelation) Co
 		Lambda:          1,
 		Kappa:           1,
 		TernaryLength:   numCols,
-		NormCheck:       false,
 		BaseRing:        ringParams.BaseRing,
 		UniformSampler:  ring.NewUniformSampler(prng, ringParams.BaseRing),
 		TernarySampler:  ring.NewTernarySampler(prng, ringParams.BaseRing, 1.0/3.0, false),
@@ -71,11 +69,6 @@ func (c Config) WithReplication(k int) Config {
 func (c Config) WithSecurityParameters(kappa, lambda int) Config {
 	c.Kappa = kappa
 	c.Lambda = lambda
-	return c
-}
-
-func (c Config) WithNormCheck() Config {
-	c.NormCheck = true
 	return c
 }
 
@@ -101,7 +94,6 @@ type PublicParams struct {
 	U      *fastmath.IntVec
 	B0     *fastmath.PolyNTTMatrix
 	B      *fastmath.PolyNTTMatrix
-	Bs     *fastmath.PolyNTTVec
 	Sig    fastmath.Automorphism
 }
 
@@ -112,7 +104,6 @@ func GeneratePublicParameters(rel crypto.LinearRelation, config Config) PublicPa
 		config.UniformSampler,
 		config.BaseRing)
 	b := fastmath.NewRandomPolyMatrix(bSize, B0.Cols(), config.UniformSampler, config.BaseRing)
-	bs := fastmath.NewRandomPolyVec(B0.Cols(), config.UniformSampler, config.BaseRing)
 	sig := fastmath.NewAutomorphism(uint64(config.D), uint64(config.K))
 	return PublicParams{
 		config: config,
@@ -120,7 +111,22 @@ func GeneratePublicParameters(rel crypto.LinearRelation, config Config) PublicPa
 		U:      rel.U,
 		B0:     B0.NTT(),
 		B:      b.NTT(),
-		Bs:     bs.NTT(),
 		Sig:    sig,
 	}
+}
+
+func Execute(s *fastmath.IntVec, params PublicParams) bool {
+	prover := NewProver(params)
+	verifier := NewVerifier(params)
+	// Commit to the message.
+	t0, t, w, ps := prover.CommitToMessage(s)
+	alpha, gamma, vs := verifier.CreateMasks(t0, t, w)
+	t, h, v, vp, ps := prover.CommitToRelation(alpha, gamma, ps)
+	c, vs := verifier.CreateChallenge(t, h, v, vp, vs)
+	// Recreate the masked opening until it satisfies the shortness condition.
+	z, ps, err := prover.MaskedOpening(c, ps)
+	for err != nil {
+		z, ps, err = prover.MaskedOpening(c, ps)
+	}
+	return verifier.Verify(z, vs)
 }

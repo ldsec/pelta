@@ -200,6 +200,20 @@ func (m *PolyNTTMatrix) All(pred func(int, int, *PolyNTT) bool) bool {
 	return true
 }
 
+func (m *PolyNTTMatrix) ExtendCols(a *PolyNTTMatrix) {
+	for i, r := range m.rows {
+		for _, el := range a.Row(i).elems {
+			r.Append(el)
+		}
+	}
+}
+
+func (m *PolyNTTMatrix) ExtendRows(a *PolyNTTMatrix) {
+	for _, r := range a.rows {
+		m.rows = append(m.rows, r)
+	}
+}
+
 func (m *PolyNTTMatrix) InvNTT() *PolyMatrix {
 	polyRows := make([]PolyVec, 0, m.Rows())
 	for _, r := range m.rows {

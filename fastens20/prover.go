@@ -7,23 +7,19 @@ import (
 )
 
 type ProverState struct {
-	G     *fastmath.PolyNTT
-	S     *fastmath.IntVec
-	SHat  *fastmath.PolyNTTVec
-	R     *fastmath.PolyNTTVec
-	T0    *fastmath.PolyNTTVec
-	T     *fastmath.PolyNTTVec
-	Y     *fastmath.PolyNTTMatrix
-	Ts    *fastmath.PolyNTT
-	Ys    *fastmath.PolyNTT
-	W     *fastmath.PolyNTTMatrix
-	V     *fastmath.PolyNTT
-	Psi   *fastmath.PolyNTTMatrix
-	Omega *fastmath.IntMatrix
-	H     *fastmath.PolyNTT
-	Vp    *fastmath.PolyNTTVec
-	Z     *fastmath.PolyNTTMatrix
-	Zs    *fastmath.IntVec
+	G    *fastmath.PolyNTT
+	S    *fastmath.IntVec
+	SHat *fastmath.PolyNTTVec
+	R    *fastmath.PolyNTTVec
+	T0   *fastmath.PolyNTTVec
+	T    *fastmath.PolyNTTVec
+	Y    *fastmath.PolyNTTMatrix
+	W    *fastmath.PolyNTTMatrix
+	V    *fastmath.PolyNTT
+	Psi  *fastmath.PolyNTTMatrix
+	H    *fastmath.PolyNTT
+	Vp   *fastmath.PolyNTTVec
+	Z    *fastmath.PolyNTTMatrix
 }
 
 type Prover struct {
@@ -36,7 +32,7 @@ func NewProver(params PublicParams) Prover {
 
 // CommitToMessage commits to the given secret message s.
 // Returns t0, t, w
-func (p Prover) CommitToMessage(s *fastmath.IntVec) (*fastmath.PolyNTTVec, *fastmath.PolyNTTVec, *fastmath.PolyNTT, *fastmath.PolyNTTMatrix, ProverState) {
+func (p Prover) CommitToMessage(s *fastmath.IntVec) (*fastmath.PolyNTTVec, *fastmath.PolyNTTVec, *fastmath.PolyNTTMatrix, ProverState) {
 	// Rebase the message into polynomial space.
 	sHat := SplitInvNTT(s, p.params).NTT()
 	// Sample a polynomial g s.t. g_0=...=g_{k-1}=0
@@ -57,19 +53,16 @@ func (p Prover) CommitToMessage(s *fastmath.IntVec) (*fastmath.PolyNTTVec, *fast
 	t.Append(*p.params.B.Row(p.params.config.NumSplits()).Dot(r).Add(g))
 	// Create the masks.
 	y := fastmath.NewRandomPolyMatrix(p.params.config.K, r.Size(), p.params.config.GaussianSampler, p.params.config.BaseRing).NTT()
-	ys := fastmath.NewRandomPoly(p.params.config.TernarySampler, p.params.config.BaseRing).NTT()
-	// Commit to the bound proof mask.
-	ts := p.params.Bs.Dot(r).Add(ys)
 	w := fastmath.NewPolyMatrix(p.params.config.K, p.params.config.Kappa, p.params.config.BaseRing).NTT()
 	w.PopulateRows(func(i int) fastmath.PolyNTTVec {
 		return *p.params.B0.MulVec(y.Row(i))
 	})
-	return t0.Copy(), t.Copy(), ts.Copy(), w.Copy(), ProverState{S: s.Copy(), SHat: sHat, G: g, R: r, T0: t0, Ts: ts, Ys: ys, T: t, Y: y, W: w}
+	return t0.Copy(), t.Copy(), w.Copy(), ProverState{S: s.Copy(), SHat: sHat, G: g, R: r, T0: t0, T: t, Y: y, W: w}
 }
 
 // CommitToRelation commits to the ternary structure of the secret and the knowledge of the secret s, s.t. As = U.
 // Returns t, h, v, vp
-func (p Prover) CommitToRelation(alpha *fastmath.PolyNTTVec, gamma, omega *fastmath.IntMatrix, state ProverState) (*fastmath.PolyNTTVec, *fastmath.PolyNTT, *fastmath.PolyNTT, *fastmath.PolyNTTVec, ProverState) {
+func (p Prover) CommitToRelation(alpha *fastmath.PolyNTTVec, gamma *fastmath.IntMatrix, state ProverState) (*fastmath.PolyNTTVec, *fastmath.PolyNTT, *fastmath.PolyNTT, *fastmath.PolyNTTVec, ProverState) {
 	// Prover further set up.
 	sum1 := CommitmentSum(p.params.config.K, p.params.config.NumTernarySplits(), alpha,
 		func(i int, j int) fastmath.PolyNTT {
@@ -157,13 +150,12 @@ func (p Prover) CommitToRelation(alpha *fastmath.PolyNTTVec, gamma, omega *fastm
 	state.Psi = psi
 	state.H = h
 	state.Vp = vp
-	state.Omega = omega
 	return state.T.Copy(), state.H.Copy(), v.Copy(), vp.Copy(), state
 }
 
 // MaskedOpening returns the masked openings to the commitments.
 // Returns z
-func (p Prover) MaskedOpening(c *fastmath.Poly, state ProverState) (*fastmath.PolyNTTMatrix, *fastmath.IntVec, ProverState, error) {
+func (p Prover) MaskedOpening(c *fastmath.Poly, state ProverState) (*fastmath.PolyNTTMatrix, ProverState, error) {
 	// Masked openings.
 	z := fastmath.NewPolyMatrix(p.params.config.K, state.R.Size(), p.params.config.BaseRing).NTT()
 	z.PopulateRows(func(i int) fastmath.PolyNTTVec {
@@ -171,7 +163,6 @@ func (p Prover) MaskedOpening(c *fastmath.Poly, state ProverState) (*fastmath.Po
 		tmp := state.R.Copy().MulAll(sigc)
 		return *tmp.Add(state.Y.Row(i))
 	})
-	zs := state.Omega.MulVec(state.S).Add(state.Ys.Copy().InvNTT().Coeffs())
 	//normInBounds := z.AllRows(
 	//	func(zi math.Vector, i int) bool {
 	//		infNorm := zi.NewPolyVec().InfNorm(p.params.config.Q)
@@ -183,6 +174,5 @@ func (p Prover) MaskedOpening(c *fastmath.Poly, state ProverState) (*fastmath.Po
 	//}
 	// Update the state.
 	state.Z = z
-	state.Zs = zs
-	return z.Copy(), zs.Copy(), state, nil
+	return z.Copy(), state, nil
 }
