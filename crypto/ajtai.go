@@ -31,6 +31,12 @@ func NewAjtaiCommitment(A, B *fastmath.IntMatrix, s, r *fastmath.IntVec, p *big.
 	return AjtaiCommitment{A, B, s, r, kappa, comP, p}
 }
 
+func NewAjtaiCommitmentWithKappa(A, B *fastmath.IntMatrix, s, r, kappa *fastmath.IntVec, p *big.Int) AjtaiCommitment {
+	comQ := A.MulVec(s).Add(B.MulVec(r))
+	comP := comQ.Copy().Reduce(p)
+	return AjtaiCommitment{A, B, s, r, kappa, comP, p}
+}
+
 // EmbedIntoLinearRelation embeds this Ajitai commitment into the given linear relation.
 func (aj *AjtaiCommitment) EmbedIntoLinearRelation(rel *LinearRelation, d int, q *big.Int, baseRing *ring.Ring) {
 	k := rel.S.Size()/d - 1

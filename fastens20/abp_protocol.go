@@ -19,7 +19,7 @@ func extendPublicParameters(params *PublicParams, tau int) {
 func updateProtocol(originalRel *crypto.LinearRelation, p *ABPProver, v *ABPVerifier, ps *ABPProverState, vs *ABPVerifierState) {
 	BA := originalRel.A.MulMat(vs.ABPVerifierMask)
 	newRel := originalRel.Copy()
-	newRel.EmbedSecondary(BA, ps.ABPProverMask, ps.ABPMaskedOpening)
+	newRel.AppendDependentOnS(BA, ps.ABPProverMask, ps.ABPMaskedOpening)
 	p.params.A = newRel.A
 	v.params.A = newRel.A
 	v.params.U = newRel.U

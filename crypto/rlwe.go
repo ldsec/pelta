@@ -28,7 +28,7 @@ func NewRLWEParameters(q *big.Int, d int, beta uint64, baseRing *ring.Ring) RLWE
 	}
 }
 
-// RLWERelation represents an MRLWE problem, i.e., p0 = -p1 * s + e.
+// RLWERelation represents an MRLWE relation, i.e., p0 = -p1 * s + e.
 type RLWERelation struct {
 	Params RLWEParameters
 	P0     *fastmath.Poly
@@ -43,11 +43,20 @@ func NewRLWERelation(p1, s, e *fastmath.Poly, params RLWEParameters) RLWERelatio
 	return RLWERelation{params, p0, p1, s, e}
 }
 
+func NewRLWERelationWithLHS(p0, p1, s, e *fastmath.Poly, params RLWEParameters) RLWERelation {
+	return RLWERelation{params, p0, p1, s, e}
+}
+
 // ErrorDecomposition returns the ternary decomposition of the error.
 func (r RLWERelation) ErrorDecomposition() (*fastmath.IntMatrix, *fastmath.IntVec) {
 	eCoeffs := r.E.Coeffs()
 	eDecomp, ternaryBasis := fastmath.TernaryDecomposition(eCoeffs, r.Params.Beta, r.Params.LogBeta, r.Params.Q, r.Params.BaseRing)
 	return eDecomp.Transposed(), ternaryBasis
+}
+
+func (r RLWERelation) ToLinearRelationAuto(T *fastmath.IntMatrix) LinearRelation {
+	e, b := r.ErrorDecomposition()
+	return r.ToLinearRelation(e, b, T)
 }
 
 // ToLinearRelation transforms an RLWE relation into an equivalent linear relation.
