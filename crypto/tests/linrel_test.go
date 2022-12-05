@@ -41,7 +41,50 @@ func TestLinRelRebase(t *testing.T) {
 	verifyRelation(t, rebasedRel)
 }
 
-func TestLinRelEmbedSecondary(t *testing.T) {
+func TestLinRelAppendIndependent(t *testing.T) {
+	config := crypto.GetDefaultConfig()
+	n := 8
+	m := 16
+	// First relation: As = u
+	A := fastmath.NewRandomIntMatrix(m, n, config.Q, config.BaseRing)
+	s := fastmath.NewRandomIntVec(n, config.Q, config.BaseRing)
+	rel := crypto.NewLinearRelation(A, s)
+	verifyRelation(t, rel)
+	// Second relation: By = z
+	np := 9
+	mp := 13
+	B := fastmath.NewRandomIntMatrix(mp, np, config.Q, config.BaseRing)
+	y := fastmath.NewRandomIntVec(np, config.Q, config.BaseRing)
+	rel2 := crypto.NewLinearRelation(B, y)
+	verifyRelation(t, rel2)
+	// Verify the appended version.
+	rel.AppendIndependent(rel2)
+	verifyRelation(t, rel)
+}
+
+func TestLinRelExtend(t *testing.T) {
+	config := crypto.GetDefaultConfig()
+	n := 8
+	m := 16
+	// First relation: As = u
+	A := fastmath.NewRandomIntMatrix(m, n, config.Q, config.BaseRing)
+	s := fastmath.NewRandomIntVec(n, config.Q, config.BaseRing)
+	rel := crypto.NewLinearRelation(A, s)
+	verifyRelation(t, rel)
+	// Second relation: By = z
+	np := 9
+	mp := m
+	B := fastmath.NewRandomIntMatrix(mp, np, config.Q, config.BaseRing)
+	y := fastmath.NewRandomIntVec(np, config.Q, config.BaseRing)
+	rel2 := crypto.NewLinearRelation(B, y)
+	verifyRelation(t, rel2)
+	// Verify the extended version.
+	rel.Extend(rel2)
+	verifyRelation(t, rel)
+
+}
+
+func TestLinRelAppendDependentOnS(t *testing.T) {
 	config := crypto.GetDefaultConfig()
 	n := 8
 	m := 16
@@ -55,6 +98,6 @@ func TestLinRelEmbedSecondary(t *testing.T) {
 	y := fastmath.NewRandomIntVec(n, config.Q, config.BaseRing)
 	z := B.MulVec(s).Add(y)
 	// Verify the appended version.
-	rel.EmbedSecondary(B, y, z)
+	rel.AppendDependentOnS(B, y, z)
 	verifyRelation(t, rel)
 }
