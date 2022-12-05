@@ -17,6 +17,10 @@ func NewLinearRelation(A *fastmath.IntMatrix, s *fastmath.IntVec) LinearRelation
 	return LinearRelation{A, s, u}
 }
 
+func NewLinearRelationWithLHS(A *fastmath.IntMatrix, s, u *fastmath.IntVec) LinearRelation {
+	return LinearRelation{A, s, u}
+}
+
 func (r LinearRelation) Rebase(newRing fastmath.RingParams) LinearRelation {
 	return LinearRelation{
 		A: r.A.Copy().RebaseRowsLossless(newRing, 0),
@@ -37,7 +41,9 @@ func (r *LinearRelation) AppendDependent(B *fastmath.IntMatrix, y, z *fastmath.I
 		r.A.ExtendCols(fastmath.NewIntMatrix(m, np-n, r.S.BaseRing()))
 	}
 	r.A.ExtendRows(B)
-	r.S.Append(y)
+	if np > n {
+		r.S.Append(y)
+	}
 	r.U.Append(z)
 	return r
 }
@@ -61,14 +67,21 @@ func (r *LinearRelation) AppendIndependent(rp LinearRelation) *LinearRelation {
 // Extend extends a linear relation As = u with By = z s.t. As + By = z + u.
 // The resulting relation is (A || B) (s, y) = z + u
 func (r *LinearRelation) Extend(rp LinearRelation) *LinearRelation {
+	r.ExtendPartial(rp.A, rp.S)
+	r.U.Add(rp.U)
+	return r
+}
+
+// ExtendPartial extends a linear relation As = u with (B, y) s.t. As + By = u.
+// The resulting relation is (A || B) (s, y) = z
+func (r *LinearRelation) ExtendPartial(B *fastmath.IntMatrix, y *fastmath.IntVec) *LinearRelation {
 	m := r.A.Rows()
-	mp := rp.A.Rows()
+	mp := B.Rows()
 	if mp != m {
 		panic("cannot extend (B, y) because B has incompatible number of rows")
 	}
-	r.A.ExtendCols(rp.A)
-	r.S.Append(rp.S)
-	r.U.Add(rp.U)
+	r.A.ExtendCols(B)
+	r.S.Append(y)
 	return r
 }
 
