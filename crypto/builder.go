@@ -85,26 +85,30 @@ func (eqn *LinearEquation) Linearize() LinearRelation {
 }
 
 type LinearRelationBuilder struct {
-	eqns []LinearEquation
+	eqns []*LinearEquation
 }
 
+// NewLinearRelationBuilder creates a new linear relation builder.
 func NewLinearRelationBuilder() *LinearRelationBuilder {
-	return &LinearRelationBuilder{eqns: []LinearEquation{}}
+	return &LinearRelationBuilder{eqns: []*LinearEquation{}}
 }
 
-func (lrb *LinearRelationBuilder) AppendEqn(eqn LinearEquation) *LinearRelationBuilder {
+// AppendEqn appends a new equation to this builder.
+func (lrb *LinearRelationBuilder) AppendEqn(eqn *LinearEquation) *LinearRelationBuilder {
 	lrb.eqns = append(lrb.eqns, eqn)
 	return lrb
 }
 
+// Build constructs the linear relation of the form As = u from the appended equations.
 func (lrb *LinearRelationBuilder) Build(baseRing *ring.Ring) LinearRelation {
 	if len(lrb.eqns) == 0 {
 		panic("cannot build a linear relation without any equations")
 	}
 	linRel := lrb.eqns[0].Linearize()
-	for _, eqn := range lrb.eqns[1:] {
+	for i, eqn := range lrb.eqns[1:] {
 		if eqn.IsDependent() {
-			preB := make([]*fastmath.IntMatrix, linRel.S.Size())
+			prevEqnNumTerms := len(lrb.eqns[i].GetTerms())
+			preB := make([]*fastmath.IntMatrix, prevEqnNumTerms)
 			for _, t := range eqn.GetDependentTerms() {
 				preB[t.depVecIndex] = t.A
 			}
