@@ -142,6 +142,15 @@ func (v *IntVec) Hadamard(r *IntVec) {
 	}
 }
 
+// Diag returns a diagonalization of this vector.
+func (v *IntVec) Diag() *IntMatrix {
+	m := NewIntMatrix(v.Size(), v.Size(), v.BaseRing())
+	for i := 0; i < v.Size(); i++ {
+		m.Set(i, i, v.Get(i))
+	}
+	return m
+}
+
 // Eq checks the equality between two integer vectors.
 func (v *IntVec) Eq(r *IntVec) bool {
 	if v.Size() != r.Size() {
@@ -191,7 +200,8 @@ func (v *IntVec) String() string {
 			elemStrs = append(elemStrs, fmt.Sprintf("%d", v.polys[i].Get(j, 0)))
 		}
 	}
-	return s + strings.Join(elemStrs[:v.Size()], ",") + ",...}"
+	return s + strings.Join(elemStrs[:10], ",") +
+		",...," + strings.Join(elemStrs[v.Size()-10:], ",") + "}"
 }
 
 // Append appends the contents of the given vector into this one.

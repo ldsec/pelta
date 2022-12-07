@@ -28,65 +28,26 @@ func NewRLWEParameters(q *big.Int, d int, beta uint64, baseRing *ring.Ring) RLWE
 	}
 }
 
-// RLWERelation represents an MRLWE relation, i.e., p0 = -p1 * s + e.
-type RLWERelation struct {
-	Params RLWEParameters
-	P0     *fastmath.Poly
-	P1     *fastmath.Poly
-	S      *fastmath.Poly
-	E      *fastmath.Poly
+// AppendIndependentRLWE appends an independent RLWE equation p0 = -p1 * s + e.
+func (lrb *LinearRelationBuilder) AppendIndependentRLWE(p0 *fastmath.PolyNTT, p1, s, e *fastmath.Poly, T *fastmath.IntMatrix, params RLWEParameters) *LinearRelationBuilder {
+	eqn := NewLinearEquation(p0.Coeffs(), T.Cols()).
+		AppendTerm(T.Copy().DiagMulMat(p1.Copy().NTT().Neg().Coeffs()), s.Coeffs()).
+		AppendErrorDecompositionSum(e, T, params)
+	lrb.AppendEqn(eqn)
+	return lrb
 }
 
-// NewRLWERelation creates a new RLWE instance s.t. p0 = -p1 * s + e where e is sampled from the given error sampler.
-func NewRLWERelation(p1, s, e *fastmath.Poly, params RLWEParameters) RLWERelation {
-	p0 := p1.Copy().NTT().Neg().Mul(s.Copy().NTT()).Add(e.Copy().NTT()).InvNTT()
-	return RLWERelation{params, p0, p1, s, e}
+func (eqn *LinearEquation) AppendErrorDecompositionSum(err *fastmath.Poly, T *fastmath.IntMatrix, params RLWEParameters) *LinearEquation {
+	e, b := ErrorDecomposition(err, params)
+	for i := 0; i < b.Size(); i++ {
+		eqn.AppendTerm(T.Copy().Scale(b.Get(i)), e.RowView(i))
+	}
+	return eqn
 }
 
-func NewRLWERelationWithLHS(p0, p1, s, e *fastmath.Poly, params RLWEParameters) RLWERelation {
-	return RLWERelation{params, p0, p1, s, e}
-}
-
-// ErrorDecomposition returns the ternary decomposition of the error.
-func (r RLWERelation) ErrorDecomposition() (*fastmath.IntMatrix, *fastmath.IntVec) {
-	eCoeffs := r.E.Coeffs()
-	eDecomp, ternaryBasis := fastmath.TernaryDecomposition(eCoeffs, r.Params.Beta, r.Params.LogBeta, r.Params.Q, r.Params.BaseRing)
+// ErrorDecomposition returns the ternary decomposition of the error {e_i}, b.
+func ErrorDecomposition(err *fastmath.Poly, params RLWEParameters) (*fastmath.IntMatrix, *fastmath.IntVec) {
+	eCoeffs := err.Coeffs()
+	eDecomp, ternaryBasis := fastmath.TernaryDecomposition(eCoeffs, params.Beta, params.LogBeta, params.Q, params.BaseRing)
 	return eDecomp.Transposed(), ternaryBasis
-}
-
-func (r RLWERelation) ToLinearRelationAuto(T *fastmath.IntMatrix) LinearRelation {
-	e, b := r.ErrorDecomposition()
-	return r.ToLinearRelation(e, b, T)
-}
-
-// ToLinearRelation transforms an RLWE relation into an equivalent linear relation.
-func (r RLWERelation) ToLinearRelation(e *fastmath.IntMatrix, b *fastmath.IntVec, T *fastmath.IntMatrix) LinearRelation {
-	// Extract the NTT transform.
-	k := b.Size()
-	// Compute the sub-matrices of A.
-	aParts := make([]*fastmath.IntMatrix, k+1)
-	for i := range aParts {
-		aParts[i] = T.Copy()
-	}
-	negP1 := r.P1.Copy().Neg().NTT()
-	fastmath.ExtendNTTTransform(aParts[0], negP1)
-	for i := 0; i < k; i++ {
-		aParts[i+1].Scale(b.Get(i))
-	}
-	// Compute the sub-vectors of S.
-	sParts := make([]*fastmath.IntVec, k+1)
-	sParts[0] = r.S.Coeffs()
-	for i := 0; i < k; i++ {
-		sParts[i+1] = e.RowView(i)
-	}
-	// Combine.
-	A := aParts[0]
-	for _, aPart := range aParts[1:] {
-		A.ExtendCols(aPart)
-	}
-	s := sParts[0]
-	for _, sPart := range sParts[1:] {
-		s.Append(sPart)
-	}
-	return NewLinearRelation(A, s)
 }

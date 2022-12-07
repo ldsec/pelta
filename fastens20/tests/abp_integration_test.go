@@ -17,7 +17,7 @@ func TestABPSimple(t *testing.T) {
 	rel := crypto.NewLinearRelation(A, s)
 	config := fastens20.DefaultConfig(bfvRing, rel)
 	params := fastens20.GeneratePublicParameters(rel, config)
-	if !fastens20.Execute(s, params) {
+	if !fastens20.ExecuteWithBoundProof(s, 3, params) {
 		t.Errorf("execution failed!")
 	}
 }

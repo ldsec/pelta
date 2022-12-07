@@ -33,9 +33,29 @@ func (eqn *LinearEquation) AppendTerm(A *fastmath.IntMatrix, b *fastmath.IntVec)
 	return eqn
 }
 
+func (eqn *LinearEquation) AppendVecTerm(b *fastmath.IntVec, baseRing *ring.Ring) *LinearEquation {
+	if b.Size() != eqn.n {
+		panic("cannot append term with invalid size")
+	}
+	if eqn.n != eqn.m {
+		panic("cannot append vec term to an equation with #row != #col")
+	}
+	A := fastmath.NewIdIntMatrix(eqn.m, baseRing)
+	eqn.rhs = append(eqn.rhs, term{A, b, false, 0})
+	return eqn
+}
+
 // AddDependentTerm adds a dependent term to this equation with the associated vector being defined
 // in another equation, indicated by its position in `vecIndex`.
 func (eqn *LinearEquation) AppendDependentTerm(A *fastmath.IntMatrix, vecIndex int) *LinearEquation {
+	eqn.rhs = append(eqn.rhs, term{A, nil, true, vecIndex})
+	eqn.dependent = true
+	return eqn
+}
+
+// Note: The referenced vector must have the correct size!!
+func (eqn *LinearEquation) AppendDependentVecTerm(vecIndex int, baseRing *ring.Ring) *LinearEquation {
+	A := fastmath.NewIdIntMatrix(eqn.m, baseRing)
 	eqn.rhs = append(eqn.rhs, term{A, nil, true, vecIndex})
 	eqn.dependent = true
 	return eqn

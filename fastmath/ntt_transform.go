@@ -48,11 +48,14 @@ func GenerateNTTTransform(q *big.Int, logN int, baseRing *ring.Ring) *IntMatrix 
 	return T
 }
 
-// ExtendNTTTransform extends the transformation T with p => pT with pT * q = p(Tq)
-func ExtendNTTTransform(t *IntMatrix, p *PolyNTT) {
-	// Update the transformation matrix in-place without copying anything.
-	for row := 0; row < t.Rows(); row++ {
-		tRow := t.RowView(row)
-		tRow.Scale(p.Get(row, 0))
+// DiagMulMat performs the multiplication diag(v) * T.
+func (T *IntMatrix) DiagMulMat(v *IntVec) *IntMatrix {
+	if T.Rows() != v.Size() {
+		panic("incorrect sizes for diag(v) * T")
 	}
+	// Update the transformation matrix in-place without copying anything.
+	for row := 0; row < T.Rows(); row++ {
+		T.RowView(row).Scale(v.Get(row))
+	}
+	return T
 }
