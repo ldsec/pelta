@@ -16,6 +16,43 @@ type AjtaiCommitment struct {
 	P     *big.Int
 }
 
+// GetAjtaiCommitments returns (As + Br) and (As + Br) mod p
+func GetAjtaiCommitments(A, B *fastmath.IntMatrix, s, r *fastmath.IntVec, p *big.Int) (*fastmath.IntVec, *fastmath.IntVec) {
+	comQ := A.MulVec(s).Add(B.MulVec(r))
+	comP := comQ.Copy().Reduce(p)
+	return comQ, comP
+}
+
+// GetKappa returns k s.t. (As + Br) - ([As + Br] mod p) = kp
+func GetAjtaiKappa(comP, comQ *fastmath.IntVec, p *big.Int, baseRing *ring.Ring) *fastmath.IntVec {
+	// comQ - comP = (As + Br) - [(As + Br) mod p]
+	diff := comQ.Copy().Add(comP.Copy().Neg())
+	// kappa := (comQ - comP) / p s.t. kappa * p is the difference between
+	// pInv := big.NewInt(0).ModInverse(p, config.Q).Uint64()
+	kappa := fastmath.NewIntVec(diff.Size(), baseRing)
+	kappa.Populate(func(i int) uint64 {
+		return diff.Get(i) / p.Uint64()
+	})
+	return kappa
+}
+
+// NewPaddedAjtaiEquation returns the equation comP = As + Br - kp with rows padded up to the size of s.
+func NewPaddedAjtaiEquation(comP *fastmath.IntVec, A, B *fastmath.IntMatrix, s, r, kappa *fastmath.IntVec, p, q *big.Int, baseRing *ring.Ring) *LinearEquation {
+	d := s.Size()
+	l := comP.Size()
+	padLength := d - l
+	paddedA := A.Copy().ExtendRows(fastmath.NewIntMatrix(padLength, d, baseRing))
+	paddedB := B.Copy().ExtendRows(fastmath.NewIntMatrix(padLength, d, baseRing))
+	paddedKappa := kappa.Copy().Append(fastmath.NewIntVec(padLength, baseRing))
+	paddedComP := comP.Copy().Append(fastmath.NewIntVec(padLength, baseRing))
+	negP := big.NewInt(0).Sub(q, p).Uint64()
+	eqn := NewLinearEquation(paddedComP, d)
+	eqn.AppendTerm(paddedA, s).
+		AppendTerm(paddedB, r).
+		AppendTerm(fastmath.NewIdIntMatrix(d, baseRing).Scale(negP), paddedKappa)
+	return eqn
+}
+
 func NewAjtaiCommitment(A, B *fastmath.IntMatrix, s, r *fastmath.IntVec, p *big.Int, baseRing *ring.Ring) AjtaiCommitment {
 	// Compute kappa.
 	comQ := A.MulVec(s).Add(B.MulVec(r))

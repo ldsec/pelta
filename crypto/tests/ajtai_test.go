@@ -7,51 +7,57 @@ import (
 	"github.com/ldsec/codeBase/commitment/fastmath"
 )
 
-func TestAjtaiConstruction(t *testing.T) {
+func TestAjtaiCommitments(t *testing.T) {
 	config := crypto.GetDefaultConfig()
 	comSize := 4
 	s := fastmath.NewRandomTernaryIntVec(config.D, config.BaseRing)
 	r := fastmath.NewRandomTernaryIntVec(config.D, config.BaseRing)
 	A := fastmath.NewRandomIntMatrix(comSize, s.Size(), config.P, config.BaseRing)
 	B := fastmath.NewRandomIntMatrix(comSize, s.Size(), config.P, config.BaseRing)
-	aj := crypto.NewAjtaiCommitment(A, B, s, r, config.P, config.BaseRing)
-	comQ := aj.A.MulVec(aj.S).
-		Add(aj.B.MulVec(aj.R))
-	if !aj.ComP.Eq(comQ.Copy().Reduce(aj.P)) {
-		t.Errorf("construction of com_p incorrect")
-	}
-	// comP = comQ - kappa * p
-	comP := comQ.Copy().Add(aj.Kappa.Copy().
-		Scale(aj.P.Uint64()).
-		Neg())
-	if !aj.ComP.Eq(comP) {
-		t.Errorf("construction of kappa incorrect")
+	comQ := A.MulVec(s).Add(B.MulVec(r))
+	comP := comQ.Copy().Reduce(config.P)
+	comQActual, comPActual := crypto.GetAjtaiCommitments(A, B, s, r, config.P)
+	if !comQActual.Eq(comQ) || !comPActual.Eq(comP) {
+		t.Errorf("construction of com_p or com_q incorrect")
 	}
 }
 
-func TestAjtaiEmbedding(t *testing.T) {
-	// config := crypto.GetDefaultConfig()
-	// // Create the Ajtai commitment.
-	// comSize := 4
-	// s := fastmath.NewRandomTernaryIntVec(config.D, config.BaseRing)
-	// r := fastmath.NewRandomTernaryIntVec(config.D, config.BaseRing)
-	// A := fastmath.NewRandomIntMatrix(comSize, s.Size(), config.P, config.BaseRing)
-	// B := fastmath.NewRandomIntMatrix(comSize, s.Size(), config.P, config.BaseRing)
-	// aj := crypto.NewAjtaiCommitment(A, B, s, r, config.P, config.BaseRing)
-	// // Create the RLWE problem.
-	// p1 := fastmath.NewRandomPoly(config.UniformSampler, config.BaseRing)
-	// err := fastmath.NewRandomPoly(config.GaussianSampler, config.BaseRing)
-	// rlweParams := crypto.NewRLWEParameters(config.Q, config.D, uint64(config.Beta()), config.BaseRing)
-	// rlweRel := crypto.NewRLWERelation(p1, s.UnderlyingPolys()[0].Copy(), err, rlweParams)
-	// // Convert into an SIS problem.
-	// T := fastmath.LoadNTTTransform("ntt_transform", config.Q, config.LogD, config.BaseRing)
-	// e, b := rlweRel.ErrorDecomposition()
-	// linRel := rlweRel.ToLinearRelation(e, b, T)
-	// // Embed Ajtai into the problem.
-	// aj.EmbedIntoLinearRelation(&linRel, config.D, config.Q, config.BaseRing)
-	// // Make sure that the embedding results in a valid SIS problem.
-	// u := linRel.A.MulVec(linRel.S)
-	// if !linRel.U.Eq(u) {
-	// 	t.Errorf("embedded SIS has invalid construction")
-	// }
+func TestAjtaiKappa(t *testing.T) {
+	config := crypto.GetDefaultConfig()
+	comSize := 4
+	s := fastmath.NewRandomTernaryIntVec(config.D, config.BaseRing)
+	r := fastmath.NewRandomTernaryIntVec(config.D, config.BaseRing)
+	A := fastmath.NewRandomIntMatrix(comSize, s.Size(), config.P, config.BaseRing)
+	B := fastmath.NewRandomIntMatrix(comSize, s.Size(), config.P, config.BaseRing)
+	comQ, comP := crypto.GetAjtaiCommitments(A, B, s, r, config.P)
+	kappa := crypto.GetAjtaiKappa(comP, comQ, config.P, config.BaseRing)
+	// comP = comQ - kappa * p
+	comPReconstructed := comQ.Copy().Add(kappa.Copy().
+		Scale(config.P.Uint64()).
+		Neg())
+	if !comPReconstructed.Eq(comP) {
+		t.Errorf("construction of kappa incorrect")
+	}
+
+}
+
+func TestAjtaiEquation(t *testing.T) {
+	config := crypto.GetDefaultConfig()
+	// Create another equation Mw = v.
+	M := fastmath.NewRandomIntMatrix(config.D, config.D, config.Q, config.BaseRing)
+	w := fastmath.NewRandomIntVec(config.D, config.Q, config.BaseRing)
+	z := M.MulVec(w)
+	// Create the Ajtai commitment.
+	comSize := 4
+	d := 256
+	s := fastmath.NewRandomTernaryIntVec(d, config.BaseRing)
+	r := fastmath.NewRandomTernaryIntVec(d, config.BaseRing)
+	A := fastmath.NewRandomIntMatrix(comSize, s.Size(), config.P, config.BaseRing)
+	B := fastmath.NewRandomIntMatrix(comSize, s.Size(), config.P, config.BaseRing)
+	comQ, comP := crypto.GetAjtaiCommitments(A, B, s, r, config.P)
+	kappa := crypto.GetAjtaiKappa(comP, comQ, config.P, config.BaseRing)
+	lrb := crypto.NewLinearRelationBuilder().
+		AppendEqn(crypto.NewLinearEquation(z, w.Size()).AppendTerm(M, w)).
+		AppendEqn(crypto.NewPaddedAjtaiEquation(comP, A, B, s, r, kappa, config.P, config.Q, config.BaseRing))
+	verifyRelation(t, lrb.Build(config.BaseRing))
 }

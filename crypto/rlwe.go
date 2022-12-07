@@ -28,26 +28,30 @@ func NewRLWEParameters(q *big.Int, d int, beta uint64, baseRing *ring.Ring) RLWE
 	}
 }
 
-// AppendIndependentRLWE appends an independent RLWE equation p0 = -p1 * s + e.
-func (lrb *LinearRelationBuilder) AppendIndependentRLWE(p0 *fastmath.PolyNTT, p1, s, e *fastmath.Poly, T *fastmath.IntMatrix, params RLWEParameters) *LinearRelationBuilder {
-	eqn := NewLinearEquation(p0.Coeffs(), T.Cols()).
-		AppendTerm(T.Copy().DiagMulMat(p1.Copy().NTT().Neg().Coeffs()), s.Coeffs()).
-		AppendErrorDecompositionSum(e, T, params)
-	lrb.AppendEqn(eqn)
-	return lrb
+// GetRLWEP0 returns -p1 * s + e in NTT domain.
+func GetRLWEP0(p1, s, e *fastmath.Poly) *fastmath.PolyNTT {
+	return p1.Copy().Neg().NTT().Mul(s.Copy().NTT()).Add(e.Copy().NTT())
 }
 
-func (eqn *LinearEquation) AppendErrorDecompositionSum(err *fastmath.Poly, T *fastmath.IntMatrix, params RLWEParameters) *LinearEquation {
-	e, b := ErrorDecomposition(err, params)
+// RLWEErrorDecomposition returns the ternary decomposition of the error {e_i}, b.
+func RLWEErrorDecomposition(err *fastmath.Poly, params RLWEParameters) (*fastmath.IntMatrix, *fastmath.IntVec) {
+	eCoeffs := err.Coeffs()
+	eDecomp, ternaryBasis := fastmath.TernaryDecomposition(eCoeffs, params.Beta, params.LogBeta, params.Q, params.BaseRing)
+	return eDecomp.Transposed(), ternaryBasis
+}
+
+// NewIndependentRLWE construct an independent RLWE equation p0 = -p1 * s + e.
+func NewIndependentRLWE(p0 *fastmath.PolyNTT, p1, s, e *fastmath.Poly, T *fastmath.IntMatrix, params RLWEParameters) *LinearEquation {
+	eqn := NewLinearEquation(p0.Coeffs(), T.Cols())
+	eqn.AppendTerm(T.Copy().DiagMulMat(p1.Copy().NTT().Neg().Coeffs()), s.Coeffs()).
+		AppendRLWEErrorDecompositionSum(e, T, params)
+	return eqn
+}
+
+func (eqn *LinearEquation) AppendRLWEErrorDecompositionSum(err *fastmath.Poly, T *fastmath.IntMatrix, params RLWEParameters) *LinearEquation {
+	e, b := RLWEErrorDecomposition(err, params)
 	for i := 0; i < b.Size(); i++ {
 		eqn.AppendTerm(T.Copy().Scale(b.Get(i)), e.RowView(i))
 	}
 	return eqn
-}
-
-// ErrorDecomposition returns the ternary decomposition of the error {e_i}, b.
-func ErrorDecomposition(err *fastmath.Poly, params RLWEParameters) (*fastmath.IntMatrix, *fastmath.IntVec) {
-	eCoeffs := err.Coeffs()
-	eDecomp, ternaryBasis := fastmath.TernaryDecomposition(eCoeffs, params.Beta, params.LogBeta, params.Q, params.BaseRing)
-	return eDecomp.Transposed(), ternaryBasis
 }

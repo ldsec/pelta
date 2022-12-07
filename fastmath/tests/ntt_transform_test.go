@@ -9,7 +9,7 @@ import (
 
 func TestNTTTransform(t *testing.T) {
 	baseRing := getBaseRing()
-	q := baseRing.ModulusAtLevel[0].Uint64()
+	q := baseRing.ModulusAtLevel[0]
 	logD := int(math.Log2(float64(baseRing.N)))
 	T := fastmath.LoadNTTTransform("test", q, logD, baseRing)
 	// Create a test polynomial.
@@ -31,7 +31,7 @@ func TestNTTTransform(t *testing.T) {
 
 func TestNTTTransformScale(t *testing.T) {
 	baseRing := getBaseRing()
-	q := baseRing.ModulusAtLevel[0].Uint64()
+	q := baseRing.ModulusAtLevel[0]
 	logD := int(math.Log2(float64(baseRing.N)))
 	T := fastmath.LoadNTTTransform("test", q, logD, baseRing)
 	// Create a test polynomial.
@@ -55,7 +55,7 @@ func TestNTTTransformScale(t *testing.T) {
 
 func TestNTTTransformExtend(t *testing.T) {
 	baseRing := getBaseRing()
-	q := baseRing.ModulusAtLevel[0].Uint64()
+	q := baseRing.ModulusAtLevel[0]
 	logD := int(math.Log2(float64(baseRing.N)))
 	T := fastmath.LoadNTTTransform("test", q, logD, baseRing)
 	// Create test polynomials.
@@ -69,7 +69,7 @@ func TestNTTTransformExtend(t *testing.T) {
 	}
 	p0NTT := p0.NTT()
 	// Take the NTT transform by the extended transform matrix.
-	fastmath.ExtendNTTTransform(T, p0NTT)
+	T = T.DiagMulMat(p0NTT.Coeffs())
 	p1Coeffs := p1.Coeffs()
 	p0p1NTTCoeffs1 := T.MulVec(p1Coeffs)
 	// Take the multiplication regularly.
