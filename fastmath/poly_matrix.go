@@ -31,17 +31,17 @@ func (m *PolyMatrix) Get(i, j int) *Poly {
 	return m.rows[i].Get(j)
 }
 
-func (m *PolyMatrix) Populate(f func(int, int) Poly) {
+func (m *PolyMatrix) Populate(f func(int, int) *Poly) {
 	for i := 0; i < len(m.rows); i++ {
-		m.rows[i].Populate(func(j int) Poly {
+		m.rows[i].Populate(func(j int) *Poly {
 			return f(i, j)
 		})
 	}
 }
 
-func (m *PolyMatrix) Update(f func(int, int, Poly) Poly) {
+func (m *PolyMatrix) Update(f func(int, int, *Poly) *Poly) {
 	for i := range m.rows {
-		m.rows[i].Update(func(j int, old Poly) Poly {
+		m.rows[i].Update(func(j int, old *Poly) *Poly {
 			return f(i, j, old)
 		})
 	}
@@ -122,21 +122,33 @@ func (m *PolyNTTMatrix) Row(i int) *PolyNTTVec {
 	return &m.rows[i]
 }
 
+func (m *PolyNTTMatrix) ColCopy(i int) *PolyNTTVec {
+	col := NewPolyVec(m.Rows(), m.baseRing).NTT()
+	for j := 0; j < m.Rows(); j++ {
+		col.Set(j, m.Get(i, j))
+	}
+	return col
+}
+
 func (m *PolyNTTMatrix) Get(i, j int) *PolyNTT {
 	return m.rows[i].Get(j)
 }
 
-func (m *PolyNTTMatrix) Populate(f func(int, int) PolyNTT) {
+func (m *PolyNTTMatrix) Set(i, j int, val *PolyNTT) {
+	m.rows[i].Set(j, val)
+}
+
+func (m *PolyNTTMatrix) Populate(f func(int, int) *PolyNTT) {
 	for i := 0; i < len(m.rows); i++ {
-		m.rows[i].Populate(func(j int) PolyNTT {
+		m.rows[i].Populate(func(j int) *PolyNTT {
 			return f(i, j)
 		})
 	}
 }
 
-func (m *PolyNTTMatrix) Update(f func(int, int, PolyNTT) PolyNTT) {
+func (m *PolyNTTMatrix) Update(f func(int, int, *PolyNTT) *PolyNTT) {
 	for i := range m.rows {
-		m.rows[i].Update(func(j int, old PolyNTT) PolyNTT {
+		m.rows[i].Update(func(j int, old *PolyNTT) *PolyNTT {
 			return f(i, j, old)
 		})
 	}
@@ -167,7 +179,23 @@ func (m *PolyNTTMatrix) MulVec(b *PolyNTTVec) *PolyNTTVec {
 	out := NewPolyVec(m.Rows(), m.baseRing).NTT()
 	for i, row := range m.rows {
 		prod := row.Dot(b)
-		out.Set(i, *prod)
+		out.Set(i, prod)
+	}
+	return out
+}
+
+// MulMat performs a matrix-matrix multiplication.
+func (m *PolyNTTMatrix) MulMat(b *PolyNTTMatrix) *PolyNTTMatrix {
+	if m.Cols() != b.Rows() {
+		panic("IntMatrix.MulMat sizes incorrect")
+	}
+	out := NewPolyMatrix(m.Rows(), b.Cols(), m.baseRing).NTT()
+	for i := 0; i < out.Rows(); i++ {
+		for j := 0; j < out.Cols(); j++ {
+			p := m.Row(i)
+			q := b.ColCopy(j)
+			out.Set(i, j, p.Dot(q))
+		}
 	}
 	return out
 }
@@ -232,4 +260,15 @@ func (m *PolyNTTMatrix) Eq(b *PolyNTTMatrix) bool {
 		}
 	}
 	return true
+}
+
+// ToIntMatrix converts a polynomial matrix of dimensions m x n to an integer matrix of dimensions m x nd.
+func (m *PolyNTTMatrix) ToIntMatrix() *IntMatrix {
+	d := m.baseRing.N
+	cols := m.Cols() * d
+	im := NewIntMatrix(m.Rows(), cols, m.baseRing)
+	im.PopulateRows(func(i int) *IntVec {
+		return m.Row(i).ToIntVec()
+	})
+	return im
 }

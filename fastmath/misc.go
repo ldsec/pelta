@@ -11,10 +11,11 @@ type Vector interface {
 }
 
 type RowMatrix interface {
-	Get(i, j int) RingElement
-	Set(i, j int, newVal RingElement)
 	Rows() int
 	Cols() int
+	Get(i, j int) RingElement
+	Set(i, j int, newVal RingElement)
+	SetRow(i int, row Vector)
 	RowView(i int) Vector
 	ColCopy(i int) Vector
 }

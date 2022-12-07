@@ -64,6 +64,22 @@ func (v *IntVec) UnderlyingPolys() []*Poly {
 	return v.polys
 }
 
+func (v *IntVec) UnderlyingPolysAsPolyVec() *PolyVec {
+	pV := NewPolyVec(len(v.polys), v.BaseRing())
+	for i, p := range v.polys {
+		pV.Set(i, p)
+	}
+	return pV
+}
+
+func (v *IntVec) UnderlyingPolysAsPolyNTTVec() *PolyNTTVec {
+	pV := NewPolyVec(len(v.polys), v.BaseRing()).NTT()
+	for i, p := range v.polys {
+		pV.Set(i, ForceNTT(p))
+	}
+	return pV
+}
+
 // SetUnderlyingPolys can be used to update the polynomials that are used to represent this vector.
 func (v *IntVec) SetUnderlyingPolys(polys []*Poly) {
 	v.polys = polys

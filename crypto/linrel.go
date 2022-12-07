@@ -91,8 +91,8 @@ func (r *LinearRelation) AppendDependentOnS(B *fastmath.IntMatrix, y, z *fastmat
 	n := r.A.Cols()
 	mp := B.Rows()
 	np := B.Cols()
-	if mp != np || np != n {
-		panic("cannot append Bs + y = z where B is not n by n")
+	if np != n {
+		panic("cannot append Bs + y = z where B has different column size")
 	}
 	BExtended := B.Copy().ExtendCols(fastmath.NewIdIntMatrix(mp, r.S.BaseRing()))
 	return r.AppendDependent(BExtended, y, z)

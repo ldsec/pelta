@@ -30,10 +30,28 @@ func NewRandomTernaryPoly(baseRing *ring.Ring) *Poly {
 // NewRandomPolyVec constructs a vector, whose elements sampled from the given `sampler`.
 func NewRandomPolyVec(size int, sampler PolySampler, baseRing *ring.Ring) *PolyVec {
 	v := NewPolyVec(size, baseRing)
-	v.Populate(func(i int) Poly {
-		return *NewRandomPoly(sampler, baseRing)
+	v.Populate(func(i int) *Poly {
+		return NewRandomPoly(sampler, baseRing)
 	})
 	return v
+}
+
+// NewRandomTernaryPolyVec constructs a vector of ternary polynomials.
+func NewRandomTernaryPolyVec(size int, baseRing *ring.Ring) *PolyVec {
+	v := NewPolyVec(size, baseRing)
+	v.Populate(func(i int) *Poly {
+		return NewRandomTernaryPoly(baseRing)
+	})
+	return v
+}
+
+// NewRandomTernaryPolyVec constructs a vector of ternary polynomials.
+func NewRandomTernaryPolyMatrix(rows, cols int, baseRing *ring.Ring) *PolyMatrix {
+	A := NewPolyMatrix(rows, cols, baseRing)
+	A.PopulateRows(func(_ int) PolyVec {
+		return *NewRandomTernaryPolyVec(cols, baseRing)
+	})
+	return A
 }
 
 // NewRandomPolyMatrix constructs a 2D matrix, whose elements sampled from the given `sampler`.

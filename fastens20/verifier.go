@@ -78,11 +78,11 @@ func (vf Verifier) Verify(z *fastmath.PolyNTTMatrix, state VerifierState) bool {
 	}
 	// Constructing f
 	f := fastmath.NewPolyMatrix(vf.params.config.K, vf.params.config.NumSplits(), vf.params.config.BaseRing).NTT()
-	f.Populate(func(i int, j int) fastmath.PolyNTT {
+	f.Populate(func(i int, j int) *fastmath.PolyNTT {
 		// t[j]*sig^i(c)
 		tmp := state.T.Get(j).Copy().Mul(state.c.Permute(int64(i), vf.params.Sig).NTT())
 		// (b[j] * z[i]) - (t[j]*sig^i(c))
-		return *vf.params.B.Row(j).Dot(z.Row(i)).Add(tmp.Neg())
+		return vf.params.B.Row(j).Dot(z.Row(i)).Add(tmp.Neg())
 	})
 	// (b[n/d+2] * z[0]) - c*t[n/d+2])
 	f2 := vf.params.B.Row(vf.params.config.NumSplits() + 1).
@@ -97,7 +97,7 @@ func (vf Verifier) Verify(z *fastmath.PolyNTTMatrix, state VerifierState) bool {
 			Mul(state.T.Get(vf.params.config.NumSplits() + 2)).
 			Neg())
 	vTest := CommitmentSum(vf.params.config.K, vf.params.config.NumTernarySplits(), state.Alpha,
-		func(i int, j int) fastmath.PolyNTT {
+		func(i int, j int) *fastmath.PolyNTT {
 			// f[i][j]
 			p1 := f.Get(i, j).Copy()
 			// f[i][j] + sig^i(c)
@@ -105,7 +105,7 @@ func (vf Verifier) Verify(z *fastmath.PolyNTTMatrix, state VerifierState) bool {
 			// f[i][j] + 2sig^i(c)
 			p3 := f.Get(i, j).Copy().Add(state.c.Permute(int64(i), vf.params.Sig).Scale(2).NTT())
 			// f[i][j] * (f[i][j] + sig^i(c)) * (f[i][j] + 2sig^i(c))
-			return *p1.Mul(p2).Mul(p3)
+			return p1.Mul(p2).Mul(p3)
 		}, vf.params)
 	vTest.Add(f2).Add(f3.Copy().Mul(state.c.Copy().NTT()))
 	vTestResult := vTest.Eq(state.v)
@@ -123,26 +123,26 @@ func (vf Verifier) Verify(z *fastmath.PolyNTTMatrix, state VerifierState) bool {
 	// Reconstruct the commitment to f
 	invk := big.NewInt(0).ModInverse(big.NewInt(int64(vf.params.config.K)), vf.params.config.Q).Uint64()
 	tao := LmuSum(vf.params.config.K, invk,
-		func(mu int, v int) fastmath.PolyNTT {
+		func(mu int, v int) *fastmath.PolyNTT {
 			// (u * gamma_mu)
 			mul := vf.params.U.Dot(state.Gamma.RowView(mu))
 			dec := fastmath.NewOnePoly(mul, vf.params.config.BaseRing).NTT()
 			// \sum_{j=0}^{numSplits-1} (d*psi[mu][j] * (b[j] * z[i - v]))
 			presum := fastmath.NewPolyVec(vf.params.config.NumSplits(), vf.params.config.BaseRing).NTT()
-			presum.Populate(func(j int) fastmath.PolyNTT {
-				return *psi.Get(mu, j).Copy().
+			presum.Populate(func(j int) *fastmath.PolyNTT {
+				return psi.Get(mu, j).Copy().
 					Mul(state.T.Get(j)).
 					Scale(uint64(vf.params.config.D))
 			})
-			return *presum.Sum().Add(dec.Neg())
+			return presum.Sum().Add(dec.Neg())
 		}, vf.params)
 	// Verify the function commitment
 	functionCommitmentTest := fastmath.NewPolyVec(vf.params.config.K, vf.params.config.BaseRing).NTT()
-	functionCommitmentTest.Populate(func(i int) fastmath.PolyNTT {
+	functionCommitmentTest.Populate(func(i int) *fastmath.PolyNTT {
 		// (b[n/d + 1] * z[i])
 		add := vf.params.B.Row(vf.params.config.NumSplits()).Dot(z.Row(i))
 		outerSum := LmuSumOuter(vf.params.config.K, vf.params.config.NumSplits(), invk,
-			func(mu int, v int, j int) fastmath.PolyNTT {
+			func(mu int, v int, j int) *fastmath.PolyNTT {
 				index := big.NewInt(0).
 					Mod(big.NewInt(int64(i-v)),
 						big.NewInt(int64(vf.params.config.K))).
@@ -150,12 +150,12 @@ func (vf Verifier) Verify(z *fastmath.PolyNTTMatrix, state VerifierState) bool {
 				// b[j] * z[i - v]
 				mul := vf.params.B.Row(j).Copy().Dot(z.Row(int(index)))
 				// d * psi[mu][j] * (b[j] * z[i - v])
-				return *psi.Get(mu, j).Copy().
+				return psi.Get(mu, j).Copy().
 					Scale(uint64(vf.params.config.D)).
 					Mul(mul)
 			}, vf.params)
 		// outerSum + (b[n/d] * z[i])
-		return *outerSum.Add(add)
+		return outerSum.Add(add)
 	})
 	functionCommitmentTestResult := functionCommitmentTest.All(
 		func(i int, lhs *fastmath.PolyNTT) bool {

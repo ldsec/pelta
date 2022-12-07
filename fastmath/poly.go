@@ -20,6 +20,10 @@ func NewZeroPoly(baseRing *ring.Ring) *Poly {
 	return &Poly{baseRing.NewPoly(), baseRing}
 }
 
+func ForceInvNTT(polyNTT *PolyNTT) *Poly {
+	return polyNTT.actual
+}
+
 // NewOnePoly returns a one polynomial scaled with the given factor.
 func NewOnePoly(scale uint64, baseRing *ring.Ring) *Poly {
 	p := NewZeroPoly(baseRing)

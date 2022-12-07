@@ -78,11 +78,11 @@ func TestConsistency(tst *testing.T) {
 	}
 	// Constructing f
 	f := fastmath.NewPolyMatrix(config.K, config.NumSplits(), config.BaseRing).NTT()
-	f.Populate(func(i, j int) fastmath.PolyNTT {
+	f.Populate(func(i, j int) *fastmath.PolyNTT {
 		// t[j]*sig^i(c)
 		tmp := t.Get(j).Copy().Mul(c.Permute(int64(i), params.Sig).NTT())
 		// (b[j] * z[i]) - (t[j]*sig^i(c))
-		return *params.B.Row(j).Dot(z.Row(i)).Add(tmp.Neg())
+		return params.B.Row(j).Dot(z.Row(i)).Add(tmp.Neg())
 	})
 	// Check some equalities.
 	check1 := f.All(func(i, j int, el *fastmath.PolyNTT) bool {
@@ -100,7 +100,7 @@ func TestConsistency(tst *testing.T) {
 		Add(c.Copy().NTT().
 			Mul(t.Get(config.NumSplits() + 1)).Neg())
 	check2Sum := fastens20.CommitmentSum(config.K, config.NumSplits(), alpha,
-		func(i, j int) fastmath.PolyNTT {
+		func(i, j int) *fastmath.PolyNTT {
 			// (b[j] * y[i])^2
 			tmp := params.B.Row(j).Copy().
 				Dot(ps.Y.Row(i)).
@@ -110,7 +110,7 @@ func TestConsistency(tst *testing.T) {
 				Scale(3).
 				Add(fastmath.NewOnePoly(3, config.BaseRing).Neg().NTT())
 			// (3s[j]-3) (b[j] * y[i])^2
-			return *tmp2.Mul(tmp)
+			return tmp2.Mul(tmp)
 		}, params)
 	check2RHS := params.B.Row(config.NumSplits() + 1).Copy().
 		Dot(ps.Y.Row(0)).
@@ -126,7 +126,7 @@ func TestConsistency(tst *testing.T) {
 		Add(c.Copy().NTT().
 			Mul(t.Get(config.NumSplits() + 2)).Neg())
 	check3Sum := fastens20.CommitmentSum(config.K, config.NumSplits(), alpha,
-		func(i, j int) fastmath.PolyNTT {
+		func(i, j int) *fastmath.PolyNTT {
 			// b[j]*y[i]
 			tmp := params.B.Row(j).Dot(ps.Y.Row(i))
 			// 2s[j]-1
@@ -140,7 +140,7 @@ func TestConsistency(tst *testing.T) {
 				Add(fastmath.NewOnePoly(1, config.BaseRing).Neg().NTT()).
 				Mul(ps.SHat.Get(j))
 			// [(2s[j]-1)*(s[j]-2) + s[j](s[j]-1)] * (b[j]*y[i])
-			return *tmp.Mul(tmp1.Mul(tmp2).Add(tmp3))
+			return tmp.Mul(tmp1.Mul(tmp2).Add(tmp3))
 		}, params)
 	check3RHS := params.B.Row(config.NumSplits() + 2).
 		Dot(ps.Y.Row(0)).
