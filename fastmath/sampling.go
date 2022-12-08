@@ -11,15 +11,30 @@ type PolySampler interface {
 	Read(pol *ring.Poly)
 }
 
+// AugmentedTernarySampler samples from {0, 1, 2} instead of {-1, 0, 1}
+type AugmentedTernarySampler struct {
+	ternarySampler PolySampler
+	baseRing       *ring.Ring
+}
+
+func (s *AugmentedTernarySampler) Read(pol *ring.Poly) {
+	s.ternarySampler.Read(pol)
+	s.baseRing.AddScalar(pol, 1, pol)
+}
+
+func NewAugmentedTernarySampler(ternarySampler PolySampler, baseRing *ring.Ring) PolySampler {
+	return &AugmentedTernarySampler{ternarySampler, baseRing}
+}
+
 // NewRandomPoly returns a random polynomial sampled from the given `sampler`.
 func NewRandomPoly(sampler PolySampler, baseRing *ring.Ring) *Poly {
-	g := NewZeroPoly(baseRing)
+	g := NewPoly(baseRing)
 	sampler.Read(g.ref)
 	return g
 }
 
 func NewRandomTernaryPoly(baseRing *ring.Ring) *Poly {
-	g := NewZeroPoly(baseRing)
+	g := NewPoly(baseRing)
 	for i := 0; i < g.N(); i++ {
 		rand := ring.RandInt(big.NewInt(3)).Uint64()
 		g.Set(i, rand)
@@ -48,8 +63,8 @@ func NewRandomTernaryPolyVec(size int, baseRing *ring.Ring) *PolyVec {
 // NewRandomTernaryPolyVec constructs a vector of ternary polynomials.
 func NewRandomTernaryPolyMatrix(rows, cols int, baseRing *ring.Ring) *PolyMatrix {
 	A := NewPolyMatrix(rows, cols, baseRing)
-	A.PopulateRows(func(_ int) PolyVec {
-		return *NewRandomTernaryPolyVec(cols, baseRing)
+	A.PopulateRows(func(_ int) *PolyVec {
+		return NewRandomTernaryPolyVec(cols, baseRing)
 	})
 	return A
 }
@@ -57,8 +72,8 @@ func NewRandomTernaryPolyMatrix(rows, cols int, baseRing *ring.Ring) *PolyMatrix
 // NewRandomPolyMatrix constructs a 2D matrix, whose elements sampled from the given `sampler`.
 func NewRandomPolyMatrix(rows int, cols int, sampler PolySampler, baseRing *ring.Ring) *PolyMatrix {
 	A := NewPolyMatrix(rows, cols, baseRing)
-	A.PopulateRows(func(_ int) PolyVec {
-		return *NewRandomPolyVec(cols, sampler, baseRing)
+	A.PopulateRows(func(_ int) *PolyVec {
+		return NewRandomPolyVec(cols, sampler, baseRing)
 	})
 	return A
 }

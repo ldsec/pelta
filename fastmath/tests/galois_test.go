@@ -8,7 +8,7 @@ import (
 
 func TestPolyPerm(t *testing.T) {
 	baseRing := getBaseRing()
-	p0 := fastmath.NewZeroPoly(baseRing)
+	p0 := fastmath.NewPoly(baseRing)
 	for i := 0; i < p0.N(); i++ {
 		p0.Set(i, uint64(i+1))
 	}
@@ -31,7 +31,7 @@ func TestPolyPerm(t *testing.T) {
 
 func TestPolyPermInv(t *testing.T) {
 	baseRing := getBaseRing()
-	p0 := fastmath.NewZeroPoly(baseRing)
+	p0 := fastmath.NewPoly(baseRing)
 	for i := 0; i < p0.N(); i++ {
 		p0.Set(i, uint64(i+1))
 	}

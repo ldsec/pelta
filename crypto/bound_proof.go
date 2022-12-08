@@ -1,39 +1,62 @@
 package crypto
 
 import (
-	"errors"
-	"math/big"
+	"fmt"
 
 	"github.com/ldsec/codeBase/commitment/fastmath"
 	"github.com/tuneinsight/lattigo/v4/ring"
 )
 
-type BoundProofMask struct {
-	B *fastmath.IntMatrix
-	y *fastmath.IntVec
+func CreateABPChallenge(tau, l int, ternarySampler fastmath.PolySampler, baseRing *ring.Ring) *fastmath.PolyNTTMatrix {
+	d := baseRing.N
+	B := fastmath.NewRandomPolyMatrix(tau*d, l, ternarySampler, baseRing)
+	BNTT := fastmath.NewPolyMatrix(tau*d, l, baseRing).NTT()
+	BNTT.PopulateRows(func(i int) *fastmath.PolyNTTVec {
+		nttRow := fastmath.NewPolyVec(l, baseRing).NTT()
+		nttRow.Populate(func(j int) *fastmath.PolyNTT {
+			return fastmath.ForceNTT(B.Get(i, j))
+		})
+		return nttRow
+	})
+	return BNTT
 }
 
-func NewBoundProofParams(rows, cols int, n *big.Int, baseRing *ring.Ring) BoundProofMask {
-	B := fastmath.NewRandomIntMatrix(rows, cols, n, baseRing)
-	y := fastmath.NewRandomIntVec(rows, n, baseRing)
-	return BoundProofMask{B, y}
-}
-
-type BoundProof struct {
-	BoundProofMask
-	z *fastmath.IntVec
-}
-
-// NewBoundProof constructs a new bound proof
-func NewBoundProof(x *fastmath.IntVec, rejSamplingBound uint64, params BoundProofMask) (BoundProof, error) {
-	z := params.B.MulVec(x).Add(params.y)
-	if !fastmath.AcceptIntSample(z, rejSamplingBound) {
-		return BoundProof{}, errors.New("rejection sampling")
+func CreateABPMask(tau int, ternarySampler fastmath.PolySampler, baseRing *ring.Ring) *fastmath.PolyNTTVec {
+	abpMask := fastmath.NewRandomPolyVec(tau, ternarySampler, baseRing)
+	abpMaskNTT := fastmath.NewPolyVec(tau, baseRing).NTT()
+	for i := 0; i < tau; i++ {
+		abpMaskNTT.Set(i, fastmath.ForceNTT(abpMask.Get(i)))
 	}
-	return BoundProof{params, z}, nil
+	return abpMaskNTT
 }
 
-// Verify verifies the bound proof against the given bound.
-func (p BoundProof) Verify(bound uint64) bool {
-	return p.z.Max() <= bound
+func CreateABPMaskedOpening(abpChal *fastmath.PolyNTTMatrix, abpMask *fastmath.PolyNTTVec, u *fastmath.IntVec, baseRing *ring.Ring) *fastmath.PolyNTTVec {
+	d := baseRing.N
+	// z = Bu + y
+	uPadded := u
+	if uPadded.Size() < abpChal.Cols()*d {
+		uPadded = uPadded.Copy().Append(fastmath.NewIntVec(abpChal.Cols()*d-uPadded.Size(), baseRing))
+	}
+	B := abpChal.ToIntMatrix()
+	z := B.MulVec(uPadded)
+	z.Add(abpMask.ToIntVec())
+	return z.UnderlyingPolysAsPolyNTTVec()
+}
+
+func NewABPEquation(abpChal *fastmath.PolyNTTMatrix, A *fastmath.IntMatrix, sIndex int, abpMask, abpMaskedOpening *fastmath.PolyNTTVec, baseRing *ring.Ring) *LinearEquation {
+	fmt.Println("Creating ABP equation")
+	d := baseRing.N
+	// BAs + y = z
+	APadded := A
+	if APadded.Rows() < abpChal.Cols()*d {
+		APadded = APadded.Copy().ExtendRows(fastmath.NewIntMatrix(abpChal.Cols()*d-APadded.Rows(), APadded.Cols(), baseRing))
+	}
+	BA := abpChal.ToIntMatrix().MulMat(APadded)
+	y := abpMask.ToIntVec()
+	z := abpMaskedOpening.ToIntVec()
+	eqn := NewLinearEquation(z, BA.Cols())
+	eqn.AppendDependentTerm(BA, sIndex)
+	eqn.AppendVecTerm(y, baseRing)
+	fmt.Println("Created ABP equation")
+	return eqn
 }

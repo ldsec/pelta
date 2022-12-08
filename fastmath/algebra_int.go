@@ -22,7 +22,7 @@ func NewIntVec(size int, baseRing *ring.Ring) *IntVec {
 	}
 	polys := make([]*Poly, numPolys)
 	for i := 0; i < len(polys); i++ {
-		polys[i] = NewZeroPoly(baseRing)
+		polys[i] = NewPoly(baseRing)
 	}
 	return &IntVec{size, polys, baseRing.ModulusAtLevel[0], baseRing}
 }
@@ -124,7 +124,7 @@ func (v *IntVec) Dot(r *IntVec) uint64 {
 	if v.size != r.size {
 		panic("IntVec.Dot sizes do not match")
 	}
-	preSum := NewZeroPoly(v.baseRing)
+	preSum := NewPoly(v.baseRing)
 	for i := 0; i < len(v.polys); i++ {
 		a := v.polys[i]
 		b := r.polys[i]
@@ -238,7 +238,7 @@ func (v *IntVec) Append(r *IntVec) *IntVec {
 	oldSize := v.size
 	v.size = newSize
 	for i := len(v.polys); i < numPolys; i++ {
-		v.polys = append(v.polys, NewZeroPoly(v.baseRing))
+		v.polys = append(v.polys, NewPoly(v.baseRing))
 	}
 	// Move the elements in.
 	for i := 0; i < r.Size(); i++ {
@@ -296,7 +296,7 @@ func (v *IntVec) RebaseLossless(newRing RingParams, level int) *IntVec {
 		for i := 0; i < splitsPerPoly; i++ {
 			// Extract d (i.e., degree of new base ring) many coefficients.
 			newCoeffs := p.ref.Coeffs[level][i*newRing.D : (i+1)*newRing.D]
-			newPoly := NewZeroPoly(newRing.BaseRing)
+			newPoly := NewPoly(newRing.BaseRing)
 			for j := 0; j < newPoly.N(); j++ {
 				newPoly.Set(j, newCoeffs[j])
 			}
@@ -479,7 +479,7 @@ func (m *IntMatrix) MulVec(v *IntVec) *IntVec {
 		panic("IntMatrix.MulVec sizes incorrect")
 	}
 	out := NewIntVec(m.Rows(), m.baseRing)
-	dotResult := NewZeroPoly(m.baseRing)
+	dotResult := NewPoly(m.baseRing)
 	for i, row := range m.rows {
 		row.MulAddElems(v, dotResult)
 		out.Set(i, dotResult.SumCoeffsLimited(0, row.Size(), m.mod))

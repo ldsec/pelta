@@ -15,8 +15,8 @@ type Poly struct {
 	baseRing *ring.Ring
 }
 
-// NewZeroPoly returns a zero polynomial.
-func NewZeroPoly(baseRing *ring.Ring) *Poly {
+// NewPoly returns a zero polynomial.
+func NewPoly(baseRing *ring.Ring) *Poly {
 	return &Poly{baseRing.NewPoly(), baseRing}
 }
 
@@ -26,7 +26,7 @@ func ForceInvNTT(polyNTT *PolyNTT) *Poly {
 
 // NewOnePoly returns a one polynomial scaled with the given factor.
 func NewOnePoly(scale uint64, baseRing *ring.Ring) *Poly {
-	p := NewZeroPoly(baseRing)
+	p := NewPoly(baseRing)
 	p.Set(0, scale)
 	return p
 }
@@ -57,7 +57,7 @@ func (p *Poly) Coeffs() *IntVec {
 func (p *Poly) SumCoeffs(level int) uint64 {
 	logN := int(math.Log2(float64(p.baseRing.N)))
 	tmp := p.Copy()
-	tmp2 := NewZeroPoly(p.baseRing)
+	tmp2 := NewPoly(p.baseRing)
 	for i := 0; i < logN; i++ {
 		p.baseRing.Shift(tmp.ref, 1<<i, tmp2.ref)
 		p.baseRing.Add(tmp.ref, tmp2.ref, tmp.ref)

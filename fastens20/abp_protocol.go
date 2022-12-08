@@ -16,12 +16,15 @@ func extendPublicParameters(params *PublicParams, tau int) {
 }
 
 // Updates the protocol to include the approximate bound proof relation.
-func updateProtocol(originalRel *crypto.LinearRelation, p *ABPProver, v *ABPVerifier, ps *ABPProverState, vs *ABPVerifierState) {
-	BA := vs.ABPVerifierChal.ToIntMatrix().MulMat(originalRel.A)
-	y := ps.ABPProverMask.ToIntVec()
-	z := ps.ABPMaskedOpening.ToIntVec()
-	newRel := originalRel.Copy()
-	newRel.AppendDependentOnS(BA, y, z)
+func updateProtocol(p *ABPProver, v *ABPVerifier, ps *ABPProverState, vs *ABPVerifierState) {
+	A := p.params.A
+	s := ps.S
+	u := p.params.U
+	lrb := crypto.NewLinearRelationBuilder()
+	lrb.AppendEqn(crypto.NewLinearEquation(u, A.Cols()).AppendTerm(A, s))
+	lrb.AppendEqn(crypto.NewABPEquation(vs.ABPVerifierChal, A, 0, ps.ABPProverMask, ps.ABPMaskedOpening, p.params.config.BaseRing))
+	fmt.Println("Building")
+	newRel := lrb.Build(p.params.config.BaseRing)
 	p.params.A = newRel.A
 	v.params.A = newRel.A
 	v.params.U = newRel.U
@@ -53,22 +56,18 @@ func NewABPProver(params PublicParams, tau int) ABPProver {
 }
 
 func (p ABPProver) CommitToMessage(s *fastmath.IntVec) (*fastmath.PolyNTTVec, *fastmath.PolyNTTVec, *fastmath.PolyNTTMatrix, ABPProverState) {
-	abpMask := fastmath.NewRandomTernaryPolyVec(p.Tau, p.params.config.BaseRing)
-	abpMaskNTT := fastmath.NewPolyVec(p.Tau, p.params.config.BaseRing).NTT()
-	for i := 0; i < p.Tau; i++ {
-		abpMaskNTT.Set(i, fastmath.ForceNTT(abpMask.Get(i)))
-	}
+	abpMask := crypto.CreateABPMask(p.Tau, p.params.config.TernarySampler, p.params.config.BaseRing)
 	t0, t, w, ps := p.Prover.CommitToMessage(s)
 	for i := 0; i < p.Tau; i++ {
-		t.Append(p.params.B.Row(p.params.config.NumSplits() + 1 + i).Dot(ps.R).Add(abpMaskNTT.Get(i)))
-		ps.SHat.Append(abpMaskNTT.Get(i))
+		t.Append(p.params.B.Row(p.params.config.NumSplits() + 1 + i).Dot(ps.R).Add(abpMask.Get(i)))
+		ps.SHat.Append(abpMask.Get(i))
 	}
-	return t0, t, w, ABPProverState{ProverState: ps, ABPProverMask: abpMaskNTT}
+	return t0, t, w, ABPProverState{ProverState: ps, ABPProverMask: abpMask}
 }
 
 func (p ABPProver) CreateABPMaskedOpening(bpVerifierChal *fastmath.PolyNTTMatrix, state ABPProverState) (*fastmath.PolyNTTVec, ABPProverState, error) {
 	// TODO rejection sampling
-	abpMaskedOpening := bpVerifierChal.ToIntMatrix().MulVec(p.params.U).Add(state.ABPProverMask.ToIntVec()).UnderlyingPolysAsPolyNTTVec()
+	abpMaskedOpening := crypto.CreateABPMaskedOpening(bpVerifierChal, state.ABPProverMask, p.params.U, p.params.config.BaseRing)
 	state.ABPMaskedOpening = abpMaskedOpening
 	return abpMaskedOpening, state, nil
 }
@@ -107,7 +106,10 @@ func NewABPVerifier(params PublicParams, tau int) ABPVerifier {
 
 func (vf ABPVerifier) CreateABPChallenge() (*fastmath.PolyNTTMatrix, ABPVerifierState) {
 	l := vf.params.U.Size() / vf.params.config.D
-	abpChal := fastmath.NewRandomPolyMatrix(vf.Tau*vf.params.config.D, l, vf.params.config.TernarySampler, vf.params.config.BaseRing).NTT()
+	if vf.params.U.Size()%vf.params.config.D != 0 {
+		l += 1
+	}
+	abpChal := crypto.CreateABPChallenge(vf.Tau, l, vf.params.config.TernarySampler, vf.params.config.BaseRing)
 	return abpChal, ABPVerifierState{ABPVerifierChal: abpChal}
 }
 
@@ -137,7 +139,6 @@ func (vf ABPVerifier) Verify(z *fastmath.PolyNTTMatrix, state ABPVerifierState) 
 }
 
 func ExecuteWithBoundProof(s *fastmath.IntVec, tau int, params PublicParams) bool {
-	linRel := crypto.NewLinearRelation(params.A, s)
 	prover := NewABPProver(params, tau)
 	verifier := NewABPVerifier(params, tau)
 	// Commit to the message.
@@ -145,8 +146,10 @@ func ExecuteWithBoundProof(s *fastmath.IntVec, tau int, params PublicParams) boo
 	// ABP exchange.
 	bpVerifierChal, vs := verifier.CreateABPChallenge()
 	bpMaskedOpening, ps, _ := prover.CreateABPMaskedOpening(bpVerifierChal, ps)
+	fmt.Println("executing the protocol (1)")
 	// Update the relation to embed the approximate bound proof.
-	updateProtocol(&linRel, &prover, &verifier, &ps, &vs)
+	updateProtocol(&prover, &verifier, &ps, &vs)
+	fmt.Println("executing the protocol (2)")
 	// Resume the normal execution.
 	alpha, gamma, vs := verifier.CreateMasks(t0, t, w, bpMaskedOpening, vs)
 	// Continue the execution.

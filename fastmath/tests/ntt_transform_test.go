@@ -13,7 +13,7 @@ func TestNTTTransform(t *testing.T) {
 	logD := int(math.Log2(float64(baseRing.N)))
 	T := fastmath.LoadNTTTransform("test", q, logD, baseRing)
 	// Create a test polynomial.
-	poly := fastmath.NewZeroPoly(baseRing)
+	poly := fastmath.NewPoly(baseRing)
 	for i := 0; i < baseRing.N; i++ {
 		poly.Set(i, uint64(i+1))
 	}
@@ -35,7 +35,7 @@ func TestNTTTransformScale(t *testing.T) {
 	logD := int(math.Log2(float64(baseRing.N)))
 	T := fastmath.LoadNTTTransform("test", q, logD, baseRing)
 	// Create a test polynomial.
-	poly := fastmath.NewZeroPoly(baseRing)
+	poly := fastmath.NewPoly(baseRing)
 	for i := 0; i < baseRing.N; i++ {
 		poly.Set(i, uint64(i+1))
 	}
@@ -59,11 +59,11 @@ func TestNTTTransformExtend(t *testing.T) {
 	logD := int(math.Log2(float64(baseRing.N)))
 	T := fastmath.LoadNTTTransform("test", q, logD, baseRing)
 	// Create test polynomials.
-	p0 := fastmath.NewZeroPoly(baseRing)
+	p0 := fastmath.NewPoly(baseRing)
 	for i := 0; i < baseRing.N; i++ {
 		p0.Set(i, uint64(i+1))
 	}
-	p1 := fastmath.NewZeroPoly(baseRing)
+	p1 := fastmath.NewPoly(baseRing)
 	for i := 0; i < baseRing.N; i++ {
 		p1.Set(i, uint64(i+1))
 	}

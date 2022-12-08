@@ -17,7 +17,7 @@ func getBaseRing() *ring.Ring {
 
 func TestPolySumCoeffs(t *testing.T) {
 	baseRing := getBaseRing()
-	v := fastmath.NewZeroPoly(baseRing)
+	v := fastmath.NewPoly(baseRing)
 	for i := 0; i < 5; i++ {
 		v.Set(i, uint64(i+1))
 	}

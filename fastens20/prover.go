@@ -54,8 +54,8 @@ func (p Prover) CommitToMessage(s *fastmath.IntVec) (*fastmath.PolyNTTVec, *fast
 	// Create the masks.
 	y := fastmath.NewRandomPolyMatrix(p.params.config.K, r.Size(), p.params.config.GaussianSampler, p.params.config.BaseRing).NTT()
 	w := fastmath.NewPolyMatrix(p.params.config.K, p.params.config.Kappa, p.params.config.BaseRing).NTT()
-	w.PopulateRows(func(i int) fastmath.PolyNTTVec {
-		return *p.params.B0.MulVec(y.Row(i))
+	w.PopulateRows(func(i int) *fastmath.PolyNTTVec {
+		return p.params.B0.MulVec(y.Row(i))
 	})
 	return t0.Copy(), t.Copy(), w.Copy(), ProverState{S: s.Copy(), SHat: sHat, G: g, R: r, T0: t0, T: t, Y: y, W: w}
 }
@@ -110,9 +110,9 @@ func (p Prover) CommitToRelation(alpha *fastmath.PolyNTTVec, gamma *fastmath.Int
 	v := p.params.B.Row(p.params.config.NumSplits() + 1).Dot(state.Y.Row(0)).Add(sum3)
 	At := p.params.A.Transposed()
 	psi := fastmath.NewPolyMatrix(p.params.config.K, p.params.config.NumSplits(), p.params.config.BaseRing).NTT()
-	psi.PopulateRows(func(mu int) fastmath.PolyNTTVec {
+	psi.PopulateRows(func(mu int) *fastmath.PolyNTTVec {
 		tmp := At.MulVec(gamma.RowView(mu))
-		return *SplitInvNTT(tmp, p.params).NTT()
+		return SplitInvNTT(tmp, p.params).NTT()
 	})
 	invK := big.NewInt(0).ModInverse(big.NewInt(int64(p.params.config.K)), p.params.config.Q).Uint64()
 	gMask := LmuSum(p.params.config.K, invK,
@@ -158,10 +158,10 @@ func (p Prover) CommitToRelation(alpha *fastmath.PolyNTTVec, gamma *fastmath.Int
 func (p Prover) MaskedOpening(c *fastmath.Poly, state ProverState) (*fastmath.PolyNTTMatrix, ProverState, error) {
 	// Masked openings.
 	z := fastmath.NewPolyMatrix(p.params.config.K, state.R.Size(), p.params.config.BaseRing).NTT()
-	z.PopulateRows(func(i int) fastmath.PolyNTTVec {
+	z.PopulateRows(func(i int) *fastmath.PolyNTTVec {
 		sigc := c.Permute(int64(i), p.params.Sig).NTT()
 		tmp := state.R.Copy().MulAll(sigc)
-		return *tmp.Add(state.Y.Row(i))
+		return tmp.Add(state.Y.Row(i))
 	})
 	//normInBounds := z.AllRows(
 	//	func(zi math.Vector, i int) bool {

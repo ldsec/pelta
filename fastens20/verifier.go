@@ -116,9 +116,9 @@ func (vf Verifier) Verify(z *fastmath.PolyNTTMatrix, state VerifierState) bool {
 	// Reconstruct psi
 	At := vf.params.A.Transposed()
 	psi := fastmath.NewPolyMatrix(vf.params.config.K, vf.params.config.NumSplits(), vf.params.config.BaseRing).NTT()
-	psi.PopulateRows(func(mu int) fastmath.PolyNTTVec {
+	psi.PopulateRows(func(mu int) *fastmath.PolyNTTVec {
 		tmp := At.MulVec(state.Gamma.RowView(mu))
-		return *SplitInvNTT(tmp, vf.params).NTT()
+		return SplitInvNTT(tmp, vf.params).NTT()
 	})
 	// Reconstruct the commitment to f
 	invk := big.NewInt(0).ModInverse(big.NewInt(int64(vf.params.config.K)), vf.params.config.Q).Uint64()

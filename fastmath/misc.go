@@ -6,11 +6,11 @@ type RingElement interface {
 
 type Vector interface {
 	Get(i int) RingElement
-	Set(i int, newVal RingElement) Vector
+	Set(i int, newVal RingElement)
 	Size() int
 }
 
-type RowMatrix interface {
+type Matrix interface {
 	Rows() int
 	Cols() int
 	Get(i, j int) RingElement
@@ -32,7 +32,7 @@ func EqVec(v1, v2 Vector) bool {
 	return true
 }
 
-func EqMatrix(m1, m2 RowMatrix) bool {
+func EqMatrix(m1, m2 Matrix) bool {
 	if m1.Rows() != m2.Rows() || m1.Cols() != m2.Cols() {
 		return false
 	}

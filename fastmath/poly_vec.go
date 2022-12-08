@@ -10,7 +10,7 @@ type PolyVec struct {
 func NewPolyVec(size int, baseRing *ring.Ring) *PolyVec {
 	elems := make([]*Poly, size)
 	for i := 0; i < size; i++ {
-		elems[i] = NewZeroPoly(baseRing)
+		elems[i] = NewPoly(baseRing)
 	}
 	return &PolyVec{elems, baseRing}
 }
@@ -70,7 +70,7 @@ func (v *PolyVec) Update(f func(int, *Poly) *Poly) {
 }
 
 func (v *PolyVec) Sum() *Poly {
-	out := NewZeroPoly(v.baseRing)
+	out := NewPoly(v.baseRing)
 	for _, el := range v.elems {
 		out.Add(el)
 	}
@@ -183,7 +183,7 @@ func (v *PolyNTTVec) Update(f func(int, *PolyNTT) *PolyNTT) {
 }
 
 func (v *PolyNTTVec) Sum() *PolyNTT {
-	out := NewZeroPoly(v.baseRing).NTT()
+	out := NewPoly(v.baseRing).NTT()
 	for _, el := range v.elems {
 		out.Add(el)
 	}
@@ -234,7 +234,7 @@ func (v *PolyNTTVec) InvNTT() *PolyVec {
 }
 
 func (v *PolyNTTVec) Dot(r *PolyNTTVec) *PolyNTT {
-	out := NewZeroPoly(v.baseRing).NTT()
+	out := NewPoly(v.baseRing).NTT()
 	for i, p := range v.elems {
 		a := p.actual.ref
 		b := r.Get(i).actual.ref

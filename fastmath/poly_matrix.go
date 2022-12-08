@@ -3,14 +3,14 @@ package fastmath
 import "github.com/tuneinsight/lattigo/v4/ring"
 
 type PolyMatrix struct {
-	rows     []PolyVec
+	rows     []*PolyVec
 	baseRing *ring.Ring
 }
 
 func NewPolyMatrix(numRows, numCols int, baseRing *ring.Ring) *PolyMatrix {
-	rows := make([]PolyVec, numRows)
+	rows := make([]*PolyVec, numRows)
 	for i := 0; i < numRows; i++ {
-		rows[i] = *NewPolyVec(numCols, baseRing)
+		rows[i] = NewPolyVec(numCols, baseRing)
 	}
 	return &PolyMatrix{rows, baseRing}
 }
@@ -24,7 +24,7 @@ func (m *PolyMatrix) Cols() int {
 }
 
 func (m *PolyMatrix) Row(i int) *PolyVec {
-	return &m.rows[i]
+	return m.rows[i]
 }
 
 func (m *PolyMatrix) Get(i, j int) *Poly {
@@ -47,20 +47,20 @@ func (m *PolyMatrix) Update(f func(int, int, *Poly) *Poly) {
 	}
 }
 
-func (m *PolyMatrix) PopulateRows(f func(int) PolyVec) {
+func (m *PolyMatrix) PopulateRows(f func(int) *PolyVec) {
 	for i := range m.rows {
 		m.rows[i] = f(i)
 	}
 }
 
-func (m *PolyMatrix) UpdateRows(f func(int, PolyVec) PolyVec) {
+func (m *PolyMatrix) UpdateRows(f func(int, *PolyVec) *PolyVec) {
 	for i, old := range m.rows {
 		m.rows[i] = f(i, old)
 	}
 }
 
 func (m *PolyMatrix) Sum() *Poly {
-	out := NewZeroPoly(m.baseRing)
+	out := NewPoly(m.baseRing)
 	for _, row := range m.rows {
 		rowSum := row.Sum()
 		out.Add(rowSum)
@@ -69,16 +69,16 @@ func (m *PolyMatrix) Sum() *Poly {
 }
 
 func (m *PolyMatrix) Copy() *PolyMatrix {
-	newRows := make([]PolyVec, 0, len(m.rows))
+	newRows := make([]*PolyVec, 0, len(m.rows))
 	for _, row := range m.rows {
-		newRows = append(newRows, *row.Copy())
+		newRows = append(newRows, row.Copy())
 	}
 	return &PolyMatrix{newRows, m.baseRing}
 }
 
 func (m *PolyMatrix) AllRows(pred func(int, *PolyVec) bool) bool {
 	for i, row := range m.rows {
-		if !pred(i, &row) {
+		if !pred(i, row) {
 			return false
 		}
 	}
@@ -86,9 +86,9 @@ func (m *PolyMatrix) AllRows(pred func(int, *PolyVec) bool) bool {
 }
 
 func (m *PolyMatrix) NTT() *PolyNTTMatrix {
-	nttRows := make([]PolyNTTVec, 0, m.Rows())
+	nttRows := make([]*PolyNTTVec, 0, m.Rows())
 	for _, r := range m.rows {
-		nttRows = append(nttRows, *r.NTT())
+		nttRows = append(nttRows, r.NTT())
 	}
 	return &PolyNTTMatrix{nttRows, m.baseRing}
 }
@@ -106,7 +106,7 @@ func (m *PolyMatrix) Eq(b *PolyMatrix) bool {
 }
 
 type PolyNTTMatrix struct {
-	rows     []PolyNTTVec
+	rows     []*PolyNTTVec
 	baseRing *ring.Ring
 }
 
@@ -119,7 +119,7 @@ func (m *PolyNTTMatrix) Cols() int {
 }
 
 func (m *PolyNTTMatrix) Row(i int) *PolyNTTVec {
-	return &m.rows[i]
+	return m.rows[i]
 }
 
 func (m *PolyNTTMatrix) ColCopy(i int) *PolyNTTVec {
@@ -154,20 +154,20 @@ func (m *PolyNTTMatrix) Update(f func(int, int, *PolyNTT) *PolyNTT) {
 	}
 }
 
-func (m *PolyNTTMatrix) PopulateRows(f func(int) PolyNTTVec) {
+func (m *PolyNTTMatrix) PopulateRows(f func(int) *PolyNTTVec) {
 	for i := range m.rows {
 		m.rows[i] = f(i)
 	}
 }
 
-func (m *PolyNTTMatrix) UpdateRows(f func(int, PolyNTTVec) PolyNTTVec) {
+func (m *PolyNTTMatrix) UpdateRows(f func(int, *PolyNTTVec) *PolyNTTVec) {
 	for i, old := range m.rows {
 		m.rows[i] = f(i, old)
 	}
 }
 
 func (m *PolyNTTMatrix) Sum() *PolyNTT {
-	out := NewZeroPoly(m.baseRing).NTT()
+	out := NewPoly(m.baseRing).NTT()
 	for _, row := range m.rows {
 		rowSum := row.Sum()
 		out.Add(rowSum)
@@ -201,16 +201,16 @@ func (m *PolyNTTMatrix) MulMat(b *PolyNTTMatrix) *PolyNTTMatrix {
 }
 
 func (m *PolyNTTMatrix) Copy() *PolyNTTMatrix {
-	newRows := make([]PolyNTTVec, 0, len(m.rows))
+	newRows := make([]*PolyNTTVec, 0, len(m.rows))
 	for _, row := range m.rows {
-		newRows = append(newRows, *row.Copy())
+		newRows = append(newRows, row.Copy())
 	}
 	return &PolyNTTMatrix{newRows, m.baseRing}
 }
 
 func (m *PolyNTTMatrix) AllRows(pred func(int, *PolyNTTVec) bool) bool {
 	for i, row := range m.rows {
-		if !pred(i, &row) {
+		if !pred(i, row) {
 			return false
 		}
 	}
@@ -243,9 +243,9 @@ func (m *PolyNTTMatrix) ExtendRows(a *PolyNTTMatrix) {
 }
 
 func (m *PolyNTTMatrix) InvNTT() *PolyMatrix {
-	polyRows := make([]PolyVec, 0, m.Rows())
+	polyRows := make([]*PolyVec, 0, m.Rows())
 	for _, r := range m.rows {
-		polyRows = append(polyRows, *r.InvNTT())
+		polyRows = append(polyRows, r.InvNTT())
 	}
 	return &PolyMatrix{polyRows, m.baseRing}
 }

@@ -27,7 +27,7 @@ func (p *Poly) Permute(exp int64, sig Automorphism) *Poly {
 		gen = sig.Exponent(invExp)
 	}
 	// Write the permuted result on out
-	out := NewZeroPoly(p.baseRing)
+	out := NewPoly(p.baseRing)
 	p.baseRing.Permute(p.ref, gen, out.ref)
 	return out
 }
