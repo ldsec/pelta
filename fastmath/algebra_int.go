@@ -147,7 +147,7 @@ func (v *IntVec) MulAddElems(r *IntVec, out *Poly) {
 }
 
 // Hadamard performs coefficient-wise multiplication.
-func (v *IntVec) Hadamard(r *IntVec) {
+func (v *IntVec) Hadamard(r *IntVec) *IntVec {
 	if v.size != r.size {
 		panic("IntVec.Dot sizes do not match")
 	}
@@ -156,6 +156,7 @@ func (v *IntVec) Hadamard(r *IntVec) {
 		b := r.polys[i]
 		v.baseRing.MulCoeffs(a.ref, b.ref, a.ref)
 	}
+	return v
 }
 
 // Diag returns a diagonalization of this vector.
@@ -515,6 +516,14 @@ func (m *IntMatrix) Hadamard(b *IntMatrix) *IntMatrix {
 func (m *IntMatrix) Scale(factor uint64) *IntMatrix {
 	for _, row := range m.rows {
 		row.Scale(factor)
+	}
+	return m
+}
+
+// Neg negates this matrix.
+func (m *IntMatrix) Neg() *IntMatrix {
+	for _, row := range m.rows {
+		row.Neg()
 	}
 	return m
 }
