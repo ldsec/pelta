@@ -16,12 +16,12 @@ type KeyGenPublicParams struct {
 	p  *big.Int
 }
 
-func GenerateKeygenRelation(s, r, err *fastmath.Poly, params KeyGenPublicParams, config GlobalConfig) crypto.LinearRelation {
-	aj := crypto.NewAjtaiCommitment(params.A1, params.A2, s.Coeffs(), r.Coeffs(), config.P, config.BfvRing.BaseRing)
+func GenerateKeygenRelation(s, r, err *fastmath.Poly, k *fastmath.IntVec, params KeyGenPublicParams, config GlobalConfig) crypto.LinearRelation {
 	rlweParams := crypto.NewRLWEParameters(config.BfvRing.Q, config.BfvRing.D, config.Beta, config.BfvRing.BaseRing)
-	rlwe := crypto.NewRLWERelation(params.p1, s, err, rlweParams)
-	e, b := rlwe.ErrorDecomposition()
-	linRel := rlwe.ToLinearRelation(e, b, params.T)
-	aj.EmbedIntoLinearRelation(&linRel, config.BfvRing.D, config.BfvRing.Q, config.BfvRing.BaseRing)
-	return linRel
+	lrb := crypto.NewLinearRelationBuilder()
+	p0 := crypto.GetRLWEP0(params.p1, s, err)
+	lrb.AppendEqn(crypto.NewIndependentRLWE(p0, params.p1, s, err, params.T, rlweParams))
+	_, comP := crypto.GetAjtaiCommitments(params.A1, params.A2, s.Coeffs(), r.Coeffs(), params.p)
+	lrb.AppendEqn(crypto.NewPaddedAjtaiEquation(comP, params.A1, params.A2, s.Coeffs(), r.Coeffs(), k, params.p, config.BfvRing.Q, config.BfvRing.BaseRing))
+	return lrb.Build(config.BfvRing.BaseRing)
 }
