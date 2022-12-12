@@ -30,7 +30,7 @@ func GenerateCollectiveBootstrappingRelation(s1, s2, s3, r, e0, e1, e2 *fastmath
 
 	h0 := c1T.MulVec(s1.Coeffs()).Add(params.D.MulVec(M).Neg()).Add(e0.Coeffs())
 	h1 := negaT.MulVec(s1.Coeffs()).Neg().Add(params.D.MulVec(M)).Add(e1.Copy().NTT().Coeffs())
-	t, _ := crypto.GetAjtaiCommitments(params.A1, params.A2, s1.Coeffs(), r.Coeffs(), params.p)
+	_, t := crypto.GetAjtaiCommitments(params.A1, params.A2, s1.Coeffs(), r.Coeffs(), params.p)
 
 	eqn1 := crypto.NewLinearEquation(h0, h0.Size()).
 		AppendTerm(c1T, s1.Coeffs()).

@@ -22,7 +22,7 @@ func GenerateKeySwitchCollDecRelation(s, sp, u, r, err *fastmath.Poly, k, kSmdg 
 	rlweParams := crypto.NewRLWEParameters(config.BfvRing.Q, config.BfvRing.D, config.Beta, config.BfvRing.BaseRing)
 	c1T := params.c1.Coeffs().Diag().Hadamard(params.T)
 	h := c1T.MulVec(s.Coeffs()).Add(err.Coeffs())
-	t, _ := crypto.GetAjtaiCommitments(params.A1, params.A2, s.Coeffs(), r.Coeffs(), params.p)
+	_, t := crypto.GetAjtaiCommitments(params.A1, params.A2, s.Coeffs(), r.Coeffs(), params.p)
 	eqn1 := crypto.NewLinearEquation(h, h.Size()).
 		AppendTerm(c1T, s.Coeffs()).
 		AppendVecTerm(err.Coeffs(), config.BfvRing.BaseRing)
@@ -59,7 +59,7 @@ func GeneratePubKeySwitchRelation(s, u, sp, e0, e1, r *fastmath.Poly, k1, kSmdg 
 	A3T := params.A3.Copy().Hadamard(params.T)
 	h0 := c1T.MulVec(s.Coeffs()).Add(p0T.MulVec(u.Coeffs())).Add(e0.Coeffs())
 	h1 := p1T.MulVec(u.Coeffs()).Add(e1.Copy().NTT().Coeffs())
-	t, _ := crypto.GetAjtaiCommitments(params.A1, params.A2, s.Coeffs(), r.Coeffs(), params.p)
+	_, t := crypto.GetAjtaiCommitments(params.A1, params.A2, s.Coeffs(), r.Coeffs(), params.p)
 	eqn1 := crypto.NewLinearEquation(h0, h0.Size()).
 		AppendTerm(c1T, s.Coeffs()).
 		AppendTerm(p0T, u.Coeffs()).
