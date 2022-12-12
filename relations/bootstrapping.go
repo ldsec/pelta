@@ -50,7 +50,11 @@ func GenerateCollectiveBootstrappingRelation(s1, s2, s3, r, e0, e1, e2 *fastmath
 		AppendTerm(params.A4.Copy().Hadamard(params.T), s3.Coeffs()).
 		AppendRLWEErrorDecompositionSum(e2, params.T, rlweParams).
 		AppendVecTerm(k3.Copy().Scale(params.qPt.Uint64()), config.BfvRing.BaseRing)
-	lrb := crypto.NewLinearRelationBuilder()
-	lrb.AppendEqn(eqn1).AppendEqn(eqn2).AppendEqn(eqn3).AppendEqn(eqn4).AppendEqn(eqn5)
+	lrb := crypto.NewLinearRelationBuilder().
+		AppendEqn(eqn1).
+		AppendEqn(eqn2).
+		AppendEqn(eqn3).
+		AppendEqn(eqn4).
+		AppendEqn(eqn5)
 	return lrb.Build(config.BfvRing.BaseRing)
 }

@@ -1,6 +1,9 @@
 package crypto
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/ldsec/codeBase/commitment/fastmath"
 	"github.com/tuneinsight/lattigo/v4/ring"
 )
@@ -113,6 +116,49 @@ func (eqn *LinearEquation) Linearize() LinearRelation {
 	return linRel
 }
 
+func (eqn *LinearEquation) String() string {
+	strs := make([]string, 0)
+	for i := 0; ; i++ {
+		shouldStop := true
+		rowStr := make([]string, 0)
+		if eqn.lhs.Size() > i {
+			rowStr = append(rowStr, fmt.Sprintf("[ %5d ]", eqn.lhs.Get(i)))
+			shouldStop = false
+		} else {
+			rowStr = append(rowStr, "         ")
+		}
+		// Equal sign
+		if i == eqn.lhs.Size()/2 {
+			rowStr = append(rowStr, " = ")
+		} else {
+			rowStr = append(rowStr, "   ")
+		}
+		terms := make([]string, 0, len(eqn.rhs))
+		for _, term := range eqn.rhs {
+			termStrs := make([]string, 0, len(eqn.rhs))
+			if term.A.Rows() > i {
+				termStrs = append(termStrs, term.A.RowView(i).String())
+				shouldStop = false
+			}
+			if term.b.Size() > i {
+				termStrs = append(termStrs, fmt.Sprintf("[ %5d ] ", term.b.Get(i)))
+				shouldStop = false
+			}
+			terms = append(terms, strings.Join(termStrs, ""))
+		}
+		if shouldStop {
+			break
+		}
+		termJoiner := "   "
+		if eqn.lhs.Size()/2 == i {
+			termJoiner = " + "
+		}
+		rowStr = append(rowStr, strings.Join(terms, termJoiner))
+		strs = append(strs, strings.Join(rowStr, " "))
+	}
+	return strings.Join(strs, "\n")
+}
+
 type LinearRelationBuilder struct {
 	eqns []*LinearEquation
 }
@@ -167,4 +213,12 @@ func (lrb *LinearRelationBuilder) Build(baseRing *ring.Ring) LinearRelation {
 		}
 	}
 	return linRel
+}
+
+func (lrb *LinearRelationBuilder) String() string {
+	strs := make([]string, 0, len(lrb.eqns))
+	for i, eqn := range lrb.eqns {
+		strs = append(strs, fmt.Sprintf("Eqn %d:\n%s", i, eqn.String()))
+	}
+	return strings.Join(strs, "\n")
 }

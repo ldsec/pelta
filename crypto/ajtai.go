@@ -36,9 +36,12 @@ func GetAjtaiKappa(comP, comQ *fastmath.IntVec, p *big.Int, baseRing *ring.Ring)
 	return kappa
 }
 
-// NewPaddedAjtaiEquation returns the equation comP = As + Br - kp with rows padded up to the size of s.
+// NewPaddedAjtaiEquation returns the equation comP = As + Br - kp with rows padded up to the size of s. This is done to be able to generate
+// the Id * (-p) on the lhs.
 func NewPaddedAjtaiEquation(comP *fastmath.IntVec, A, B *fastmath.IntMatrix, s, r, kappa *fastmath.IntVec, p, q *big.Int, baseRing *ring.Ring) *LinearEquation {
+	// Num cols
 	d := s.Size()
+	// Num rows
 	l := comP.Size()
 	padLength := d - l
 	paddedA := A.Copy().ExtendRows(fastmath.NewIntMatrix(padLength, d, baseRing))

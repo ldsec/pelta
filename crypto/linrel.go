@@ -1,6 +1,8 @@
 package crypto
 
 import (
+	"fmt"
+
 	"github.com/ldsec/codeBase/commitment/fastmath"
 )
 
@@ -104,4 +106,8 @@ func (r *LinearRelation) Copy() LinearRelation {
 		S: r.S.Copy(),
 		U: r.U.Copy(),
 	}
+}
+
+func (r *LinearRelation) String() string {
+	return fmt.Sprintf("A: %s\ns: %s\nu: %s", r.A.String(), r.S.String(), r.U.String())
 }

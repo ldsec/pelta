@@ -212,13 +212,10 @@ func (v *IntVec) Copy() *IntVec {
 func (v *IntVec) String() string {
 	s := fmt.Sprintf("IntVec[%d]{", v.Size())
 	elemStrs := make([]string, 0, v.Size())
-	for i := 0; i < len(v.polys); i++ {
-		for j := 0; j < v.polys[i].N(); j++ {
-			elemStrs = append(elemStrs, fmt.Sprintf("%d", v.polys[i].Get(j, 0)))
-		}
+	for i := 0; i < v.Size(); i++ {
+		elemStrs = append(elemStrs, fmt.Sprintf("%d", v.Get(i)))
 	}
-	return s + strings.Join(elemStrs[:10], ",") +
-		",...," + strings.Join(elemStrs[v.Size()-10:], ",") + "}"
+	return s + strings.Join(elemStrs, ",") + "}"
 }
 
 // Append appends the contents of the given vector into this one.
