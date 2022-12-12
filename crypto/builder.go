@@ -136,6 +136,7 @@ func (eqn *LinearEquation) String() string {
 		terms := make([]string, 0, len(eqn.rhs))
 		for _, term := range eqn.rhs {
 			termStrs := make([]string, 0, len(eqn.rhs))
+			// TODO: handle empty rows
 			if term.A.Rows() > i {
 				termStrs = append(termStrs, term.A.RowView(i).String())
 				shouldStop = false
@@ -182,8 +183,11 @@ func (lrb *LinearRelationBuilder) Build(baseRing *ring.Ring) LinearRelation {
 	linRel := lrb.eqns[0].Linearize()
 	for i, eqn := range lrb.eqns[1:] {
 		if eqn.IsDependent() {
-			prevEqnNumTerms := len(lrb.eqns[i].GetTerms())
-			preB := make([]*fastmath.IntMatrix, prevEqnNumTerms)
+			prevEqnNumIndepTerms := 0
+			for j := i; j >= 0; j-- {
+				prevEqnNumIndepTerms += len(lrb.eqns[j].GetIndependentTerms())
+			}
+			preB := make([]*fastmath.IntMatrix, prevEqnNumIndepTerms)
 			for _, t := range eqn.GetDependentTerms() {
 				preB[t.depVecIndex] = t.A
 			}

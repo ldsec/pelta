@@ -139,7 +139,15 @@ func TestLRBThreeEqnsDependentTerms(t *testing.T) {
 	lrb.AppendEqn(crypto.NewLinearEquation(q, n).
 		AppendDependentTerm(C, 0).
 		AppendTerm(D, p))
-	// Convert into linear relation (A || B || 0, C || 0 || D) (s y p) = (z q)
+	// Eqn 2: Ew + Fy = u
+	E := fastmath.NewRandomIntMatrix(m, n, big.NewInt(5), bfvRing.BaseRing)
+	F := fastmath.NewRandomIntMatrix(m, n, big.NewInt(5), bfvRing.BaseRing)
+	w := fastmath.NewRandomIntVec(n, big.NewInt(3), bfvRing.BaseRing)
+	u := E.MulVec(w).Add(F.MulVec(y))
+	lrb.AppendEqn(crypto.NewLinearEquation(u, n).
+		AppendTerm(E, w).
+		AppendDependentTerm(F, 1))
 	linRel := lrb.Build(bfvRing.BaseRing)
+	t.Logf(linRel.String())
 	verifyRelation(t, linRel)
 }
