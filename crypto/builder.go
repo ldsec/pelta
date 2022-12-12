@@ -169,6 +169,7 @@ func (lrb *LinearRelationBuilder) AppendEqn(eqn *LinearEquation) *LinearRelation
 }
 
 func getZeroPad(i, j int, eqns []*LinearEquation, baseRing *ring.Ring) *fastmath.IntMatrix {
+	// Try to find an appropriate matrix among the equations to determine the zero padding column size.
 	var targetEqn *LinearEquation
 	if i > 0 {
 		targetEqn = eqns[i-1]
@@ -183,7 +184,9 @@ func getZeroPad(i, j int, eqns []*LinearEquation, baseRing *ring.Ring) *fastmath
 	} else {
 		return nil
 	}
-	return fastmath.NewIntMatrix(targetMatrix.Rows(), targetMatrix.Cols(), baseRing)
+	cols := targetMatrix.Cols()
+	rows := eqns[i].m
+	return fastmath.NewIntMatrix(rows, cols, baseRing)
 }
 
 // Build constructs the linear relation of the form As = u from the appended equations.

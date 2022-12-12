@@ -25,13 +25,17 @@ func updateProtocol(p *ABPProver, v *ABPVerifier, ps *ABPProverState, vs *ABPVer
 	lrb.AppendEqn(crypto.NewABPEquation(vs.ABPVerifierChal, A, 0, ps.ABPProverMask, ps.ABPMaskedOpening, p.params.config.BaseRing))
 	fmt.Println("building")
 	newRel := lrb.Build(p.params.config.BaseRing)
-	fmt.Println(newRel.String())
+	if !newRel.Verify() {
+		fmt.Println("invalid ABP embedding")
+	}
 	p.params.A = newRel.A
 	v.params.A = newRel.A
 	v.params.U = newRel.U
 	p.params.U = newRel.U
 	p.params.config.M = newRel.A.Rows()
 	v.params.config.M = newRel.A.Rows()
+	p.params.config.TernaryLength = p.params.config.N
+	v.params.config.TernaryLength = v.params.config.N
 	p.params.config.N = newRel.A.Cols()
 	v.params.config.N = newRel.A.Cols()
 }
@@ -63,6 +67,7 @@ func (p ABPProver) CommitToMessage(s *fastmath.IntVec) (*fastmath.PolyNTTVec, *f
 		t.Append(p.params.B.Row(p.params.config.NumSplits() + 1 + i).Dot(ps.R).Add(abpMask.Get(i)))
 		ps.SHat.Append(abpMask.Get(i))
 	}
+	ps.T = t
 	return t0, t, w, ABPProverState{ProverState: ps, ABPProverMask: abpMask}
 }
 
@@ -124,6 +129,11 @@ func (vf ABPVerifier) CreateChallenge(t *fastmath.PolyNTTVec, h, v *fastmath.Pol
 }
 
 func (vf ABPVerifier) Verify(z *fastmath.PolyNTTMatrix, state ABPVerifierState) bool {
+	res := vf.Verifier.Verify(z, state.VerifierState)
+	if !res {
+		fmt.Println("verifier original failed")
+		return false
+	}
 	bound := big.NewInt(0).Sqrt(
 		big.NewInt(0).Div(
 			vf.params.config.Q,
@@ -132,7 +142,7 @@ func (vf ABPVerifier) Verify(z *fastmath.PolyNTTMatrix, state ABPVerifierState) 
 		fmt.Println("verifier failed ABP check")
 		return false
 	}
-	return vf.Verifier.Verify(z, state.VerifierState)
+	return true
 }
 
 func ExecuteWithBoundProof(s *fastmath.IntVec, tau int, params PublicParams) bool {

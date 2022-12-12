@@ -111,3 +111,11 @@ func (r *LinearRelation) Copy() LinearRelation {
 func (r *LinearRelation) String() string {
 	return fmt.Sprintf("A: %s\ns: %s\nu: %s", r.A.String(), r.S.String(), r.U.String())
 }
+
+func (r *LinearRelation) SizesString() string {
+	return fmt.Sprintf("A[%dx%d] s[%d] = u[%d]", r.A.Rows(), r.A.Cols(), r.S.Size(), r.U.Size())
+}
+
+func (r *LinearRelation) Verify() bool {
+	return r.A.MulVec(r.S).Eq(r.U)
+}
