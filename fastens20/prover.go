@@ -1,6 +1,7 @@
 package fastens20
 
 import (
+	"fmt"
 	"math/big"
 
 	"github.com/ldsec/codeBase/commitment/fastmath"
@@ -115,6 +116,8 @@ func (p Prover) CommitToRelation(alpha *fastmath.PolyNTTVec, gamma *fastmath.Int
 		return SplitInvNTT(tmp, p.params).NTT()
 	})
 	invK := big.NewInt(0).ModInverse(big.NewInt(int64(p.params.config.K)), p.params.config.Q).Uint64()
+	fmt.Println(p.params.config.NumSplits())
+	fmt.Println(state.SHat.Size())
 	gMask := LmuSum(p.params.config.K, invK,
 		func(mu int, v int) *fastmath.PolyNTT {
 			presum := fastmath.NewPolyVec(p.params.config.NumSplits(), p.params.config.BaseRing).NTT()

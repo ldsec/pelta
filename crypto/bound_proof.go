@@ -7,56 +7,48 @@ import (
 	"github.com/tuneinsight/lattigo/v4/ring"
 )
 
-func CreateABPChallenge(tau, l int, ternarySampler fastmath.PolySampler, baseRing *ring.Ring) *fastmath.PolyNTTMatrix {
-	d := baseRing.N
-	B := fastmath.NewRandomPolyMatrix(tau*d, l, ternarySampler, baseRing)
-	BNTT := fastmath.NewPolyMatrix(tau*d, l, baseRing).NTT()
-	BNTT.PopulateRows(func(i int) *fastmath.PolyNTTVec {
-		nttRow := fastmath.NewPolyVec(l, baseRing).NTT()
+func CreateABPChallenge(tau, m int, ternarySampler fastmath.PolySampler, baseRing *ring.Ring) *fastmath.PolyNTTMatrix {
+	// Create R^T of m x (tau * d)
+	RT := fastmath.NewRandomPolyMatrix(m, tau, ternarySampler, baseRing)
+	RTNTT := fastmath.NewPolyMatrix(RT.Rows(), RT.Cols(), baseRing).NTT()
+	RTNTT.PopulateRows(func(i int) *fastmath.PolyNTTVec {
+		nttRow := fastmath.NewPolyVec(RT.Cols(), baseRing).NTT()
 		nttRow.Populate(func(j int) *fastmath.PolyNTT {
-			return fastmath.ForceNTT(B.Get(i, j))
+			return fastmath.ForceNTT(RT.Get(i, j))
 		})
 		return nttRow
 	})
-	return BNTT
+	return RTNTT
 }
 
 func CreateABPMask(tau int, ternarySampler fastmath.PolySampler, baseRing *ring.Ring) *fastmath.PolyNTTVec {
+	// Create y of (tau * d)
 	abpMask := fastmath.NewRandomPolyVec(tau, ternarySampler, baseRing)
 	abpMaskNTT := fastmath.NewPolyVec(tau, baseRing).NTT()
-	for i := 0; i < tau; i++ {
-		abpMaskNTT.Set(i, fastmath.ForceNTT(abpMask.Get(i)))
-	}
+	abpMaskNTT.Populate(func(i int) *fastmath.PolyNTT {
+		return fastmath.ForceNTT(abpMask.Get(i))
+	})
 	return abpMaskNTT
 }
 
 func CreateABPMaskedOpening(abpChal *fastmath.PolyNTTMatrix, abpMask *fastmath.PolyNTTVec, u *fastmath.IntVec, baseRing *ring.Ring) *fastmath.PolyNTTVec {
-	d := baseRing.N
-	// z = Bu + y
-	uPadded := u
-	if uPadded.Size() < abpChal.Cols()*d {
-		uPadded = uPadded.Copy().Append(fastmath.NewIntVec(abpChal.Cols()*d-uPadded.Size(), baseRing))
-	}
-	B := abpChal.ToIntMatrix()
-	z := B.MulVec(uPadded)
+	// z = Ru + y
+	R := abpChal.ToIntMatrix().Transposed()
+	z := R.MulVec(u)
 	z.Add(abpMask.ToIntVec())
 	return z.UnderlyingPolysAsPolyNTTVec()
 }
 
 func NewABPEquation(abpChal *fastmath.PolyNTTMatrix, A *fastmath.IntMatrix, sIndex int, abpMask, abpMaskedOpening *fastmath.PolyNTTVec, baseRing *ring.Ring) *LinearEquation {
-	fmt.Println("Creating ABP equation")
-	d := baseRing.N
-	// BAs + y = z
-	APadded := A
-	if APadded.Rows() < abpChal.Cols()*d {
-		APadded = APadded.Copy().ExtendRows(fastmath.NewIntMatrix(abpChal.Cols()*d-APadded.Rows(), APadded.Cols(), baseRing))
-	}
-	BA := abpChal.ToIntMatrix().MulMat(APadded)
+	fmt.Println("creating ABP equation (1)")
+	// Add the equation RAs + y = z
+	RA := abpChal.ToIntMatrix().Transposed().MulMat(A)
 	y := abpMask.ToIntVec()
 	z := abpMaskedOpening.ToIntVec()
-	eqn := NewLinearEquation(z, BA.Cols())
-	eqn.AppendDependentTerm(BA, sIndex)
+	fmt.Println("creating ABP equation (2)")
+	eqn := NewLinearEquation(z, RA.Cols())
+	eqn.AppendDependentTerm(RA, sIndex)
 	eqn.AppendVecTerm(y, baseRing)
-	fmt.Println("Created ABP equation")
+	fmt.Println("created ABP equation")
 	return eqn
 }

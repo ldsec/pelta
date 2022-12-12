@@ -9,7 +9,7 @@ import (
 )
 
 func TestABPSimple(t *testing.T) {
-	bfvRing := fastmath.BFVZeroLevelRing()
+	bfvRing := fastmath.ShortCommitmentRing(7)
 	m := bfvRing.D
 	n := bfvRing.D
 	A := fastmath.NewRandomIntMatrix(m, n, bfvRing.Q, bfvRing.BaseRing)

@@ -23,8 +23,9 @@ func updateProtocol(p *ABPProver, v *ABPVerifier, ps *ABPProverState, vs *ABPVer
 	lrb := crypto.NewLinearRelationBuilder()
 	lrb.AppendEqn(crypto.NewLinearEquation(u, A.Cols()).AppendTerm(A, s))
 	lrb.AppendEqn(crypto.NewABPEquation(vs.ABPVerifierChal, A, 0, ps.ABPProverMask, ps.ABPMaskedOpening, p.params.config.BaseRing))
-	fmt.Println("Building")
+	fmt.Println("building")
 	newRel := lrb.Build(p.params.config.BaseRing)
+	fmt.Println(newRel.String())
 	p.params.A = newRel.A
 	v.params.A = newRel.A
 	v.params.U = newRel.U
@@ -105,11 +106,7 @@ func NewABPVerifier(params PublicParams, tau int) ABPVerifier {
 }
 
 func (vf ABPVerifier) CreateABPChallenge() (*fastmath.PolyNTTMatrix, ABPVerifierState) {
-	l := vf.params.U.Size() / vf.params.config.D
-	if vf.params.U.Size()%vf.params.config.D != 0 {
-		l += 1
-	}
-	abpChal := crypto.CreateABPChallenge(vf.Tau, l, vf.params.config.TernarySampler, vf.params.config.BaseRing)
+	abpChal := crypto.CreateABPChallenge(vf.Tau, vf.params.config.M, vf.params.config.TernarySampler, vf.params.config.BaseRing)
 	return abpChal, ABPVerifierState{ABPVerifierChal: abpChal}
 }
 

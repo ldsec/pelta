@@ -19,17 +19,16 @@ type LinearEquation struct {
 	lhs       *fastmath.IntVec
 	rhs       []term
 	m         int
-	n         int
 	dependent bool
 }
 
 func NewLinearEquation(lhs *fastmath.IntVec, cols int) *LinearEquation {
-	return &LinearEquation{lhs, []term{}, lhs.Size(), cols, false}
+	return &LinearEquation{lhs, []term{}, lhs.Size(), false}
 }
 
 // AppendTerm adds a new term to this equation.
 func (eqn *LinearEquation) AppendTerm(A *fastmath.IntMatrix, b *fastmath.IntVec) *LinearEquation {
-	if A.Rows() != eqn.m || A.Cols() != eqn.n || b.Size() != eqn.n {
+	if A.Rows() != eqn.m || A.Cols() != b.Size() {
 		panic("cannot append term with invalid size")
 	}
 	eqn.rhs = append(eqn.rhs, term{A, b, false, 0})
@@ -37,13 +36,7 @@ func (eqn *LinearEquation) AppendTerm(A *fastmath.IntMatrix, b *fastmath.IntVec)
 }
 
 func (eqn *LinearEquation) AppendVecTerm(b *fastmath.IntVec, baseRing *ring.Ring) *LinearEquation {
-	if b.Size() != eqn.n {
-		panic("cannot append term with invalid size")
-	}
-	if eqn.n != eqn.m {
-		panic("cannot append vec term to an equation with #row != #col")
-	}
-	id := fastmath.NewIdIntMatrix(eqn.m, baseRing)
+	id := fastmath.NewIdIntMatrix(b.Size(), baseRing)
 	eqn.rhs = append(eqn.rhs, term{id, b, false, 0})
 	return eqn
 }
@@ -175,6 +168,24 @@ func (lrb *LinearRelationBuilder) AppendEqn(eqn *LinearEquation) *LinearRelation
 	return lrb
 }
 
+func getZeroPad(i, j int, eqns []*LinearEquation, baseRing *ring.Ring) *fastmath.IntMatrix {
+	var targetEqn *LinearEquation
+	if i > 0 {
+		targetEqn = eqns[i-1]
+	} else if i+1 < len(eqns) {
+		targetEqn = eqns[i+1]
+	} else {
+		return nil
+	}
+	var targetMatrix *fastmath.IntMatrix
+	if j < len(targetEqn.rhs) {
+		targetMatrix = targetEqn.rhs[j].A
+	} else {
+		return nil
+	}
+	return fastmath.NewIntMatrix(targetMatrix.Rows(), targetMatrix.Cols(), baseRing)
+}
+
 // Build constructs the linear relation of the form As = u from the appended equations.
 func (lrb *LinearRelationBuilder) Build(baseRing *ring.Ring) LinearRelation {
 	if len(lrb.eqns) == 0 {
@@ -196,13 +207,13 @@ func (lrb *LinearRelationBuilder) Build(baseRing *ring.Ring) LinearRelation {
 			}
 			var B *fastmath.IntMatrix
 			if preB[0] == nil {
-				B = fastmath.NewIntMatrix(eqn.m, eqn.n, baseRing)
+				B = getZeroPad(i+1, 0, lrb.eqns, baseRing)
 			} else {
 				B = preB[0]
 			}
-			for _, m := range preB[1:] {
+			for j, m := range preB[1:] {
 				if m == nil {
-					B.ExtendCols(fastmath.NewIntMatrix(eqn.m, eqn.n, baseRing))
+					B.ExtendCols(getZeroPad(i+1, j+1, lrb.eqns, baseRing))
 				} else {
 					B.ExtendCols(m)
 				}
