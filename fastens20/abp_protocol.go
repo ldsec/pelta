@@ -146,7 +146,8 @@ func (vf ABPVerifier) Verify(z *fastmath.PolyNTTMatrix, state ABPVerifierState) 
 		big.NewInt(0).Div(
 			vf.params.config.Q,
 			big.NewInt(int64(2*vf.params.U.Size())))).Uint64() / 2
-	if state.ABPMaskedOpening.Copy().InvNTT().InfNorm() >= bound {
+	// Infinity norm check.
+	if state.ABPMaskedOpening.Copy().InvNTT().Max() >= bound {
 		fmt.Println("ABP verifier failed infinity norm check")
 		return false
 	}

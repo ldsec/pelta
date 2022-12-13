@@ -6,6 +6,6 @@ func AcceptIntSample(z *IntVec, samplingBound uint64) bool {
 
 func AcceptPolyVecSample(z *PolyVec, samplingBound uint64) bool {
 	return z.All(func(_ int, p *Poly) bool {
-		return p.MaxCoeff(0) < samplingBound
+		return p.Max(0) < samplingBound
 	})
 }

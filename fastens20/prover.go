@@ -140,7 +140,7 @@ func (p Prover) CommitToRelation(alpha *fastmath.PolyNTTVec, gamma *fastmath.Int
 					Int64()
 				return p.params.B.Row(j).Copy().
 					MulAll(psi.Get(mu, j)).
-					ScaleAll(uint64(p.params.config.D)).
+					Scale(uint64(p.params.config.D)).
 					Dot(state.Y.Row(int(index)))
 			}, p.params)
 		return outerSum.Add(add)

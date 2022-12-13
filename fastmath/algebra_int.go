@@ -92,113 +92,6 @@ func (v *IntVec) Set(index int, newValue uint64) {
 	v.polys[polyIndex].Set(coeffIndex, newValue)
 }
 
-// Scale scales the vector by the given amount.
-func (v *IntVec) Scale(factor uint64) *IntVec {
-	for _, p := range v.polys {
-		p.Scale(factor)
-	}
-	return v
-}
-
-// Neg negates the polynomial.
-func (v *IntVec) Neg() *IntVec {
-	for _, p := range v.polys {
-		p.Neg()
-	}
-	return v
-}
-
-// Add adds two integer vectors.
-func (v *IntVec) Add(r *IntVec) *IntVec {
-	if v.size != r.size {
-		panic("IntVec.Add sizes do not match")
-	}
-	for i, p := range v.polys {
-		p.Add(r.polys[i])
-	}
-	return v
-}
-
-// Dot returns the dot product of the given two vectors.
-func (v *IntVec) Dot(r *IntVec) uint64 {
-	if v.size != r.size {
-		panic("IntVec.Dot sizes do not match")
-	}
-	preSum := NewPoly(v.baseRing)
-	for i := 0; i < len(v.polys); i++ {
-		a := v.polys[i]
-		b := r.polys[i]
-		v.baseRing.MulCoeffsAndAdd(a.ref, b.ref, preSum.ref)
-	}
-	return preSum.SumCoeffsLimited(0, v.size, v.mod)
-}
-
-// MulAddElems multiplies the elements and adds it to the coefficients of the
-// given `out` polynomial.
-func (v *IntVec) MulAddElems(r *IntVec, out *Poly) {
-	if v.size != r.size {
-		panic("IntVec.Dot sizes do not match")
-	}
-	for i := 0; i < len(v.polys); i++ {
-		a := v.polys[i]
-		b := r.polys[i]
-		v.baseRing.MulCoeffsAndAdd(a.ref, b.ref, out.ref)
-	}
-}
-
-// Hadamard performs coefficient-wise multiplication.
-func (v *IntVec) Hadamard(r *IntVec) *IntVec {
-	if v.size != r.size {
-		panic("IntVec.Dot sizes do not match")
-	}
-	for i := 0; i < len(v.polys); i++ {
-		a := v.polys[i]
-		b := r.polys[i]
-		v.baseRing.MulCoeffs(a.ref, b.ref, a.ref)
-	}
-	return v
-}
-
-// Diag returns a diagonalization of this vector.
-func (v *IntVec) Diag() *IntMatrix {
-	m := NewIntMatrix(v.Size(), v.Size(), v.BaseRing())
-	for i := 0; i < v.Size(); i++ {
-		m.Set(i, i, v.Get(i))
-	}
-	return m
-}
-
-// Eq checks the equality between two integer vectors.
-func (v *IntVec) Eq(r *IntVec) bool {
-	if v.Size() != r.Size() {
-		return false
-	}
-	// The underlying polynomial # might change even when the sizes are equal.
-	// Take the minimum.
-	minPolySize := len(v.polys)
-	if len(r.polys) < minPolySize {
-		minPolySize = len(r.polys)
-	}
-	for i := 0; i < minPolySize; i++ {
-		if !v.polys[i].EqLevel(0, r.polys[i]) {
-			return false
-		}
-	}
-	return true
-}
-
-// InfNorm returns the infinity norm of this vector.
-func (v *IntVec) InfNorm() uint64 {
-	max := v.polys[0].MaxCoeff(0)
-	for _, p := range v.polys[1:] {
-		c := p.MaxCoeff(0)
-		if c > max {
-			max = c
-		}
-	}
-	return max
-}
-
 // Copy copies the vector.
 func (v *IntVec) Copy() *IntVec {
 	polys := make([]*Poly, len(v.polys))
@@ -241,29 +134,6 @@ func (v *IntVec) Append(r *IntVec) *IntVec {
 	// Move the elements in.
 	for i := 0; i < r.Size(); i++ {
 		v.Set(oldSize+i, r.Get(i))
-	}
-	return v
-}
-
-// Max returns the largest element of the vector.
-func (v *IntVec) Max() uint64 {
-	max := v.polys[0].MaxCoeff(0)
-	for _, p := range v.polys[1:] {
-		pMax := p.MaxCoeff(0)
-		if pMax > max {
-			max = pMax
-		}
-	}
-	return max
-}
-
-// Reduce reduces the elements of this vector by the given mod.
-func (v *IntVec) Reduce(mod *big.Int) *IntVec {
-	for _, p := range v.polys {
-		for i := 0; i < p.N(); i++ {
-			reducedVal := big.NewInt(0).Mod(big.NewInt(int64(p.Get(i, 0))), mod)
-			p.Set(i, reducedVal.Uint64())
-		}
 	}
 	return v
 }
@@ -462,69 +332,6 @@ func (m *IntMatrix) PopulateRows(f func(int) *IntVec) {
 	}
 }
 
-// Transposed returns the transposed version of this matrix.
-func (m *IntMatrix) Transposed() *IntMatrix {
-	newRows := make([]*IntVec, m.Cols())
-	for i := 0; i < len(newRows); i++ {
-		newRows[i] = m.ColCopy(i)
-	}
-	return &IntMatrix{m.numCols, m.numRows, newRows, m.mod, m.baseRing}
-}
-
-// MulVec performs a matrix-vector multiplication.
-func (m *IntMatrix) MulVec(v *IntVec) *IntVec {
-	if m.Cols() != v.Size() {
-		panic("IntMatrix.MulVec sizes incorrect")
-	}
-	out := NewIntVec(m.Rows(), m.baseRing)
-	dotResult := NewPoly(m.baseRing)
-	for i, row := range m.rows {
-		row.MulAddElems(v, dotResult)
-		out.Set(i, dotResult.SumCoeffsLimited(0, row.Size(), m.mod))
-		dotResult.ref.Zero()
-	}
-	return out
-}
-
-// MulMat performs a matrix-matrix multiplication.
-func (m *IntMatrix) MulMat(b *IntMatrix) *IntMatrix {
-	if m.Cols() != b.Rows() {
-		panic("IntMatrix.MulMat sizes incorrect")
-	}
-	out := NewIntMatrix(m.Rows(), b.Cols(), m.baseRing)
-	for i := 0; i < out.Rows(); i++ {
-		for j := 0; j < out.Cols(); j++ {
-			p := m.RowView(i)
-			q := b.ColCopy(j)
-			out.Set(i, j, p.Dot(q))
-		}
-	}
-	return out
-}
-
-func (m *IntMatrix) Hadamard(b *IntMatrix) *IntMatrix {
-	for i, r := range m.rows {
-		r.Hadamard(b.RowView(i))
-	}
-	return m
-}
-
-// Scale scales the matrix by the given amount.
-func (m *IntMatrix) Scale(factor uint64) *IntMatrix {
-	for _, row := range m.rows {
-		row.Scale(factor)
-	}
-	return m
-}
-
-// Neg negates this matrix.
-func (m *IntMatrix) Neg() *IntMatrix {
-	for _, row := range m.rows {
-		row.Neg()
-	}
-	return m
-}
-
 // Copy returns a copy of this matrix.
 func (m *IntMatrix) Copy() *IntMatrix {
 	rows := make([]*IntVec, m.numRows)
@@ -532,20 +339,6 @@ func (m *IntMatrix) Copy() *IntMatrix {
 		rows[i] = row.Copy()
 	}
 	return &IntMatrix{m.numRows, m.numCols, rows, m.mod, m.baseRing}
-}
-
-// Eq returns true iff two matrices are equal in their elements.
-func (m *IntMatrix) Eq(b *IntMatrix) bool {
-	if m.Rows() != b.Rows() || m.Cols() != b.Cols() {
-		return false
-	}
-	for i, row := range m.rows {
-		bRow := b.RowView(i)
-		if !row.Eq(bRow) {
-			return false
-		}
-	}
-	return true
 }
 
 // String returns a string representation of the matrix.
