@@ -8,7 +8,7 @@ import (
 )
 
 func TestAjtaiCommitments(t *testing.T) {
-	config := crypto.GetDefaultConfig()
+	config := crypto.GetDefaultCryptoConfig()
 	comSize := 4
 	s := fastmath.NewRandomTernaryIntVec(config.D, config.BaseRing)
 	r := fastmath.NewRandomTernaryIntVec(config.D, config.BaseRing)
@@ -23,7 +23,7 @@ func TestAjtaiCommitments(t *testing.T) {
 }
 
 func TestAjtaiKappa(t *testing.T) {
-	config := crypto.GetDefaultConfig()
+	config := crypto.GetDefaultCryptoConfig()
 	comSize := 4
 	s := fastmath.NewRandomTernaryIntVec(config.D, config.BaseRing)
 	r := fastmath.NewRandomTernaryIntVec(config.D, config.BaseRing)
@@ -42,7 +42,7 @@ func TestAjtaiKappa(t *testing.T) {
 }
 
 func TestAjtaiEquation(t *testing.T) {
-	config := crypto.GetDefaultConfig()
+	config := crypto.GetDefaultCryptoConfig()
 	// Create another equation Mw = v.
 	M := fastmath.NewRandomIntMatrix(config.D, config.D, config.Q, config.BaseRing)
 	w := fastmath.NewRandomIntVec(config.D, config.Q, config.BaseRing)

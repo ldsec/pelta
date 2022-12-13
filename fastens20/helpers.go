@@ -5,11 +5,13 @@ import (
 )
 
 // SplitInvNTT extracts the underlying polynomials from an integer vector such that the integer vector
-// satisfies lhs = NTT(x_1) || NTT(x_2) || ... || NTT(x_numSplits)
+// satisfies lhs = NTT(x_1) || NTT(x_2) || ... || NTT(x_k)
 func SplitInvNTT(lhs *fastmath.IntVec, params PublicParams) *fastmath.PolyVec {
 	splits := fastmath.NewPolyVec(len(lhs.UnderlyingPolys()), params.config.BaseRing)
 	splits.Populate(func(i int) *fastmath.Poly {
+		// We assume that LHS is in NTT form.
 		split := fastmath.ForceNTT(lhs.UnderlyingPolys()[i].Copy())
+		// Move back to the poly space.
 		return split.InvNTT()
 	})
 	return splits

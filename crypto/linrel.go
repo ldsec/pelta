@@ -116,6 +116,7 @@ func (r *LinearRelation) SizesString() string {
 	return fmt.Sprintf("A[%dx%d] s[%d] = u[%d]", r.A.Rows(), r.A.Cols(), r.S.Size(), r.U.Size())
 }
 
+// Verify returns true iff As = u holds.
 func (r *LinearRelation) Verify() bool {
 	return r.A.MulVec(r.S).Eq(r.U)
 }

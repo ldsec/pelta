@@ -8,7 +8,6 @@ import (
 )
 
 type GlobalConfig struct {
-	BfvRing         fastmath.RingParams
 	Delta1          int
 	Beta            uint64
 	P               *big.Int
@@ -16,4 +15,5 @@ type GlobalConfig struct {
 	TernarySampler  fastmath.PolySampler
 	GaussianSampler fastmath.PolySampler
 	RLWEParams      crypto.RLWEParameters
+	Ring            fastmath.RingParams
 }

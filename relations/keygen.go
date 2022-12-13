@@ -17,15 +17,15 @@ type KeyGenPublicParams struct {
 }
 
 func GenerateKeyGenRelation(s, r, err *fastmath.Poly, k *fastmath.IntVec, params KeyGenPublicParams, config GlobalConfig) crypto.LinearRelation {
-	rlweParams := crypto.NewRLWEParameters(config.BfvRing.Q, config.BfvRing.D, config.Beta, config.BfvRing.BaseRing)
+	rlweParams := crypto.NewRLWEParameters(config.Ring.Q, config.Ring.D, config.Beta, config.Ring.BaseRing)
 	_, comP := crypto.GetAjtaiCommitments(params.A1, params.A2, s.Coeffs(), r.Coeffs(), params.p)
-	ajtaiEqn := crypto.NewPaddedAjtaiEquation(comP, params.A1, params.A2, s.Coeffs(), r.Coeffs(), k, params.p, config.BfvRing.Q, config.BfvRing.BaseRing)
+	ajtaiEqn := crypto.NewPaddedAjtaiEquation(comP, params.A1, params.A2, s.Coeffs(), r.Coeffs(), k, params.p, config.Ring.Q, config.Ring.BaseRing)
 	ajtaiEqn.AddDependency(0, 0)
 	lrb := crypto.NewLinearRelationBuilder()
 	p0 := crypto.GetRLWEP0(params.p1, s, err)
 	lrb.AppendEqn(crypto.NewIndependentRLWE(p0, params.p1, s, err, params.T, rlweParams))
 	lrb.AppendEqn(ajtaiEqn)
-	return lrb.Build(config.BfvRing.BaseRing)
+	return lrb.Build(config.Ring.BaseRing)
 }
 
 type RelinKeyGenPublicParams struct {
@@ -39,7 +39,7 @@ type RelinKeyGenPublicParams struct {
 }
 
 func GenerateRelinKeyGenRelation(s, u, e0, e1, r *fastmath.Poly, k1 *fastmath.IntVec, params RelinKeyGenPublicParams, config GlobalConfig) crypto.LinearRelation {
-	rlweParams := crypto.NewRLWEParameters(config.BfvRing.Q, config.BfvRing.D, config.Beta, config.BfvRing.BaseRing)
+	rlweParams := crypto.NewRLWEParameters(config.Ring.Q, config.Ring.D, config.Beta, config.Ring.BaseRing)
 	aT := params.a.Coeffs().Neg().Diag().Hadamard(params.T)
 	wT := params.w.Coeffs().Diag().Hadamard(params.T)
 	h0 := aT.Copy().Neg().MulVec(u.Coeffs()).Add(wT.MulVec(s.Coeffs())).Add(e0.Copy().NTT().Coeffs())
@@ -53,12 +53,12 @@ func GenerateRelinKeyGenRelation(s, u, e0, e1, r *fastmath.Poly, k1 *fastmath.In
 	eqn2 := crypto.NewLinearEquation(h1, h1.Size()).
 		AppendDependentTerm(aT, 1).
 		AppendRLWEErrorDecompositionSum(e1, params.T, rlweParams)
-	eqn3 := crypto.NewPaddedAjtaiEquation(t, params.A1, params.A2, s.Coeffs(), r.Coeffs(), k1, params.p, config.BfvRing.Q, config.BfvRing.BaseRing)
+	eqn3 := crypto.NewPaddedAjtaiEquation(t, params.A1, params.A2, s.Coeffs(), r.Coeffs(), k1, params.p, config.Ring.Q, config.Ring.BaseRing)
 	eqn3.AddDependency(0, 1)
 
 	lrb := crypto.NewLinearRelationBuilder().
 		AppendEqn(eqn1).
 		AppendEqn(eqn2).
 		AppendEqn(eqn3)
-	return lrb.Build(config.BfvRing.BaseRing)
+	return lrb.Build(config.Ring.BaseRing)
 }

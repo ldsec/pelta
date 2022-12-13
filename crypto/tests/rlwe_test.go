@@ -8,7 +8,7 @@ import (
 )
 
 func TestRLWEP0(t *testing.T) {
-	config := crypto.GetDefaultConfig()
+	config := crypto.GetDefaultCryptoConfig()
 	// Create the RLWE problem variables.
 	p1 := fastmath.NewRandomPoly(config.UniformSampler, config.BaseRing)
 	s := fastmath.NewRandomTernaryPoly(config.BaseRing)
@@ -21,7 +21,7 @@ func TestRLWEP0(t *testing.T) {
 }
 
 func TestRLWEErrorDecomposition(t *testing.T) {
-	config := crypto.GetDefaultConfig()
+	config := crypto.GetDefaultCryptoConfig()
 	// Create a random error.
 	err := fastmath.NewRandomPoly(config.GaussianSampler, config.BaseRing)
 	rlweParams := crypto.NewRLWEParameters(config.Q, config.D, uint64(config.Beta()), config.BaseRing)
@@ -41,7 +41,7 @@ func TestRLWEErrorDecomposition(t *testing.T) {
 }
 
 func TestRLWEEquation(t *testing.T) {
-	config := crypto.GetDefaultConfig()
+	config := crypto.GetDefaultCryptoConfig()
 	// Create the RLWE problem variables.
 	p1 := fastmath.NewRandomPoly(config.UniformSampler, config.BaseRing)
 	s := fastmath.NewRandomTernaryPoly(config.BaseRing)

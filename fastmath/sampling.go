@@ -18,7 +18,9 @@ type AugmentedTernarySampler struct {
 }
 
 func (s *AugmentedTernarySampler) Read(pol *ring.Poly) {
+	// Read -1, 0, 1
 	s.ternarySampler.Read(pol)
+	// Convert into 0, 1, 2
 	s.baseRing.AddScalar(pol, 1, pol)
 }
 

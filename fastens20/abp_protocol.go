@@ -9,8 +9,10 @@ import (
 )
 
 func extendPublicParameters(params *PublicParams, tau int) {
-	b0Extension := fastmath.NewRandomPolyMatrix(params.config.Kappa, tau, params.config.UniformSampler, params.config.BaseRing).NTT()
+	// Extend B0 horizontally by tau.
+	b0Extension := fastmath.NewRandomPolyMatrix(params.B0.Rows(), tau, params.config.UniformSampler, params.config.BaseRing).NTT()
 	params.B0.ExtendCols(b0Extension)
+	// Extend b_i vertically by tau.
 	bExtension := fastmath.NewRandomPolyMatrix(tau, params.B.Cols(), params.config.UniformSampler, params.config.BaseRing).NTT()
 	params.B.ExtendRows(bExtension)
 }
@@ -20,18 +22,23 @@ func updateProtocol(p *ABPProver, v *ABPVerifier, ps *ABPProverState, vs *ABPVer
 	A := p.params.A
 	s := ps.S
 	u := p.params.U
+	// Create the new relation (A || 0, RA || Id)(s, y) = (u, z)
 	lrb := crypto.NewLinearRelationBuilder()
+	// As = u
 	lrb.AppendEqn(crypto.NewLinearEquation(u, A.Cols()).AppendTerm(A, s))
+	// RAs + y = z
 	lrb.AppendEqn(crypto.NewABPEquation(vs.ABPVerifierChal, A, 0, ps.ABPProverMask, ps.ABPMaskedOpening, p.params.config.BaseRing))
 	fmt.Println("building")
 	newRel := lrb.Build(p.params.config.BaseRing)
 	if !newRel.Verify() {
-		fmt.Println("invalid ABP embedding")
+		panic("invalid ABP embedding")
 	}
+	// Update the public parameters with the new relation.
 	p.params.A = newRel.A
 	v.params.A = newRel.A
 	v.params.U = newRel.U
 	p.params.U = newRel.U
+	// Update the configuration parameters.
 	p.params.config.M = newRel.A.Rows()
 	v.params.config.M = newRel.A.Rows()
 	p.params.config.TernaryLength = p.params.config.N
@@ -63,11 +70,13 @@ func NewABPProver(params PublicParams, tau int) ABPProver {
 func (p ABPProver) CommitToMessage(s *fastmath.IntVec) (*fastmath.PolyNTTVec, *fastmath.PolyNTTVec, *fastmath.PolyNTTMatrix, ABPProverState) {
 	abpMask := crypto.CreateABPMask(p.Tau, p.params.config.TernarySampler, p.params.config.BaseRing)
 	t0, t, w, ps := p.Prover.CommitToMessage(s)
+	// Append the new commitments t_i = b_i * r + y_i.
 	for i := 0; i < p.Tau; i++ {
 		t.Append(p.params.B.Row(p.params.config.NumSplits() + 1 + i).Dot(ps.R).Add(abpMask.Get(i)))
-		ps.SHat.Append(abpMask.Get(i))
 	}
 	ps.T = t
+	// Reperform sHat calculation.
+	ps.SHat = SplitInvNTT(s.Copy().Append(abpMask.ToIntVec()), p.params).NTT()
 	return t0, t, w, ABPProverState{ProverState: ps, ABPProverMask: abpMask}
 }
 
@@ -131,15 +140,14 @@ func (vf ABPVerifier) CreateChallenge(t *fastmath.PolyNTTVec, h, v *fastmath.Pol
 func (vf ABPVerifier) Verify(z *fastmath.PolyNTTMatrix, state ABPVerifierState) bool {
 	res := vf.Verifier.Verify(z, state.VerifierState)
 	if !res {
-		fmt.Println("verifier original failed")
-		return false
+		fmt.Println("ABP verifier original failed")
 	}
 	bound := big.NewInt(0).Sqrt(
 		big.NewInt(0).Div(
 			vf.params.config.Q,
 			big.NewInt(int64(2*vf.params.U.Size())))).Uint64() / 2
 	if state.ABPMaskedOpening.Copy().InvNTT().InfNorm() >= bound {
-		fmt.Println("verifier failed ABP check")
+		fmt.Println("ABP verifier failed infinity norm check")
 		return false
 	}
 	return true

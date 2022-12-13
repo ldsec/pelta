@@ -7,6 +7,7 @@ import (
 	"github.com/tuneinsight/lattigo/v4/ring"
 )
 
+// CreateABPChallenge returns a random ternary polynomial matrix with dimensions tau x m.
 func CreateABPChallenge(tau, m int, ternarySampler fastmath.PolySampler, baseRing *ring.Ring) *fastmath.PolyNTTMatrix {
 	// Create R^T of m x (tau * d)
 	RT := fastmath.NewRandomPolyMatrix(m, tau, ternarySampler, baseRing)
@@ -21,6 +22,7 @@ func CreateABPChallenge(tau, m int, ternarySampler fastmath.PolySampler, baseRin
 	return RTNTT
 }
 
+// CreateABPMask returns a random ternary vector of size tau.
 func CreateABPMask(tau int, ternarySampler fastmath.PolySampler, baseRing *ring.Ring) *fastmath.PolyNTTVec {
 	// Create y of (tau * d)
 	abpMask := fastmath.NewRandomPolyVec(tau, ternarySampler, baseRing)
@@ -31,6 +33,7 @@ func CreateABPMask(tau int, ternarySampler fastmath.PolySampler, baseRing *ring.
 	return abpMaskNTT
 }
 
+// CreateABPMaskedOpening returns abpChal * u + abpMask
 func CreateABPMaskedOpening(abpChal *fastmath.PolyNTTMatrix, abpMask *fastmath.PolyNTTVec, u *fastmath.IntVec, baseRing *ring.Ring) *fastmath.PolyNTTVec {
 	// z = Ru + y
 	R := abpChal.ToIntMatrix().Transposed()
@@ -39,6 +42,7 @@ func CreateABPMaskedOpening(abpChal *fastmath.PolyNTTMatrix, abpMask *fastmath.P
 	return z.UnderlyingPolysAsPolyNTTVec()
 }
 
+// NewABPEquation creates an equation of form RAs + y = z with s dependent where abpChal: R, abpMask: y, abpMaskedOpening: z.
 func NewABPEquation(abpChal *fastmath.PolyNTTMatrix, A *fastmath.IntMatrix, sIndex int, abpMask, abpMaskedOpening *fastmath.PolyNTTVec, baseRing *ring.Ring) *LinearEquation {
 	fmt.Println("creating ABP equation (1)")
 	// Add the equation RAs + y = z

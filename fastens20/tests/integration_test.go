@@ -38,7 +38,7 @@ func TestConsistency(tst *testing.T) {
 	A := fastmath.NewRandomIntMatrix(m, n, bfvRing.Q, bfvRing.BaseRing)
 	s := fastmath.NewRandomTernaryIntVec(n, bfvRing.BaseRing)
 	rel := crypto.NewLinearRelation(A, s)
-	config := fastens20.DefaultConfig(bfvRing, rel)
+	config := fastens20.DefaultProtocolConfig(bfvRing, rel)
 	params := fastens20.GeneratePublicParameters(rel, config)
 	ACopy := params.A.Copy()
 	BCopy := params.B.Copy()
@@ -158,7 +158,7 @@ func TestSimple(t *testing.T) {
 	A := fastmath.NewRandomIntMatrix(m, n, bfvRing.Q, bfvRing.BaseRing)
 	s := fastmath.NewRandomTernaryIntVec(n, bfvRing.BaseRing)
 	rel := crypto.NewLinearRelation(A, s)
-	config := fastens20.DefaultConfig(bfvRing, rel)
+	config := fastens20.DefaultProtocolConfig(bfvRing, rel)
 	params := fastens20.GeneratePublicParameters(rel, config)
 	ExecuteAndTestCorrectness(t, s, params)
 }
@@ -170,7 +170,7 @@ func TestMultiReplication(t *testing.T) {
 	A := fastmath.NewRandomIntMatrix(m, n, bfvRing.Q, bfvRing.BaseRing)
 	s := fastmath.NewRandomTernaryIntVec(n, bfvRing.BaseRing)
 	rel := crypto.NewLinearRelation(A, s)
-	config := fastens20.DefaultConfig(bfvRing, rel).
+	config := fastens20.DefaultProtocolConfig(bfvRing, rel).
 		WithReplication(4)
 	params := fastens20.GeneratePublicParameters(rel, config)
 	ExecuteAndTestCorrectness(t, s, params)
@@ -183,7 +183,7 @@ func TestMultiSplit(t *testing.T) {
 	A := fastmath.NewRandomIntMatrix(m, n, bfvRing.Q, bfvRing.BaseRing)
 	s := fastmath.NewRandomTernaryIntVec(n, bfvRing.BaseRing)
 	rel := crypto.NewLinearRelation(A, s)
-	config := fastens20.DefaultConfig(bfvRing, rel)
+	config := fastens20.DefaultProtocolConfig(bfvRing, rel)
 	params := fastens20.GeneratePublicParameters(rel, config)
 	ExecuteAndTestCorrectness(t, s, params)
 }
@@ -195,7 +195,7 @@ func TestMultiSplitMultiReplication(t *testing.T) {
 	A := fastmath.NewRandomIntMatrix(m, n, bfvRing.Q, bfvRing.BaseRing)
 	s := fastmath.NewRandomTernaryIntVec(n, bfvRing.BaseRing)
 	rel := crypto.NewLinearRelation(A, s)
-	config := fastens20.DefaultConfig(bfvRing, rel).
+	config := fastens20.DefaultProtocolConfig(bfvRing, rel).
 		WithReplication(4)
 	params := fastens20.GeneratePublicParameters(rel, config)
 	ExecuteAndTestCorrectness(t, s, params)
@@ -208,7 +208,7 @@ func TestTernaryPrefix(t *testing.T) {
 	A := fastmath.NewRandomIntMatrix(m, n, bfvRing.Q, bfvRing.BaseRing)
 	s := fastmath.NewRandomTernaryIntVec(n, bfvRing.BaseRing)
 	rel := crypto.NewLinearRelation(A, s)
-	config := fastens20.DefaultConfig(bfvRing, rel).
+	config := fastens20.DefaultProtocolConfig(bfvRing, rel).
 		WithTernaryPrefix(n / 2)
 	params := fastens20.GeneratePublicParameters(rel, config)
 	ExecuteAndTestCorrectness(t, s, params)
@@ -221,7 +221,7 @@ func TestSimpleFull(t *testing.T) {
 	A := fastmath.NewRandomIntMatrix(m, n, bfvRing.Q, bfvRing.BaseRing)
 	s := fastmath.NewRandomTernaryIntVec(n, bfvRing.BaseRing)
 	rel := crypto.NewLinearRelation(A, s)
-	config := fastens20.DefaultConfig(bfvRing, rel)
+	config := fastens20.DefaultProtocolConfig(bfvRing, rel)
 	params := fastens20.GeneratePublicParameters(rel, config)
 	ExecuteAndTestCorrectness(t, s, params)
 }
@@ -233,7 +233,7 @@ func TestMultiSplitFull(t *testing.T) {
 	A := fastmath.NewRandomIntMatrix(m, n, bfvRing.Q, bfvRing.BaseRing)
 	s := fastmath.NewRandomTernaryIntVec(n, bfvRing.BaseRing)
 	rel := crypto.NewLinearRelation(A, s)
-	config := fastens20.DefaultConfig(bfvRing, rel)
+	config := fastens20.DefaultProtocolConfig(bfvRing, rel)
 	params := fastens20.GeneratePublicParameters(rel, config)
 	ExecuteAndTestCorrectness(t, s, params)
 }
@@ -249,7 +249,7 @@ func TestShortRing(t *testing.T) {
 	// Run the protocol over a smaller ring of degree 2^7.
 	commitmentRing := fastmath.ShortCommitmentRing(7)
 	rebasedRel := rel.Rebase(commitmentRing)
-	config := fastens20.DefaultConfig(commitmentRing, rebasedRel)
+	config := fastens20.DefaultProtocolConfig(commitmentRing, rebasedRel)
 	if config.NumSplits() != bfvRing.D/commitmentRing.D {
 		t.Errorf("num splits not correct")
 	}

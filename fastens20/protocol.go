@@ -9,8 +9,8 @@ import (
 	"github.com/tuneinsight/lattigo/v4/utils"
 )
 
-// Config contains the settings for the ENS20 protocol.
-type Config struct {
+// ProtocolConfig contains the settings for the ENS20 protocol.
+type ProtocolConfig struct {
 	RingParams      fastmath.RingParams
 	D               int
 	Q               *big.Int
@@ -27,18 +27,21 @@ type Config struct {
 	GaussianSampler fastmath.PolySampler
 }
 
-// DefaultConfig returns the default configuration for an ENS20 execution.
+// DefaultProtocolConfig returns the default configuration for an ENS20 execution.
 // `ringParams` denotes the ring over which `relation` is defined.
-func DefaultConfig(ringParams fastmath.RingParams, rel crypto.LinearRelation) Config {
+func DefaultProtocolConfig(ringParams fastmath.RingParams, rel crypto.LinearRelation) ProtocolConfig {
 	// Create the samplers.
 	prng, err := utils.NewPRNG()
 	if err != nil {
 		panic("could not initialize the prng: %s")
 	}
+	// Construct the augmented ternary sampler.
+	originalTernarySampler := ring.NewTernarySampler(prng, ringParams.BaseRing, 1.0/3.0, false)
+	ternarySampler := fastmath.NewAugmentedTernarySampler(originalTernarySampler, ringParams.BaseRing)
 	delta1 := 16
 	numRows := rel.A.Rows()
 	numCols := rel.A.Cols()
-	return Config{
+	return ProtocolConfig{
 		RingParams:      ringParams,
 		D:               ringParams.D,
 		Q:               ringParams.Q,
@@ -51,45 +54,45 @@ func DefaultConfig(ringParams fastmath.RingParams, rel crypto.LinearRelation) Co
 		TernaryLength:   numCols,
 		BaseRing:        ringParams.BaseRing,
 		UniformSampler:  ring.NewUniformSampler(prng, ringParams.BaseRing),
-		TernarySampler:  ring.NewTernarySampler(prng, ringParams.BaseRing, 1.0/3.0, false),
+		TernarySampler:  ternarySampler,
 		GaussianSampler: ring.NewGaussianSampler(prng, ringParams.BaseRing, ringParams.Sigma, delta1),
 	}
 }
 
-func (c Config) WithTernaryPrefix(ternaryLength int) Config {
+func (c ProtocolConfig) WithTernaryPrefix(ternaryLength int) ProtocolConfig {
 	c.TernaryLength = ternaryLength
 	return c
 }
 
-func (c Config) WithReplication(k int) Config {
+func (c ProtocolConfig) WithReplication(k int) ProtocolConfig {
 	c.K = k
 	return c
 }
 
-func (c Config) WithSecurityParameters(kappa, lambda int) Config {
+func (c ProtocolConfig) WithSecurityParameters(kappa, lambda int) ProtocolConfig {
 	c.Kappa = kappa
 	c.Lambda = lambda
 	return c
 }
 
 // NumSplits returns n/d
-func (c Config) NumSplits() int {
+func (c ProtocolConfig) NumSplits() int {
 	return c.N / c.D
 }
 
 // NumTernarySplits returns the number of splits that are in ternary.
-func (c Config) NumTernarySplits() int {
+func (c ProtocolConfig) NumTernarySplits() int {
 	return c.TernaryLength / c.D
 }
 
 // Beta returns the norm Gaussian limit.
-func (c Config) Beta() int {
+func (c ProtocolConfig) Beta() int {
 	return c.Delta1
 }
 
 // PublicParams contains the public parameters of the protocol.
 type PublicParams struct {
-	config Config
+	config ProtocolConfig
 	A      *fastmath.IntMatrix
 	U      *fastmath.IntVec
 	B0     *fastmath.PolyNTTMatrix
@@ -97,7 +100,7 @@ type PublicParams struct {
 	Sig    fastmath.Automorphism
 }
 
-func GeneratePublicParameters(rel crypto.LinearRelation, config Config) PublicParams {
+func GeneratePublicParameters(rel crypto.LinearRelation, config ProtocolConfig) PublicParams {
 	bSize := config.NumSplits() + 3
 	B0 := fastmath.NewRandomPolyMatrix(config.Kappa,
 		config.Lambda+config.Kappa+bSize,

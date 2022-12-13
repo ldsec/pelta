@@ -15,7 +15,7 @@ func TestABPSimple(t *testing.T) {
 	A := fastmath.NewRandomIntMatrix(m, n, bfvRing.Q, bfvRing.BaseRing)
 	s := fastmath.NewRandomTernaryIntVec(n, bfvRing.BaseRing)
 	rel := crypto.NewLinearRelation(A, s)
-	config := fastens20.DefaultConfig(bfvRing, rel)
+	config := fastens20.DefaultProtocolConfig(bfvRing, rel)
 	params := fastens20.GeneratePublicParameters(rel, config)
 	if !fastens20.ExecuteWithBoundProof(s, 2, params) {
 		t.Errorf("execution failed!")

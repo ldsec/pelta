@@ -17,7 +17,7 @@ func verifyRelation(t *testing.T, rel crypto.LinearRelation) {
 }
 
 func TestLinRelConstruction(t *testing.T) {
-	config := crypto.GetDefaultConfig()
+	config := crypto.GetDefaultCryptoConfig()
 	n := 200
 	m := 300
 	A := fastmath.NewRandomIntMatrix(m, n, config.Q, config.BaseRing)
@@ -42,7 +42,7 @@ func TestLinRelRebase(t *testing.T) {
 }
 
 func TestLinRelAppendIndependent(t *testing.T) {
-	config := crypto.GetDefaultConfig()
+	config := crypto.GetDefaultCryptoConfig()
 	n := 8
 	m := 16
 	// First relation: As = u
@@ -63,7 +63,7 @@ func TestLinRelAppendIndependent(t *testing.T) {
 }
 
 func TestLinRelExtend(t *testing.T) {
-	config := crypto.GetDefaultConfig()
+	config := crypto.GetDefaultCryptoConfig()
 	n := 8
 	m := 16
 	// First relation: As = u
@@ -85,7 +85,7 @@ func TestLinRelExtend(t *testing.T) {
 }
 
 func TestLinRelAppendDependentOnS(t *testing.T) {
-	config := crypto.GetDefaultConfig()
+	config := crypto.GetDefaultCryptoConfig()
 	n := 8
 	m := 16
 	// First relation: As = u

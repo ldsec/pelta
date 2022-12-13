@@ -23,7 +23,7 @@ type CollectiveBootstrappingParams struct {
 }
 
 func GenerateCollectiveBootstrappingRelation(s1, s2, s3, r, e0, e1, e2 *fastmath.Poly, k1, k2, k3 *fastmath.IntVec, params CollectiveBootstrappingParams, config GlobalConfig) crypto.LinearRelation {
-	rlweParams := crypto.NewRLWEParameters(config.BfvRing.Q, config.BfvRing.D, config.Beta, config.BfvRing.BaseRing)
+	rlweParams := crypto.NewRLWEParameters(config.Ring.Q, config.Ring.D, config.Beta, config.Ring.BaseRing)
 	c1T := params.c1.Diag().Hadamard(params.T)
 	negaT := params.a.Diag().Hadamard(params.T).Neg()
 	M := params.A4.MulVec(s2.Copy().NTT().Coeffs()).Add(e2.Copy().NTT().Coeffs()).Add(k3.Copy().Scale(params.qPt.Uint64()).Neg())
@@ -35,26 +35,26 @@ func GenerateCollectiveBootstrappingRelation(s1, s2, s3, r, e0, e1, e2 *fastmath
 	eqn1 := crypto.NewLinearEquation(h0, h0.Size()).
 		AppendTerm(c1T, s1.Coeffs()).
 		AppendTerm(params.D, M.Copy().Neg()).
-		AppendVecTerm(e0.Coeffs(), config.BfvRing.BaseRing)
+		AppendVecTerm(e0.Coeffs(), config.Ring.BaseRing)
 	eqn2 := crypto.NewLinearEquation(h1, h1.Size()).
 		AppendDependentTerm(negaT.Copy(), 0).
-		AppendDependentVecTerm(1, config.BfvRing.BaseRing).
+		AppendDependentVecTerm(1, config.Ring.BaseRing).
 		AppendRLWEErrorDecompositionSum(e1, params.T, rlweParams)
-	eqn3 := crypto.NewPaddedAjtaiEquation(t, params.A1, params.A2, s1.Coeffs(), r.Coeffs(), k1, params.p, config.BfvRing.Q, config.BfvRing.BaseRing)
+	eqn3 := crypto.NewPaddedAjtaiEquation(t, params.A1, params.A2, s1.Coeffs(), r.Coeffs(), k1, params.p, config.Ring.Q, config.Ring.BaseRing)
 	eqn3.AddDependency(0, 0)
 	eqn4 := crypto.NewLinearEquation(e0.Coeffs(), e0.Coeffs().Size()).
 		AppendTerm(params.A3.Copy().Hadamard(params.T), s2.Coeffs()).
 		AppendRLWEErrorDecompositionSum(e1, params.T, rlweParams).
-		AppendVecTerm(k2.Copy().Scale(params.qSmdg.Uint64()), config.BfvRing.BaseRing)
+		AppendVecTerm(k2.Copy().Scale(params.qSmdg.Uint64()), config.Ring.BaseRing)
 	eqn5 := crypto.NewLinearEquation(M, M.Size()).
 		AppendTerm(params.A4.Copy().Hadamard(params.T), s3.Coeffs()).
 		AppendRLWEErrorDecompositionSum(e2, params.T, rlweParams).
-		AppendVecTerm(k3.Copy().Scale(params.qPt.Uint64()), config.BfvRing.BaseRing)
+		AppendVecTerm(k3.Copy().Scale(params.qPt.Uint64()), config.Ring.BaseRing)
 	lrb := crypto.NewLinearRelationBuilder().
 		AppendEqn(eqn1).
 		AppendEqn(eqn2).
 		AppendEqn(eqn3).
 		AppendEqn(eqn4).
 		AppendEqn(eqn5)
-	return lrb.Build(config.BfvRing.BaseRing)
+	return lrb.Build(config.Ring.BaseRing)
 }
