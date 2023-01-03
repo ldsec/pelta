@@ -24,7 +24,7 @@ type CryptoConfig struct {
 func GetDefaultCryptoConfig() CryptoConfig {
 	// Initialize the ring parameters.
 	defaultRing := fastmath.BFVZeroLevelRing()
-	delta1 := 16
+	delta1 := 19
 	// Create the samplers.
 	prng, err := utils.NewPRNG()
 	if err != nil {

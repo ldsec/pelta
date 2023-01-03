@@ -214,7 +214,7 @@ func TestTernaryPrefix(t *testing.T) {
 	ExecuteAndTestCorrectness(t, s, params)
 }
 
-func TestSimpleFull(t *testing.T) {
+func TestManyRows(t *testing.T) {
 	bfvRing := fastmath.BFVZeroLevelRing()
 	m := bfvRing.D
 	n := bfvRing.D
@@ -238,16 +238,28 @@ func TestMultiSplitFull(t *testing.T) {
 	ExecuteAndTestCorrectness(t, s, params)
 }
 
-func TestShortRing(t *testing.T) {
+func TestAllLevels(t *testing.T) {
+	bfvRing := fastmath.BFVFullRing()
+	m := 16
+	n := bfvRing.D
+	A := fastmath.NewRandomIntMatrix(m, n, bfvRing.Q, bfvRing.BaseRing)
+	s := fastmath.NewRandomTernaryIntVec(n, bfvRing.BaseRing)
+	rel := crypto.NewLinearRelation(A, s)
+	config := fastens20.DefaultProtocolConfig(bfvRing, rel)
+	params := fastens20.GeneratePublicParameters(rel, config)
+	ExecuteAndTestCorrectness(t, s, params)
+}
+
+func TestAllLevelsShortRing(t *testing.T) {
 	// Create the linear relation on the BFV ring.
-	bfvRing := fastmath.BFVZeroLevelRing()
+	bfvRing := fastmath.BFVFullRing()
 	m := bfvRing.D
 	n := bfvRing.D
 	A := fastmath.NewRandomIntMatrix(m, n, bfvRing.Q, bfvRing.BaseRing)
 	s := fastmath.NewRandomTernaryIntVec(n, bfvRing.BaseRing)
 	rel := crypto.NewLinearRelation(A, s)
 	// Run the protocol over a smaller ring of degree 2^7.
-	commitmentRing := fastmath.ShortCommitmentRing(7)
+	commitmentRing := fastmath.BFVFullShortCommtRing(7)
 	rebasedRel := rel.Rebase(commitmentRing)
 	config := fastens20.DefaultProtocolConfig(commitmentRing, rebasedRel)
 	if config.NumSplits() != bfvRing.D/commitmentRing.D {
@@ -255,4 +267,76 @@ func TestShortRing(t *testing.T) {
 	}
 	params := fastens20.GeneratePublicParameters(rebasedRel, config)
 	ExecuteAndTestCorrectness(t, rebasedRel.S, params)
+}
+
+func TestPerformanceSimple(tst *testing.T) {
+	bfvRing := fastmath.BFVFullRing()
+	m := bfvRing.D
+	n := bfvRing.D
+	A := fastmath.NewRandomIntMatrix(m, n, bfvRing.Q, bfvRing.BaseRing)
+	s := fastmath.NewRandomTernaryIntVec(n, bfvRing.BaseRing)
+	rel := crypto.NewLinearRelation(A, s)
+	config := fastens20.DefaultProtocolConfig(bfvRing, rel)
+	params := fastens20.GeneratePublicParameters(rel, config)
+	prover := fastens20.NewProver(params)
+	verifier := fastens20.NewVerifier(params)
+	// Commit to the message.
+	var t0, t *fastmath.PolyNTTVec
+	var w *fastmath.PolyNTTMatrix
+	var ps fastens20.ProverState
+	{
+		start_t := time.Now()
+		t0, t, w, ps = prover.CommitToMessage(s)
+		end_t := time.Now()
+		delta_t := end_t.Sub(start_t)
+		tst.Logf("Prover.CommitToMessage execution took %dms", delta_t.Milliseconds())
+	}
+	var alpha *fastmath.PolyNTTVec
+	var gamma *fastmath.IntMatrix
+	var vs fastens20.VerifierState
+	{
+		start_t := time.Now()
+		alpha, gamma, vs = verifier.CreateMasks(t0, t, w)
+		end_t := time.Now()
+		delta_t := end_t.Sub(start_t)
+		tst.Logf("Verifier.CreateMasks execution took %dms", delta_t.Milliseconds())
+	}
+	var h, v *fastmath.PolyNTT
+	var vp *fastmath.PolyNTTVec
+	{
+		start_t := time.Now()
+		t, h, v, vp, ps = prover.CommitToRelation(alpha, gamma, ps)
+		end_t := time.Now()
+		delta_t := end_t.Sub(start_t)
+		tst.Logf("Prover.CommitToRelation execution took %dms", delta_t.Milliseconds())
+	}
+	var c *fastmath.Poly
+	{
+		start_t := time.Now()
+		c, vs = verifier.CreateChallenge(t, h, v, vp, vs)
+		end_t := time.Now()
+		delta_t := end_t.Sub(start_t)
+		tst.Logf("Verifier.CreateChallenge execution took %dms", delta_t.Milliseconds())
+	}
+	var z *fastmath.PolyNTTMatrix
+	{
+		var err error
+		start_t := time.Now()
+		z, ps, err = prover.MaskedOpening(c, ps)
+		for err != nil {
+			z, ps, err = prover.MaskedOpening(c, ps)
+		}
+		end_t := time.Now()
+		delta_t := end_t.Sub(start_t)
+		tst.Logf("Prover.MaskedOpening execution took %dms", delta_t.Milliseconds())
+	}
+	{
+		start_t := time.Now()
+		if !verifier.Verify(z, vs) {
+			tst.Logf("verification failed")
+		}
+		end_t := time.Now()
+		delta_t := end_t.Sub(start_t)
+		tst.Logf("Verifier.Verify execution took %dms", delta_t.Milliseconds())
+	}
 }

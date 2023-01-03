@@ -1,6 +1,7 @@
 package relations
 
 import (
+	"fmt"
 	"math/big"
 
 	"github.com/ldsec/codeBase/commitment/crypto"
@@ -8,23 +9,23 @@ import (
 )
 
 type KeyGenPublicParams struct {
-	p1 *fastmath.Poly
+	P1 *fastmath.Poly
 	A1 *fastmath.IntMatrix
 	A2 *fastmath.IntMatrix
 	T  *fastmath.IntMatrix // NTT transform
-	b  *fastmath.IntVec    // ternary basis
-	p  *big.Int
+	P  *big.Int
 }
 
-func GenerateKeyGenRelation(s, r, err *fastmath.Poly, k *fastmath.IntVec, params KeyGenPublicParams, config GlobalConfig) crypto.LinearRelation {
+func GenerateKeyGenRelation(s, r, e *fastmath.Poly, k *fastmath.IntVec, params KeyGenPublicParams, config GlobalConfig) crypto.LinearRelation {
 	rlweParams := crypto.NewRLWEParameters(config.Ring.Q, config.Ring.D, config.Beta, config.Ring.BaseRing)
-	_, comP := crypto.GetAjtaiCommitments(params.A1, params.A2, s.Coeffs(), r.Coeffs(), params.p)
-	ajtaiEqn := crypto.NewPaddedAjtaiEquation(comP, params.A1, params.A2, s.Coeffs(), r.Coeffs(), k, params.p, config.Ring.Q, config.Ring.BaseRing)
+	_, comP := crypto.GetAjtaiCommitments(params.A1, params.A2, s.Coeffs(), r.Coeffs(), params.P)
+	ajtaiEqn := crypto.NewPaddedAjtaiEquation(comP, params.A1, params.A2, s.Coeffs(), r.Coeffs(), k, params.P, config.Ring.Q, config.Ring.BaseRing)
 	ajtaiEqn.AddDependency(0, 0)
 	lrb := crypto.NewLinearRelationBuilder()
-	p0 := crypto.GetRLWEP0(params.p1, s, err)
-	lrb.AppendEqn(crypto.NewIndependentRLWE(p0, params.p1, s, err, params.T, rlweParams))
+	p0 := crypto.GetRLWEP0(params.P1, s, e)
+	lrb.AppendEqn(crypto.NewIndependentRLWE(p0, params.P1, s, e, params.T, rlweParams))
 	lrb.AppendEqn(ajtaiEqn)
+	fmt.Println(lrb.SizesString())
 	return lrb.Build(config.Ring.BaseRing)
 }
 

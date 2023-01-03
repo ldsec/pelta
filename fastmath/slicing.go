@@ -6,15 +6,26 @@ type Slice struct {
 	end   int
 }
 
-func (p *Poly) Slice(s Slice) *Poly {
-	return p
+func NewSlice(start, end int) Slice {
+	return Slice{start, end}
+}
 
+func (s Slice) Size() int {
+	return s.end - s.start
+}
+
+func (p *Poly) Slice(s Slice) *Poly {
+	panic("not implemented")
 }
 
 func (v *IntVec) Slice(s Slice) *IntVec {
-	return v
+	sliced := NewIntVec(s.Size(), v.baseRing)
+	for i := s.start; i < s.end; i++ {
+		sliced.Set(i-s.start, v.Get(i))
+	}
+	return sliced
 }
 
 func (v *PolyVec) Slice(s Slice) *PolyVec {
-	return v
+	panic("not implemented")
 }

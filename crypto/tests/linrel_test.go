@@ -27,8 +27,8 @@ func TestLinRelConstruction(t *testing.T) {
 }
 
 func TestLinRelRebase(t *testing.T) {
-	largeRing := fastmath.ShortCommitmentRing(8)
-	smallRing := fastmath.ShortCommitmentRing(4)
+	largeRing := fastmath.BFVZeroLevelShortCommtRing(8)
+	smallRing := fastmath.BFVZeroLevelShortCommtRing(4)
 	n := largeRing.D
 	m := largeRing.D
 	A := fastmath.NewRandomIntMatrix(m, n, largeRing.Q, largeRing.BaseRing)

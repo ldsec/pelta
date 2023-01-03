@@ -120,6 +120,20 @@ func (eqn *LinearEquation) Linearize() LinearRelation {
 	return linRel
 }
 
+func (eqn *LinearEquation) SizesString() string {
+	termStrs := make([]string, 0)
+	for _, term := range eqn.rhs {
+		var s string
+		if term.dependent {
+			s = fmt.Sprintf("A[%dx%d]b[dep=%d]", term.A.Rows(), term.A.Cols(), term.depVecIndex)
+		} else {
+			s = fmt.Sprintf("A[%dx%d]b[%d]", term.A.Rows(), term.A.Cols(), term.b.Size())
+		}
+		termStrs = append(termStrs, s)
+	}
+	return fmt.Sprintf("[%d] = %s", eqn.lhs.Size(), strings.Join(termStrs, " + "))
+}
+
 // String returns a string representation of this equation.
 // TODO: fix
 func (eqn *LinearEquation) String() string {
@@ -177,6 +191,7 @@ func NewLinearRelationBuilder() *LinearRelationBuilder {
 
 // AppendEqn appends a new equation to this builder.
 func (lrb *LinearRelationBuilder) AppendEqn(eqn *LinearEquation) *LinearRelationBuilder {
+	fmt.Println("lrb: appending an equation")
 	lrb.eqns = append(lrb.eqns, eqn)
 	return lrb
 }
@@ -206,6 +221,7 @@ func getZeroPad(i, j int, eqns []*LinearEquation, baseRing *ring.Ring) *fastmath
 
 // Build constructs the linear relation of the form As = u from the appended equations.
 func (lrb *LinearRelationBuilder) Build(baseRing *ring.Ring) LinearRelation {
+	fmt.Println("lrb: building...")
 	if len(lrb.eqns) == 0 {
 		panic("cannot build a linear relation without any equations")
 	}
@@ -227,6 +243,7 @@ func (lrb *LinearRelationBuilder) Build(baseRing *ring.Ring) LinearRelation {
 			for _, t := range eqn.GetIndependentTerms() {
 				preB = append(preB, t.A)
 			}
+			fmt.Printf("lrb (%d): created B instruction of size %d\n", i, len(preB))
 			// Iteratively build up the new row in the matrix.
 			var B *fastmath.IntMatrix
 			if preB[0] == nil {
@@ -235,6 +252,7 @@ func (lrb *LinearRelationBuilder) Build(baseRing *ring.Ring) LinearRelation {
 				B = preB[0]
 			}
 			for j, m := range preB[1:] {
+				fmt.Printf("lrb (%d): handling term %d/%d\n", i, j+2, len(preB))
 				if m == nil {
 					B.ExtendCols(getZeroPad(i+1, j+1, lrb.eqns, baseRing))
 				} else {
@@ -260,6 +278,16 @@ func (lrb *LinearRelationBuilder) String() string {
 	strs := make([]string, 0, len(lrb.eqns))
 	for i, eqn := range lrb.eqns {
 		strs = append(strs, fmt.Sprintf("Eqn %d:\n%s", i, eqn.String()))
+	}
+	return strings.Join(strs, "\n")
+}
+
+// String returns a string representation this LRB, i.e., a listing of all the appended
+// equations up to now.
+func (lrb *LinearRelationBuilder) SizesString() string {
+	strs := make([]string, 0, len(lrb.eqns))
+	for i, eqn := range lrb.eqns {
+		strs = append(strs, fmt.Sprintf("Eqn %d: %s", i, eqn.SizesString()))
 	}
 	return strings.Join(strs, "\n")
 }

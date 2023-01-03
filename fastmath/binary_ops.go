@@ -88,7 +88,7 @@ func (v *IntVec) Dot(r *IntVec) uint64 {
 		b := r.polys[i]
 		v.baseRing.MulCoeffsAndAdd(a.ref, b.ref, preSum.ref)
 	}
-	return preSum.SumCoeffsLimited(0, v.size, v.mod)
+	return preSum.SumCoeffs(0, v.mod.Uint64())
 }
 
 func (v *PolyNTTVec) Dot(r *PolyNTTVec) *PolyNTT {
@@ -134,7 +134,8 @@ func (p *Poly) EqLevel(level int, q *Poly) bool {
 
 // Eq checks whether these two polynomials are equal.
 func (p *PolyNTT) Eq(q *PolyNTT) bool {
-	return p.actual.baseRing.EqualLvl(0, p.actual.ref, q.actual.ref)
+	// return p.actual.baseRing.EqualLvl(0, p.actual.ref, q.actual.ref)
+	return p.actual.baseRing.Equal(p.actual.ref, p.actual.ref)
 }
 
 // Eq checks the equality between two integer vectors.
@@ -209,9 +210,10 @@ func (m *IntMatrix) MulVec(v *IntVec) *IntVec {
 	}
 	out := NewIntVec(m.Rows(), m.baseRing)
 	dotResult := NewPoly(m.baseRing)
+	modUint := m.mod.Uint64()
 	for i, row := range m.rows {
 		row.MulAddElems(v, dotResult)
-		out.Set(i, dotResult.SumCoeffsLimited(0, row.Size(), m.mod))
+		out.Set(i, dotResult.SumCoeffs(0, modUint))
 		dotResult.ref.Zero()
 	}
 	return out

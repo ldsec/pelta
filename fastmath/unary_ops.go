@@ -151,8 +151,8 @@ func (v *IntVec) Reduce(mod *big.Int) *IntVec {
 	return v
 }
 
-// SumCoeffs returns the sum of the coefficients of this polynomial.
-func (p *Poly) SumCoeffs(level int) uint64 {
+// SumCoeffsAllLevels returns the sum of the coefficients of this polynomial.
+func (p *Poly) SumCoeffsAllLevels(level int) uint64 {
 	logN := int(math.Log2(float64(p.baseRing.N)))
 	tmp := p.Copy()
 	tmp2 := NewPoly(p.baseRing)
@@ -163,16 +163,13 @@ func (p *Poly) SumCoeffs(level int) uint64 {
 	return tmp.ref.Coeffs[level][0]
 }
 
-// SumCoeffsLimited returns the sum of the first `limit` coefficients of this polynomial.
-func (p *Poly) SumCoeffsLimited(level, limit int, mod *big.Int) uint64 {
-	if limit >= p.N() {
-		return p.SumCoeffs(level)
+// SumCoeffs returns the sum of the coefficients of this polynomial.
+func (p *Poly) SumCoeffs(level int, mod uint64) uint64 {
+	out := uint64(0)
+	for _, c := range p.ref.Coeffs[level] {
+		c += out
 	}
-	out := big.NewInt(0)
-	for i := 0; i < limit; i++ {
-		out.Add(out, big.NewInt(int64(p.Get(i, level)))).Mod(out, mod)
-	}
-	return out.Uint64()
+	return out % mod
 }
 
 // Sum sums the elements of this vector.

@@ -31,6 +31,7 @@ func LoadNTTTransform(name string, q *big.Int, logN int, baseRing *ring.Ring) *I
 
 // GenerateNTTTransform computes and returns the integer NTT transformation matrix for the given base ring.
 func GenerateNTTTransform(q *big.Int, logN int, baseRing *ring.Ring) *IntMatrix {
+	fmt.Printf("generating NTT transform... this may take a while")
 	qUint := q.Uint64()
 	w := ring.InvMForm(baseRing.NttPsi[0][baseRing.N>>1], qUint, baseRing.MredParams[0])
 	mask := uint64(2*baseRing.N - 1)

@@ -21,7 +21,7 @@ func TestPolySumCoeffs(t *testing.T) {
 	for i := 0; i < 5; i++ {
 		v.Set(i, uint64(i+1))
 	}
-	actual := v.SumCoeffs(0)
+	actual := v.SumCoeffsAllLevels(0)
 	expected := uint64(1 + 2 + 3 + 4 + 5)
 	if actual != expected {
 		t.Errorf("actual=%d, expected=%d", actual, expected)
@@ -29,7 +29,7 @@ func TestPolySumCoeffs(t *testing.T) {
 }
 
 func TestIntVecRebaseLossless(t *testing.T) {
-	largeRing := fastmath.ShortCommitmentRing(8)
+	largeRing := fastmath.BFVZeroLevelShortCommtRing(8)
 	v := fastmath.NewIntVec(largeRing.D, largeRing.BaseRing)
 	for i := 0; i < v.Size(); i++ {
 		v.Set(i, uint64(i+1))
@@ -42,7 +42,7 @@ func TestIntVecRebaseLossless(t *testing.T) {
 	if v.Size() != 256 {
 		t.Errorf("actual=%d, expected=%d", v.Size(), 256)
 	}
-	v.RebaseLossless(fastmath.ShortCommitmentRing(4), 0)
+	v.RebaseLossless(fastmath.BFVZeroLevelShortCommtRing(4), 0)
 	// After rebase.
 	if len(v.UnderlyingPolys()) != 16 {
 		t.Errorf("actual=%d, expected=%d", len(v.UnderlyingPolys()), 16)
@@ -178,7 +178,7 @@ func TestIntMatrixMulMat(t *testing.T) {
 }
 
 func TestIntMatrixRebaseRowsLossless(t *testing.T) {
-	largeRing := fastmath.ShortCommitmentRing(8)
+	largeRing := fastmath.BFVZeroLevelShortCommtRing(8)
 	m := fastmath.NewIntMatrix(largeRing.D, largeRing.D, largeRing.BaseRing)
 	for i := 0; i < m.Rows(); i++ {
 		for j := 0; j < m.Cols(); j++ {
@@ -195,7 +195,7 @@ func TestIntMatrixRebaseRowsLossless(t *testing.T) {
 			t.Errorf("actual=%d, expected=%d", v.Size(), 256)
 		}
 	}
-	m.RebaseRowsLossless(fastmath.ShortCommitmentRing(4), 0)
+	m.RebaseRowsLossless(fastmath.BFVZeroLevelShortCommtRing(4), 0)
 	// After rebase.
 	for _, v := range m.RowsView() {
 		if len(v.UnderlyingPolys()) != 16 {

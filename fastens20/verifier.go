@@ -57,6 +57,7 @@ func (vf Verifier) Verify(z *fastmath.PolyNTTMatrix, state VerifierState) bool {
 		func(i int, zi *fastmath.PolyNTTVec) bool {
 			perm := state.c.Permute(int64(i), vf.params.Sig).NTT()
 			rhs := state.W.Row(i).Copy().Add(state.T0.Copy().MulAll(perm))
+			// TODO masked opening bound check (need a good delta1 parameter)
 			//sizeCheck := zi.Copy().AsVec().NewPolyVec().L2Norm(vf.settings.Q) < vf.settings.Beta
 			return vf.params.B0.MulVec(zi).Eq(rhs) //&& sizeCheck
 		})
@@ -73,6 +74,7 @@ func (vf Verifier) Verify(z *fastmath.PolyNTTMatrix, state VerifierState) bool {
 		}
 	}
 	if !hTestResult {
+		fmt.Println(state.h.String())
 		fmt.Println("verifier failed zero-coefficient check")
 		return false
 	}
@@ -114,15 +116,13 @@ func (vf Verifier) Verify(z *fastmath.PolyNTTMatrix, state VerifierState) bool {
 		return false
 	}
 	// Reconstruct psi
-	At := vf.params.A.Transposed()
 	psi := fastmath.NewPolyMatrix(vf.params.config.K, vf.params.config.NumSplits(), vf.params.config.BaseRing).NTT()
 	psi.PopulateRows(func(mu int) *fastmath.PolyNTTVec {
-		tmp := At.MulVec(state.Gamma.RowView(mu))
+		tmp := vf.params.At.MulVec(state.Gamma.RowView(mu))
 		return SplitInvNTT(tmp, vf.params).NTT()
 	})
 	// Reconstruct the commitment to f
-	invk := big.NewInt(0).ModInverse(big.NewInt(int64(vf.params.config.K)), vf.params.config.Q).Uint64()
-	tao := LmuSum(vf.params.config.K, invk,
+	tao := LmuSum(vf.params.config.K, vf.params.config.InvK,
 		func(mu int, v int) *fastmath.PolyNTT {
 			// (u * gamma_mu)
 			mul := vf.params.U.Dot(state.Gamma.RowView(mu))
@@ -141,7 +141,7 @@ func (vf Verifier) Verify(z *fastmath.PolyNTTMatrix, state VerifierState) bool {
 	functionCommitmentTest.Populate(func(i int) *fastmath.PolyNTT {
 		// (b[n/d + 1] * z[i])
 		add := vf.params.B.Row(vf.params.config.NumSplits()).Dot(z.Row(i))
-		outerSum := LmuSumOuter(vf.params.config.K, vf.params.config.NumSplits(), invk,
+		outerSum := LmuSumOuter(vf.params.config.K, vf.params.config.NumSplits(), vf.params.config.InvK,
 			func(mu int, v int, j int) *fastmath.PolyNTT {
 				index := big.NewInt(0).
 					Mod(big.NewInt(int64(i-v)),

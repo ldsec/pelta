@@ -23,7 +23,8 @@ func NewLinearRelationWithLHS(A *fastmath.IntMatrix, s, u *fastmath.IntVec) Line
 	return LinearRelation{A, s, u}
 }
 
-func (r LinearRelation) Rebase(newRing fastmath.RingParams) LinearRelation {
+// Rebase rebases A, s, u on the new given ring.
+func (r *LinearRelation) Rebase(newRing fastmath.RingParams) LinearRelation {
 	return LinearRelation{
 		A: r.A.Copy().RebaseRowsLossless(newRing, 0),
 		S: r.S.Copy().RebaseLossless(newRing, 0),
@@ -116,7 +117,7 @@ func (r *LinearRelation) SizesString() string {
 	return fmt.Sprintf("A[%dx%d] s[%d] = u[%d]", r.A.Rows(), r.A.Cols(), r.S.Size(), r.U.Size())
 }
 
-// Verify returns true iff As = u holds.
-func (r *LinearRelation) Verify() bool {
+// IsValid returns true iff As = u holds.
+func (r *LinearRelation) IsValid() bool {
 	return r.A.MulVec(r.S).Eq(r.U)
 }

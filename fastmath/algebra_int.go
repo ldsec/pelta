@@ -178,6 +178,15 @@ func (v *IntVec) RebaseLossless(newRing RingParams, level int) *IntVec {
 	return v
 }
 
+func (v *IntVec) All(pred func(el uint64) bool) bool {
+	for i := 0; i < v.Size(); i++ {
+		if !pred(v.Get(i)) {
+			return false
+		}
+	}
+	return true
+}
+
 // BaseRing returns the polynomial ring over which this integer vector is defined.
 func (v *IntVec) BaseRing() *ring.Ring {
 	return v.baseRing
@@ -296,7 +305,7 @@ func (m *IntMatrix) AppendRow(v *IntVec) {
 // ExtendRows concatenates the matrices vertically.
 func (m *IntMatrix) ExtendRows(b *IntMatrix) *IntMatrix {
 	if m.Cols() != b.Cols() {
-		panic("IntMatrix.ExtendRows cannot extend, invalid size")
+		panic("IntMatrix.ExtendRows cannot extend, invalid col size")
 	}
 	m.rows = append(m.rows, b.rows...)
 	m.numRows += b.Rows()
@@ -306,7 +315,7 @@ func (m *IntMatrix) ExtendRows(b *IntMatrix) *IntMatrix {
 // ExtendCols concatenates the matrices horizontally.
 func (m *IntMatrix) ExtendCols(b *IntMatrix) *IntMatrix {
 	if m.Rows() != b.Rows() {
-		panic("IntMatrix.ExtendCols cannot extend, invalid size")
+		panic("IntMatrix.ExtendCols cannot extend, invalid row size")
 	}
 	for i := 0; i < m.Rows(); i++ {
 		m.rows[i].Append(b.RowView(i))
@@ -348,6 +357,12 @@ func (m *IntMatrix) String() string {
 		s += "\t" + row.String() + "\n"
 	}
 	return s + ", ...}"
+}
+
+// SizeString returns a string representation of the matrix's dimensions.
+func (m *IntMatrix) SizeString() string {
+	s := fmt.Sprintf("IntMatrix[%d,%d]\n", m.Rows(), m.Cols())
+	return s
 }
 
 // RebaseRowsLossless rebases each row.

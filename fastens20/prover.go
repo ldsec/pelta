@@ -98,24 +98,24 @@ func (p Prover) CommitToRelation(alpha *fastmath.PolyNTTVec, gamma *fastmath.Int
 			return by.Pow(3, p.params.config.Q.Uint64())
 		}, p.params)
 	// t[n/d+2]
-	state.T.Append(p.params.B.Row(p.params.config.NumSplits() + 1).
-		Dot(state.R).
-		Add(p.params.B.Row(p.params.config.NumSplits() + 2).
-			Dot(state.Y.Row(0))).
-		Add(sum1.Neg()))
+	state.T.Append(
+		p.params.B.Row(p.params.config.NumSplits() + 1).
+			Dot(state.R).
+			Add(p.params.B.Row(p.params.config.NumSplits() + 2).
+				Dot(state.Y.Row(0))).
+			Add(sum1.Neg()))
 	// t[n/d+3]
-	state.T.Append(p.params.B.Row(p.params.config.NumSplits() + 2).
-		Dot(state.R).
-		Add(sum2))
+	state.T.Append(
+		p.params.B.Row(p.params.config.NumSplits() + 2).
+			Dot(state.R).
+			Add(sum2))
 	v := p.params.B.Row(p.params.config.NumSplits() + 1).Dot(state.Y.Row(0)).Add(sum3)
-	At := p.params.A.Transposed()
 	psi := fastmath.NewPolyMatrix(p.params.config.K, p.params.config.NumSplits(), p.params.config.BaseRing).NTT()
 	psi.PopulateRows(func(mu int) *fastmath.PolyNTTVec {
-		tmp := At.MulVec(gamma.RowView(mu))
+		tmp := p.params.At.MulVec(gamma.RowView(mu))
 		return SplitInvNTT(tmp, p.params).NTT()
 	})
-	invK := big.NewInt(0).ModInverse(big.NewInt(int64(p.params.config.K)), p.params.config.Q).Uint64()
-	gMask := LmuSum(p.params.config.K, invK,
+	gMask := LmuSum(p.params.config.K, p.params.config.InvK,
 		func(mu int, v int) *fastmath.PolyNTT {
 			presum := fastmath.NewPolyVec(p.params.config.NumSplits(), p.params.config.BaseRing).NTT()
 			presum.Populate(func(j int) *fastmath.PolyNTT {
@@ -132,7 +132,7 @@ func (p Prover) CommitToRelation(alpha *fastmath.PolyNTTVec, gamma *fastmath.Int
 	vp.Populate(func(i int) *fastmath.PolyNTT {
 		// b[n/d + 1] * y[i]
 		add := p.params.B.Row(p.params.config.NumSplits()).Dot(state.Y.Row(i))
-		outerSum := LmuSumOuter(p.params.config.K, p.params.config.NumSplits(), invK,
+		outerSum := LmuSumOuter(p.params.config.K, p.params.config.NumSplits(), p.params.config.InvK,
 			func(mu int, v int, j int) *fastmath.PolyNTT {
 				index := big.NewInt(0).
 					Mod(big.NewInt(int64(i-v)),
@@ -163,6 +163,7 @@ func (p Prover) MaskedOpening(c *fastmath.Poly, state ProverState) (*fastmath.Po
 		tmp := state.R.Copy().MulAll(sigc)
 		return tmp.Add(state.Y.Row(i))
 	})
+	// TODO add rejection sampling
 	//normInBounds := z.AllRows(
 	//	func(zi math.Vector, i int) bool {
 	//		infNorm := zi.NewPolyVec().InfNorm(p.params.config.Q)

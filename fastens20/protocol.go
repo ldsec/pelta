@@ -1,7 +1,9 @@
 package fastens20
 
 import (
+	"fmt"
 	"math/big"
+	"time"
 
 	"github.com/ldsec/codeBase/commitment/crypto"
 	"github.com/ldsec/codeBase/commitment/fastmath"
@@ -17,6 +19,7 @@ type ProtocolConfig struct {
 	M               int
 	N               int
 	K               int
+	InvK            uint64
 	Delta1          int
 	Lambda          int
 	Kappa           int
@@ -41,6 +44,7 @@ func DefaultProtocolConfig(ringParams fastmath.RingParams, rel crypto.LinearRela
 	delta1 := 16
 	numRows := rel.A.Rows()
 	numCols := rel.A.Cols()
+	invK := big.NewInt(0).ModInverse(big.NewInt(int64(1)), ringParams.Q).Uint64()
 	return ProtocolConfig{
 		RingParams:      ringParams,
 		D:               ringParams.D,
@@ -48,6 +52,7 @@ func DefaultProtocolConfig(ringParams fastmath.RingParams, rel crypto.LinearRela
 		N:               numCols,
 		M:               numRows,
 		K:               1,
+		InvK:            invK,
 		Delta1:          delta1,
 		Lambda:          1,
 		Kappa:           1,
@@ -66,6 +71,7 @@ func (c ProtocolConfig) WithTernaryPrefix(ternaryLength int) ProtocolConfig {
 
 func (c ProtocolConfig) WithReplication(k int) ProtocolConfig {
 	c.K = k
+	c.InvK = big.NewInt(0).ModInverse(big.NewInt(int64(k)), c.Q).Uint64()
 	return c
 }
 
@@ -94,6 +100,7 @@ func (c ProtocolConfig) Beta() int {
 type PublicParams struct {
 	config ProtocolConfig
 	A      *fastmath.IntMatrix
+	At     *fastmath.IntMatrix
 	U      *fastmath.IntVec
 	B0     *fastmath.PolyNTTMatrix
 	B      *fastmath.PolyNTTMatrix
@@ -111,6 +118,7 @@ func GeneratePublicParameters(rel crypto.LinearRelation, config ProtocolConfig) 
 	return PublicParams{
 		config: config,
 		A:      rel.A,
+		At:     rel.A.Transposed(),
 		U:      rel.U,
 		B0:     B0.NTT(),
 		B:      b.NTT(),
@@ -119,6 +127,7 @@ func GeneratePublicParameters(rel crypto.LinearRelation, config ProtocolConfig) 
 }
 
 func Execute(s *fastmath.IntVec, params PublicParams) bool {
+	tstart := time.Now()
 	prover := NewProver(params)
 	verifier := NewVerifier(params)
 	// Commit to the message.
@@ -131,5 +140,8 @@ func Execute(s *fastmath.IntVec, params PublicParams) bool {
 	for err != nil {
 		z, ps, err = prover.MaskedOpening(c, ps)
 	}
-	return verifier.Verify(z, vs)
+	res := verifier.Verify(z, vs)
+	tend := time.Now()
+	fmt.Printf("ens20 execution took %dms\n", tend.Sub(tstart).Milliseconds())
+	return res
 }

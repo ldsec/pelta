@@ -17,3 +17,18 @@ type GlobalConfig struct {
 	RLWEParams      crypto.RLWEParameters
 	Ring            fastmath.RingParams
 }
+
+func NewGlobalConfig(cryptoConfig crypto.CryptoConfig) GlobalConfig {
+	beta := uint64(16)
+	rlweParams := crypto.NewRLWEParameters(cryptoConfig.Q, cryptoConfig.D, beta, cryptoConfig.BaseRing)
+	return GlobalConfig{
+		Delta1:          cryptoConfig.Delta1,
+		Beta:            beta,
+		P:               cryptoConfig.P,
+		UniformSampler:  cryptoConfig.UniformSampler,
+		TernarySampler:  cryptoConfig.TernarySampler,
+		GaussianSampler: cryptoConfig.GaussianSampler,
+		RLWEParams:      rlweParams,
+		Ring:            cryptoConfig.RingParams,
+	}
+}
