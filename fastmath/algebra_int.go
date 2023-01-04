@@ -372,7 +372,7 @@ func (m *IntMatrix) String() string {
 
 // SizeString returns a string representation of the matrix's dimensions.
 func (m *IntMatrix) SizeString() string {
-	s := fmt.Sprintf("IntMatrix[%d,%d]\n", m.Rows(), m.Cols())
+	s := fmt.Sprintf("IntMatrix[%d,%d]", m.Rows(), m.Cols())
 	return s
 }
 

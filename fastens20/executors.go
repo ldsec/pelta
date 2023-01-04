@@ -28,16 +28,16 @@ func ExecuteWithoutBoundProof(s *fastmath.IntVec, params PublicParams) bool {
 func ExecuteWithBoundProof(s *fastmath.IntVec, slice fastmath.Slice, params PublicParams) bool {
 	prover := NewABPProver(params, slice, params.config.Tau)
 	verifier := NewABPVerifier(params, slice, params.config.Tau)
-	// fmt.Println("abp exchange initiated")
+	fmt.Println("abp exchange initiated")
 	// Commit to the message.
 	t0, t, w, ps := prover.CommitToMessage(s)
 	// ABP exchange.
 	abpVerifierChal, vs := verifier.CreateABPChallenge()
 	abpMaskedOpening, ps, _ := prover.CreateABPMaskedOpening(abpVerifierChal, ps)
-	// fmt.Println("updating the protocol")
+	fmt.Println("updating the protocol")
 	// Update the relation to embed the approximate bound proof.
 	updateProtocol(&prover, &verifier, &ps, &vs)
-	// fmt.Println("continuing the executing of the protocol")
+	fmt.Println("continuing the executing of the protocol")
 	// Resume the normal execution.
 	alpha, gamma, vs := verifier.CreateMasks(t0, t, w, abpMaskedOpening, vs)
 	// Continue the execution.

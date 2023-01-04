@@ -8,25 +8,25 @@ import (
 )
 
 type KeySwitchCollDecPublicParams struct {
-	c1    *fastmath.Poly
+	C1    *fastmath.Poly
 	A1    *fastmath.IntMatrix
 	A2    *fastmath.IntMatrix
 	A3    *fastmath.IntMatrix
 	T     *fastmath.IntMatrix // NTT transform
-	b     *fastmath.IntVec    // ternary basis
-	p     *big.Int
-	qSmdg *big.Int
+	B     *fastmath.IntVec    // ternary basis
+	P     *big.Int
+	QSmdg *big.Int
 }
 
 func GenerateKeySwitchCollDecRelation(s, sp, u, r, err *fastmath.Poly, k, kSmdg *fastmath.IntVec, params KeySwitchCollDecPublicParams, config GlobalConfig) crypto.LinearRelation {
 	rlweParams := crypto.NewRLWEParameters(config.Ring.Q, config.Ring.D, config.Beta, config.Ring.BaseRing)
-	c1T := params.c1.Coeffs().Diag().Hadamard(params.T)
+	c1T := params.C1.Coeffs().Diag().Hadamard(params.T)
 	h := c1T.MulVec(s.Coeffs()).Add(err.Coeffs())
-	_, t := crypto.GetAjtaiCommitments(params.A1, params.A2, s.Coeffs(), r.Coeffs(), params.p)
+	_, t := crypto.GetAjtaiCommitments(params.A1, params.A2, s.Coeffs(), r.Coeffs(), params.P)
 	eqn1 := crypto.NewLinearEquation(h, h.Size()).
 		AppendTerm(c1T, s.Coeffs()).
 		AppendVecTerm(err.Coeffs(), config.Ring.BaseRing)
-	eqn2 := crypto.NewPaddedAjtaiEquation(t, params.A1, params.A2, s.Coeffs(), r.Coeffs(), k, params.p, config.Ring.Q, config.Ring.BaseRing).
+	eqn2 := crypto.NewPaddedAjtaiEquation(t, params.A1, params.A2, s.Coeffs(), r.Coeffs(), k, params.P, config.Ring.Q, config.Ring.BaseRing).
 		AddDependency(0, 0)
 	eqn3 := crypto.NewLinearEquation(err.Coeffs(), params.A3.Rows()).
 		AppendTerm(params.A3.Copy().Hadamard(params.T), sp.Coeffs()).AddDependency(0, 0).

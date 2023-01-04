@@ -196,27 +196,21 @@ func (lrb *LinearRelationBuilder) AppendEqn(eqn *LinearEquation) *LinearRelation
 	return lrb
 }
 
-// getZeroPad constructs a zero-padding for j-th term of i-th equation in the given system of equations by dynamically
+// getZeroPad constructs a zero-padding for j-th independent term of i-th equation in the given system of equations by dynamically
 // selecting an appropriate column length.
 func getZeroPad(i, j int, eqns []*LinearEquation, baseRing *ring.Ring) *fastmath.IntMatrix {
-	// Try to find an appropriate matrix among the equations to determine the zero padding column size.
-	var targetEqn *LinearEquation
-	if i > 0 {
-		targetEqn = eqns[i-1]
-	} else if i+1 < len(eqns) {
-		targetEqn = eqns[i+1]
-	} else {
-		return nil
+	// Try to find an appropriate matrix among the upper equations to determine the zero padding column size.
+	curr := 0
+	for eqnIndex, eqn := range eqns {
+		eqnIndepTerms := eqn.GetIndependentTerms()
+		if j < curr+len(eqnIndepTerms) {
+			fmt.Println("found padding reference at", eqnIndex, j-curr)
+			targetTerm := eqnIndepTerms[j-curr]
+			return fastmath.NewIntMatrix(eqns[i].m, targetTerm.A.Cols(), baseRing)
+		}
+		curr += len(eqnIndepTerms)
 	}
-	var targetMatrix *fastmath.IntMatrix
-	if j < len(targetEqn.rhs) {
-		targetMatrix = targetEqn.rhs[j].A
-	} else {
-		return nil
-	}
-	cols := targetMatrix.Cols()
-	rows := eqns[i].m
-	return fastmath.NewIntMatrix(rows, cols, baseRing)
+	return nil
 }
 
 // Build constructs the linear relation of the form As = u from the appended equations.
@@ -228,11 +222,12 @@ func (lrb *LinearRelationBuilder) Build(baseRing *ring.Ring) LinearRelation {
 	}
 	linRel := lrb.eqns[0].Linearize()
 	for i, eqn := range lrb.eqns[1:] {
+		fmt.Println("lrb: built so far:", linRel.SizesString())
 		if eqn.IsDependent() {
 			// For a dependent equation we want to find a B, y s.t. (A || 0, B) (s, y) = (u, lhs) will yield
 			// the correct linear relation.
-			prevEqnNumIndepTerms := 0
-			for j := i; j >= 0; j-- {
+			prevEqnNumIndepTerms := 0 // a.k.a. upper row slot amount
+			for j := i; j >= 0; j-- { // i is the prev eqn index!
 				prevEqnNumIndepTerms += len(lrb.eqns[j].GetIndependentTerms())
 			}
 			// First, emplace the dependent term matrices into the correct position.
@@ -244,7 +239,7 @@ func (lrb *LinearRelationBuilder) Build(baseRing *ring.Ring) LinearRelation {
 			for _, t := range eqn.GetIndependentTerms() {
 				preB = append(preB, t.A)
 			}
-			fmt.Printf("lrb (%d): created B instruction of size %d\n", i, len(preB))
+			fmt.Printf("lrb (%d): created B instruction of size %d\n", i+1, len(preB))
 			// Iteratively build up the new row in the matrix.
 			var B *fastmath.IntMatrix
 			if preB[0] == nil {
@@ -252,9 +247,10 @@ func (lrb *LinearRelationBuilder) Build(baseRing *ring.Ring) LinearRelation {
 			} else {
 				B = preB[0]
 			}
-			for j, m := range preB[1:] {
-				fmt.Printf("lrb (%d): handling term %d/%d\n", i, j+2, len(preB))
+			for j, m := range preB[1:] { // j is the prev independent term index (overall)!
+				fmt.Printf("lrb (%d): handling term %d\n", i+1, j+1)
 				if m == nil {
+					fmt.Printf("lrb (%d): zero padding on %d %d\n", i+1, i+1, j+1)
 					B.ExtendCols(getZeroPad(i+1, j+1, lrb.eqns, baseRing))
 				} else {
 					B.ExtendCols(m)
@@ -265,11 +261,13 @@ func (lrb *LinearRelationBuilder) Build(baseRing *ring.Ring) LinearRelation {
 			for _, t := range eqn.GetIndependentTerms()[1:] {
 				y.Append(t.b)
 			}
+			fmt.Println("lrb: extending with B:", B.SizeString())
 			linRel.AppendDependent(B, y, eqn.lhs)
 		} else {
 			linRel.AppendIndependent(eqn.Linearize())
 		}
 	}
+	fmt.Println("lrb: built:", linRel.SizesString())
 	return linRel
 }
 

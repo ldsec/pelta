@@ -28,22 +28,22 @@ func GenerateKeyGenRelation(s, r, e *fastmath.Poly, k *fastmath.IntVec, params K
 }
 
 type RelinKeyGenPublicParams struct {
-	a  *fastmath.Poly
-	w  *fastmath.Poly
-	l  int
+	A  *fastmath.Poly
+	W  *fastmath.Poly
+	L  int
 	A1 *fastmath.IntMatrix
 	A2 *fastmath.IntMatrix
-	p  *big.Int
+	P  *big.Int
 	T  *fastmath.IntMatrix
 }
 
 func GenerateRelinKeyGenRelation(s, u, e0, e1, r *fastmath.Poly, k1 *fastmath.IntVec, params RelinKeyGenPublicParams, config GlobalConfig) crypto.LinearRelation {
 	rlweParams := crypto.NewRLWEParameters(config.Ring.Q, config.Ring.D, config.Beta, config.Ring.BaseRing)
-	aT := params.a.Coeffs().Neg().Diag().Hadamard(params.T)
-	wT := params.w.Coeffs().Diag().Hadamard(params.T)
+	aT := params.A.Coeffs().Neg().Diag().Hadamard(params.T)
+	wT := params.W.Coeffs().Diag().Hadamard(params.T)
 	h0 := aT.Copy().Neg().MulVec(u.Coeffs()).Add(wT.MulVec(s.Coeffs())).Add(e0.Copy().NTT().Coeffs())
 	h1 := aT.Copy().MulVec(s.Coeffs()).Add(e0.Copy().NTT().Coeffs())
-	_, t := crypto.GetAjtaiCommitments(params.A1, params.A2, s.Coeffs(), r.Coeffs(), params.p)
+	_, t := crypto.GetAjtaiCommitments(params.A1, params.A2, s.Coeffs(), r.Coeffs(), params.P)
 
 	eqn1 := crypto.NewLinearEquation(h0, h0.Size()).
 		AppendTerm(aT.Copy().Neg(), u.Coeffs()).
@@ -52,7 +52,7 @@ func GenerateRelinKeyGenRelation(s, u, e0, e1, r *fastmath.Poly, k1 *fastmath.In
 	eqn2 := crypto.NewLinearEquation(h1, h1.Size()).
 		AppendDependentTerm(aT, 1).
 		AppendRLWEErrorDecompositionSum(e1, params.T, rlweParams)
-	eqn3 := crypto.NewPaddedAjtaiEquation(t, params.A1, params.A2, s.Coeffs(), r.Coeffs(), k1, params.p, config.Ring.Q, config.Ring.BaseRing)
+	eqn3 := crypto.NewPaddedAjtaiEquation(t, params.A1, params.A2, s.Coeffs(), r.Coeffs(), k1, params.P, config.Ring.Q, config.Ring.BaseRing)
 	eqn3.AddDependency(0, 1)
 
 	lrb := crypto.NewLinearRelationBuilder().
