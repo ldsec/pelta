@@ -82,6 +82,9 @@ func (v *IntVec) Dot(r *IntVec) uint64 {
 	if v.size != r.size {
 		panic("IntVec.Dot sizes do not match")
 	}
+	if v.mod == nil {
+		v.mod = v.baseRing.ModulusAtLevel[0]
+	}
 	preSum := NewPoly(v.baseRing)
 	for i := 0; i < len(v.polys); i++ {
 		a := v.polys[i]
@@ -233,11 +236,15 @@ func (m *IntMatrix) MulMat(b *IntMatrix) *IntMatrix {
 		panic("IntMatrix.MulMat sizes incorrect")
 	}
 	out := NewIntMatrix(m.Rows(), b.Cols(), m.baseRing)
+	modUint := m.mod.Uint64()
 	for i := 0; i < out.Rows(); i++ {
 		for j := 0; j < out.Cols(); j++ {
 			p := m.RowView(i)
-			q := b.ColCopy(j)
-			out.Set(i, j, p.Dot(q))
+			dotResult := uint64(0)
+			for k := 0; k < p.Size(); k++ {
+				dotResult = (dotResult + p.Get(k)*b.Get(k, j)) % modUint
+			}
+			out.Set(i, j, dotResult)
 		}
 	}
 	return out

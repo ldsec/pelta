@@ -175,6 +175,7 @@ func (v *IntVec) RebaseLossless(newRing RingParams, level int) *IntVec {
 	v.SetUnderlyingPolys(newPolys)
 	// Update the base ring pointer.
 	v.baseRing = newRing.BaseRing
+	v.mod = newRing.BaseRing.ModulusAtLevel[0]
 	return v
 }
 

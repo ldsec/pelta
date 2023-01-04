@@ -38,12 +38,10 @@ func TestKeyGen(t *testing.T) {
 	}
 
 	t.Logf("running the protocol...")
-	shortRing := fastmath.BFVZeroLevelShortCommtRing(7)
-	rebasedRel := rel.Rebase(shortRing)
-	ens20Config := fastens20.DefaultProtocolConfig(shortRing, rebasedRel).
-		WithTernaryPrefix(config.Ring.D)
-	ens20Params := fastens20.GeneratePublicParameters(rebasedRel, ens20Config)
-	if !fastens20.ExecuteWithoutBoundProof(rebasedRel.S, ens20Params) {
+	val := rel.CreateValidityProofDef()
+	ter := rel.CreateTernaryProofDef(0, config.Ring.D)
+	abp := rel.CreateApproxBoundProofDef(config.Ring.D*6, config.Ring.D*7, config.Ring.Q)
+	if !fastens20.Execute(rel.S, &val, &ter, &abp, config.Ring) {
 		t.Errorf("execution failed")
 	}
 }

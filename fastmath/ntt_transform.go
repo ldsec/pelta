@@ -17,12 +17,12 @@ func LoadNTTTransform(name string, q *big.Int, logN int, baseRing *ring.Ring) *I
 		T = GenerateNTTTransform(q, logN, baseRing)
 		err := SaveIntMatrix(T, name)
 		if err != nil {
-			fmt.Printf("couldn't save the NTT transform %s: %s\n", name, err.Error())
+			fmt.Printf("couldn't save the ntt transform %s: %s\n", name, err.Error())
 		}
 	} else {
 		T, err = LoadIntMatrix(name, baseRing)
 		if err != nil {
-			fmt.Printf("couldn't load the NTT transform %s, regenerating: %s\n", name, err.Error())
+			fmt.Printf("couldn't load the ntt transform %s, regenerating: %s\n", name, err.Error())
 			T = GenerateNTTTransform(q, logN, baseRing)
 		}
 	}
@@ -31,7 +31,7 @@ func LoadNTTTransform(name string, q *big.Int, logN int, baseRing *ring.Ring) *I
 
 // GenerateNTTTransform computes and returns the integer NTT transformation matrix for the given base ring.
 func GenerateNTTTransform(q *big.Int, logN int, baseRing *ring.Ring) *IntMatrix {
-	fmt.Printf("generating NTT transform... this may take a while")
+	fmt.Printf("generating ntt transform... this may take a while")
 	qUint := q.Uint64()
 	w := ring.InvMForm(baseRing.NttPsi[0][baseRing.N>>1], qUint, baseRing.MredParams[0])
 	mask := uint64(2*baseRing.N - 1)

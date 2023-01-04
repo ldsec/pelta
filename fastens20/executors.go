@@ -1,6 +1,9 @@
 package fastens20
 
 import (
+	"fmt"
+	"time"
+
 	"github.com/ldsec/codeBase/commitment/crypto"
 	"github.com/ldsec/codeBase/commitment/fastmath"
 )
@@ -53,9 +56,14 @@ func Execute(s *fastmath.IntVec, val *crypto.ValidityProofDef, ter *crypto.Terna
 	}
 	params := GeneratePublicParameters(config, val.Rel)
 	// Either execute with or without bound proof.
+	var res bool
+	t0 := time.Now()
 	if abp != nil {
-		return ExecuteWithBoundProof(s, abp.Target, params)
+		res = ExecuteWithBoundProof(s, abp.Target, params)
 	} else {
-		return ExecuteWithoutBoundProof(s, params)
+		res = ExecuteWithoutBoundProof(s, params)
 	}
+	dt := time.Now().Sub(t0)
+	fmt.Printf("protocol execution took %dms\n", dt.Milliseconds())
+	return res
 }

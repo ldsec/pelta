@@ -125,9 +125,9 @@ func (eqn *LinearEquation) SizesString() string {
 	for _, term := range eqn.rhs {
 		var s string
 		if term.dependent {
-			s = fmt.Sprintf("A[%dx%d]b[dep=%d]", term.A.Rows(), term.A.Cols(), term.depVecIndex)
+			s = fmt.Sprintf("[%dx%d][dep=%d]", term.A.Rows(), term.A.Cols(), term.depVecIndex)
 		} else {
-			s = fmt.Sprintf("A[%dx%d]b[%d]", term.A.Rows(), term.A.Cols(), term.b.Size())
+			s = fmt.Sprintf("[%dx%d][%d]", term.A.Rows(), term.A.Cols(), term.b.Size())
 		}
 		termStrs = append(termStrs, s)
 	}
@@ -222,6 +222,7 @@ func getZeroPad(i, j int, eqns []*LinearEquation, baseRing *ring.Ring) *fastmath
 // Build constructs the linear relation of the form As = u from the appended equations.
 func (lrb *LinearRelationBuilder) Build(baseRing *ring.Ring) LinearRelation {
 	fmt.Println("lrb: building...")
+	fmt.Println(lrb.SizesString())
 	if len(lrb.eqns) == 0 {
 		panic("cannot build a linear relation without any equations")
 	}

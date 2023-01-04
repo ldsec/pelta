@@ -1,7 +1,6 @@
 package relations
 
 import (
-	"fmt"
 	"math/big"
 
 	"github.com/ldsec/codeBase/commitment/crypto"
@@ -25,7 +24,6 @@ func GenerateKeyGenRelation(s, r, e *fastmath.Poly, k *fastmath.IntVec, params K
 	p0 := crypto.GetRLWEP0(params.P1, s, e)
 	lrb.AppendEqn(crypto.NewIndependentRLWE(p0, params.P1, s, e, params.T, rlweParams))
 	lrb.AppendEqn(ajtaiEqn)
-	fmt.Println(lrb.SizesString())
 	return lrb.Build(config.Ring.BaseRing)
 }
 
