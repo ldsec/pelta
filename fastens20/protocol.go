@@ -1,9 +1,7 @@
 package fastens20
 
 import (
-	"fmt"
 	"math/big"
-	"time"
 
 	"github.com/ldsec/codeBase/commitment/crypto"
 	"github.com/ldsec/codeBase/commitment/fastmath"
@@ -28,6 +26,7 @@ type ProtocolConfig struct {
 	UniformSampler  fastmath.PolySampler
 	TernarySampler  fastmath.PolySampler
 	GaussianSampler fastmath.PolySampler
+	Tau             int // abp security parameter
 }
 
 // DefaultProtocolConfig returns the default configuration for an ENS20 execution.
@@ -61,6 +60,7 @@ func DefaultProtocolConfig(ringParams fastmath.RingParams, rel crypto.LinearRela
 		UniformSampler:  ring.NewUniformSampler(prng, ringParams.BaseRing),
 		TernarySampler:  ternarySampler,
 		GaussianSampler: ring.NewGaussianSampler(prng, ringParams.BaseRing, ringParams.Sigma, delta1),
+		Tau:             128,
 	}
 }
 
@@ -78,6 +78,11 @@ func (c ProtocolConfig) WithReplication(k int) ProtocolConfig {
 func (c ProtocolConfig) WithSecurityParameters(kappa, lambda int) ProtocolConfig {
 	c.Kappa = kappa
 	c.Lambda = lambda
+	return c
+}
+
+func (c ProtocolConfig) WithTau(tau int) ProtocolConfig {
+	c.Tau = tau
 	return c
 }
 
@@ -107,7 +112,7 @@ type PublicParams struct {
 	Sig    fastmath.Automorphism
 }
 
-func GeneratePublicParameters(rel crypto.LinearRelation, config ProtocolConfig) PublicParams {
+func GeneratePublicParameters(config ProtocolConfig, rel crypto.LinearRelation) PublicParams {
 	bSize := config.NumSplits() + 3
 	B0 := fastmath.NewRandomPolyMatrix(config.Kappa,
 		config.Lambda+config.Kappa+bSize,
@@ -124,24 +129,4 @@ func GeneratePublicParameters(rel crypto.LinearRelation, config ProtocolConfig) 
 		B:      b.NTT(),
 		Sig:    sig,
 	}
-}
-
-func Execute(s *fastmath.IntVec, params PublicParams) bool {
-	tstart := time.Now()
-	prover := NewProver(params)
-	verifier := NewVerifier(params)
-	// Commit to the message.
-	t0, t, w, ps := prover.CommitToMessage(s)
-	alpha, gamma, vs := verifier.CreateMasks(t0, t, w)
-	t, h, v, vp, ps := prover.CommitToRelation(alpha, gamma, ps)
-	c, vs := verifier.CreateChallenge(t, h, v, vp, vs)
-	// Recreate the masked opening until it satisfies the shortness condition.
-	z, ps, err := prover.MaskedOpening(c, ps)
-	for err != nil {
-		z, ps, err = prover.MaskedOpening(c, ps)
-	}
-	res := verifier.Verify(z, vs)
-	tend := time.Now()
-	fmt.Printf("ens20 execution took %dms\n", tend.Sub(tstart).Milliseconds())
-	return res
 }

@@ -43,7 +43,7 @@ func TestKeyGen(t *testing.T) {
 	ens20Config := fastens20.DefaultProtocolConfig(shortRing, rebasedRel).
 		WithTernaryPrefix(config.Ring.D)
 	ens20Params := fastens20.GeneratePublicParameters(rebasedRel, ens20Config)
-	if !fastens20.Execute(rebasedRel.S, ens20Params) {
+	if !fastens20.ExecuteWithoutBoundProof(rebasedRel.S, ens20Params) {
 		t.Errorf("execution failed")
 	}
 }

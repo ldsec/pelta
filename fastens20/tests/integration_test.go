@@ -40,7 +40,7 @@ func TestConsistency(tst *testing.T) {
 	s := fastmath.NewRandomTernaryIntVec(n, bfvRing.BaseRing)
 	rel := crypto.NewLinearRelation(A, s)
 	config := fastens20.DefaultProtocolConfig(bfvRing, rel)
-	params := fastens20.GeneratePublicParameters(rel, config)
+	params := fastens20.GeneratePublicParameters(config, rel)
 	ACopy := params.A.Copy()
 	BCopy := params.B.Copy()
 	B0Copy := params.B0.Copy()
@@ -160,7 +160,7 @@ func TestSimple(t *testing.T) {
 	s := fastmath.NewRandomTernaryIntVec(n, bfvRing.BaseRing)
 	rel := crypto.NewLinearRelation(A, s)
 	config := fastens20.DefaultProtocolConfig(bfvRing, rel)
-	params := fastens20.GeneratePublicParameters(rel, config)
+	params := fastens20.GeneratePublicParameters(config, rel)
 	ExecuteAndTestCorrectness(t, s, params)
 }
 
@@ -173,7 +173,7 @@ func TestMultiReplication(t *testing.T) {
 	rel := crypto.NewLinearRelation(A, s)
 	config := fastens20.DefaultProtocolConfig(bfvRing, rel).
 		WithReplication(4)
-	params := fastens20.GeneratePublicParameters(rel, config)
+	params := fastens20.GeneratePublicParameters(config, rel)
 	ExecuteAndTestCorrectness(t, s, params)
 }
 
@@ -185,7 +185,7 @@ func TestMultiSplit(t *testing.T) {
 	s := fastmath.NewRandomTernaryIntVec(n, bfvRing.BaseRing)
 	rel := crypto.NewLinearRelation(A, s)
 	config := fastens20.DefaultProtocolConfig(bfvRing, rel)
-	params := fastens20.GeneratePublicParameters(rel, config)
+	params := fastens20.GeneratePublicParameters(config, rel)
 	ExecuteAndTestCorrectness(t, s, params)
 }
 
@@ -198,7 +198,7 @@ func TestMultiSplitMultiReplication(t *testing.T) {
 	rel := crypto.NewLinearRelation(A, s)
 	config := fastens20.DefaultProtocolConfig(bfvRing, rel).
 		WithReplication(4)
-	params := fastens20.GeneratePublicParameters(rel, config)
+	params := fastens20.GeneratePublicParameters(config, rel)
 	ExecuteAndTestCorrectness(t, s, params)
 }
 
@@ -215,7 +215,7 @@ func TestTernarySlice(t *testing.T) {
 	rel := crypto.NewLinearRelation(A, s)
 	config := fastens20.DefaultProtocolConfig(bfvRing, rel).
 		WithTernarySlice(ternarySlice)
-	params := fastens20.GeneratePublicParameters(rel, config)
+	params := fastens20.GeneratePublicParameters(config, rel)
 	ExecuteAndTestCorrectness(t, s, params)
 }
 
@@ -227,7 +227,7 @@ func TestManyRows(t *testing.T) {
 	s := fastmath.NewRandomTernaryIntVec(n, bfvRing.BaseRing)
 	rel := crypto.NewLinearRelation(A, s)
 	config := fastens20.DefaultProtocolConfig(bfvRing, rel)
-	params := fastens20.GeneratePublicParameters(rel, config)
+	params := fastens20.GeneratePublicParameters(config, rel)
 	ExecuteAndTestCorrectness(t, s, params)
 }
 
@@ -239,7 +239,7 @@ func TestMultiSplitFull(t *testing.T) {
 	s := fastmath.NewRandomTernaryIntVec(n, bfvRing.BaseRing)
 	rel := crypto.NewLinearRelation(A, s)
 	config := fastens20.DefaultProtocolConfig(bfvRing, rel)
-	params := fastens20.GeneratePublicParameters(rel, config)
+	params := fastens20.GeneratePublicParameters(config, rel)
 	ExecuteAndTestCorrectness(t, s, params)
 }
 
@@ -251,7 +251,7 @@ func TestAllLevels(t *testing.T) {
 	s := fastmath.NewRandomTernaryIntVec(n, bfvRing.BaseRing)
 	rel := crypto.NewLinearRelation(A, s)
 	config := fastens20.DefaultProtocolConfig(bfvRing, rel)
-	params := fastens20.GeneratePublicParameters(rel, config)
+	params := fastens20.GeneratePublicParameters(config, rel)
 	ExecuteAndTestCorrectness(t, s, params)
 }
 
@@ -270,7 +270,7 @@ func TestAllLevelsShortRing(t *testing.T) {
 	if config.NumSplits() != bfvRing.D/commitmentRing.D {
 		t.Errorf("num splits not correct")
 	}
-	params := fastens20.GeneratePublicParameters(rebasedRel, config)
+	params := fastens20.GeneratePublicParameters(config, rebasedRel)
 	ExecuteAndTestCorrectness(t, rebasedRel.S, params)
 }
 
@@ -282,7 +282,7 @@ func TestPerformanceSimple(tst *testing.T) {
 	s := fastmath.NewRandomTernaryIntVec(n, bfvRing.BaseRing)
 	rel := crypto.NewLinearRelation(A, s)
 	config := fastens20.DefaultProtocolConfig(bfvRing, rel)
-	params := fastens20.GeneratePublicParameters(rel, config)
+	params := fastens20.GeneratePublicParameters(config, rel)
 	prover := fastens20.NewProver(params)
 	verifier := fastens20.NewVerifier(params)
 	var t0, t *fastmath.PolyNTTVec
