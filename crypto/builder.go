@@ -110,7 +110,7 @@ func (eqn *LinearEquation) Linearize() LinearRelation {
 	if len(eqn.rhs) == 0 {
 		panic("cannot convert an empty equation into a relation")
 	}
-	linRel := NewLinearRelationWithLHS(eqn.rhs[0].A, eqn.rhs[0].b, eqn.lhs)
+	linRel := NewLinearRelationWithLHS(eqn.rhs[0].A.Copy(), eqn.rhs[0].b.Copy(), eqn.lhs.Copy())
 	for _, term := range eqn.rhs[1:] {
 		linRel.ExtendPartial(term.A, term.b)
 		if term.dependent {
@@ -201,10 +201,10 @@ func (lrb *LinearRelationBuilder) AppendEqn(eqn *LinearEquation) *LinearRelation
 func getZeroPad(i, j int, eqns []*LinearEquation, baseRing *ring.Ring) *fastmath.IntMatrix {
 	// Try to find an appropriate matrix among the upper equations to determine the zero padding column size.
 	curr := 0
-	for eqnIndex, eqn := range eqns {
+	for _, eqn := range eqns {
 		eqnIndepTerms := eqn.GetIndependentTerms()
 		if j < curr+len(eqnIndepTerms) {
-			fmt.Println("found padding reference at", eqnIndex, j-curr)
+			// fmt.Println("found padding reference at", eqnIndex, j-curr)
 			targetTerm := eqnIndepTerms[j-curr]
 			return fastmath.NewIntMatrix(eqns[i].m, targetTerm.A.Cols(), baseRing)
 		}
@@ -222,7 +222,7 @@ func (lrb *LinearRelationBuilder) Build(baseRing *ring.Ring) LinearRelation {
 	}
 	linRel := lrb.eqns[0].Linearize()
 	for i, eqn := range lrb.eqns[1:] {
-		fmt.Println("lrb: built so far:", linRel.SizesString())
+		// fmt.Println("lrb: built so far:", linRel.SizesString())
 		if eqn.IsDependent() {
 			// For a dependent equation we want to find a B, y s.t. (A || 0, B) (s, y) = (u, lhs) will yield
 			// the correct linear relation.
@@ -245,23 +245,25 @@ func (lrb *LinearRelationBuilder) Build(baseRing *ring.Ring) LinearRelation {
 			if preB[0] == nil {
 				B = getZeroPad(i+1, 0, lrb.eqns, baseRing)
 			} else {
-				B = preB[0]
+				B = preB[0].Copy()
 			}
+			// fmt.Println("lrb: updated B:", B.SizeString())
 			for j, m := range preB[1:] { // j is the prev independent term index (overall)!
 				fmt.Printf("lrb (%d): handling term %d\n", i+1, j+1)
 				if m == nil {
-					fmt.Printf("lrb (%d): zero padding on %d %d\n", i+1, i+1, j+1)
+					// fmt.Printf("lrb (%d): zero padding on %d %d\n", i+1, i+1, j+1)
 					B.ExtendCols(getZeroPad(i+1, j+1, lrb.eqns, baseRing))
 				} else {
 					B.ExtendCols(m)
 				}
+				// fmt.Println("lrb: updated B:", B.SizeString())
 			}
 			// Build the y, the concetanation of term vectors.
 			y := eqn.GetIndependentTerms()[0].b
 			for _, t := range eqn.GetIndependentTerms()[1:] {
 				y.Append(t.b)
 			}
-			fmt.Println("lrb: extending with B:", B.SizeString())
+			// fmt.Println("lrb: extending with B:", B.SizeString())
 			linRel.AppendDependent(B, y, eqn.lhs)
 		} else {
 			linRel.AppendIndependent(eqn.Linearize())
