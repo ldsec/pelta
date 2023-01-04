@@ -37,7 +37,7 @@ func updateProtocol(p *ABPProver, v *ABPVerifier, ps *ABPProverState, vs *ABPVer
 			A.SetCol(i, zeroCol)
 		}
 	}
-	lrb.AppendEqn(crypto.NewABPEquation(vs.ABPVerifierChal, A, 0, ps.ABPProverMask, ps.ABPMaskedOpening, p.params.config.BaseRing))
+	lrb.AppendEqn(crypto.NewABPEquation(vs.ABPVerifierChal, 0, ps.ABPProverMask, ps.ABPMaskedOpening, p.params.config.BaseRing))
 	fmt.Printf("building:\n%s\n", lrb.SizesString())
 	newRel := lrb.Build(p.params.config.BaseRing)
 	if !newRel.IsValid() {
@@ -97,9 +97,7 @@ func (p ABPProver) CommitToMessage(s *fastmath.IntVec) (*fastmath.PolyNTTVec, *f
 
 func (p ABPProver) CreateABPMaskedOpening(abpVerifierChal *fastmath.IntMatrix, state ABPProverState) (*fastmath.IntVec, ABPProverState, error) {
 	// TODO rejection sampling
-	// Get the u' from sliced s.
-	up := p.params.A.SubsectionCopy(0, p.params.A.Rows(), p.Slice.Start, p.Slice.End).MulVec(state.S.Slice(p.Slice))
-	abpMaskedOpening := crypto.CreateABPMaskedOpening(abpVerifierChal, state.ABPProverMask, up, p.params.config.BaseRing)
+	abpMaskedOpening := crypto.CreateABPMaskedOpening(abpVerifierChal, state.ABPProverMask, state.S, p.params.config.BaseRing)
 	state.ABPMaskedOpening = abpMaskedOpening
 	return abpMaskedOpening, state, nil
 }
@@ -139,7 +137,7 @@ func NewABPVerifier(params PublicParams, slice fastmath.Slice, tau int) ABPVerif
 }
 
 func (vf ABPVerifier) CreateABPChallenge() (*fastmath.IntMatrix, ABPVerifierState) {
-	abpChal := crypto.CreateABPChallenge(vf.Tau, vf.params.config.M, vf.params.config.TernarySampler, vf.params.config.BaseRing)
+	abpChal := crypto.CreateABPChallenge(vf.Tau, vf.params.config.N, vf.params.config.TernarySampler, vf.params.config.BaseRing)
 	return abpChal, ABPVerifierState{ABPVerifierChal: abpChal}
 }
 

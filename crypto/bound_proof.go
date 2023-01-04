@@ -7,10 +7,9 @@ import (
 	"github.com/tuneinsight/lattigo/v4/ring"
 )
 
-// CreateABPChallenge returns a random ternary polynomial matrix with dimensions tau x m.
-func CreateABPChallenge(tau, m int, ternarySampler fastmath.PolySampler, baseRing *ring.Ring) *fastmath.IntMatrix {
-	// Create R of tau x m
-	return fastmath.NewRandomTernaryIntMatrix(tau, m, baseRing)
+// CreateABPChallenge returns a random ternary polynomial matrix with dimensions tau x n.
+func CreateABPChallenge(tau, n int, ternarySampler fastmath.PolySampler, baseRing *ring.Ring) *fastmath.IntMatrix {
+	return fastmath.NewRandomTernaryIntMatrix(tau, n, baseRing)
 }
 
 // CreateABPMask returns a random ternary vector of size tau.
@@ -20,17 +19,17 @@ func CreateABPMask(tau int, ternarySampler fastmath.PolySampler, baseRing *ring.
 	return fastmath.NewRandomTernaryIntVec(tau, baseRing)
 }
 
-// CreateABPMaskedOpening returns abpChal * u + abpMask
-func CreateABPMaskedOpening(abpChal *fastmath.IntMatrix, abpMask *fastmath.IntVec, u *fastmath.IntVec, baseRing *ring.Ring) *fastmath.IntVec {
-	// z = Ru + y
-	return abpChal.MulVec(u).Add(abpMask)
+// CreateABPMaskedOpening returns R (abpChal) * s + y (abpMask)
+func CreateABPMaskedOpening(abpChal *fastmath.IntMatrix, abpMask *fastmath.IntVec, s *fastmath.IntVec, baseRing *ring.Ring) *fastmath.IntVec {
+	// z = Rs + y
+	return abpChal.MulVec(s).Add(abpMask)
 }
 
-// NewABPEquation creates an equation of form RAs + y = z with s dependent where abpChal: R, abpMask: y, abpMaskedOpening: z.
-func NewABPEquation(abpChal *fastmath.IntMatrix, A *fastmath.IntMatrix, sIndex int, abpMask, abpMaskedOpening *fastmath.IntVec, baseRing *ring.Ring) *LinearEquation {
+// NewABPEquation creates an equation of form Rs + y = z with s dependent where abpChal: R, abpMask: y, abpMaskedOpening: z.
+func NewABPEquation(abpChal *fastmath.IntMatrix, sIndex int, abpMask, abpMaskedOpening *fastmath.IntVec, baseRing *ring.Ring) *LinearEquation {
 	fmt.Println("creating ABP equation")
-	// Add the equation RAs + y = z
-	RA := abpChal.MulMat(A)
+	// Add the equation Rs + y = z
+	R := abpChal.Copy()
 	y := abpMask
 	z := abpMaskedOpening
 	if y.Size()%baseRing.N != 0 {
@@ -38,10 +37,10 @@ func NewABPEquation(abpChal *fastmath.IntMatrix, A *fastmath.IntMatrix, sIndex i
 		fmt.Printf("y (mask) is not a multiple of poly degree (size = %d), padding accordingly (+%d)\n", abpMask.Size(), padLength)
 		y.Append(fastmath.NewIntVec(padLength, baseRing))
 		z.Append(fastmath.NewIntVec(padLength, baseRing))
-		RA.ExtendRows(fastmath.NewIntMatrix(padLength, RA.Cols(), baseRing))
+		R.ExtendRows(fastmath.NewIntMatrix(padLength, R.Cols(), baseRing))
 	}
-	eqn := NewLinearEquation(z, RA.Cols())
-	eqn.AppendDependentTerm(RA, sIndex)
+	eqn := NewLinearEquation(z, R.Cols())
+	eqn.AppendDependentTerm(R, sIndex)
 	eqn.AppendVecTerm(y, baseRing)
 	fmt.Println("created ABP equation")
 	return eqn
