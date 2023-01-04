@@ -19,6 +19,7 @@ func NewLinearRelation(A *fastmath.IntMatrix, s *fastmath.IntVec) LinearRelation
 	return LinearRelation{A, s, u}
 }
 
+// NewLinearRelationWithLHS constructs a new linear relation with explicit u.
 func NewLinearRelationWithLHS(A *fastmath.IntMatrix, s, u *fastmath.IntVec) LinearRelation {
 	return LinearRelation{A, s, u}
 }

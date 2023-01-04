@@ -287,10 +287,20 @@ func (m *IntMatrix) Set(row, col int, newValue uint64) {
 
 // SetRow updates the given row of this matrix.
 func (m *IntMatrix) SetRow(row int, newRow *IntVec) {
-	if row >= m.Rows() {
-		panic("IntMatrix.SetRows index incorrect")
+	if row >= m.Rows() || newRow.Size() != m.Cols() {
+		panic("IntMatrix.SetRows index or size incorrect")
 	}
 	m.rows[row] = newRow
+}
+
+// SetCol updates the given col of this matrix.
+func (m *IntMatrix) SetCol(col int, newCol *IntVec) {
+	if col >= m.Cols() || newCol.Size() != m.Rows() {
+		panic("IntMatrix.SetCols index or size incorrect")
+	}
+	for i, row := range m.rows {
+		row.Set(col, newCol.Get(i))
+	}
 }
 
 // AppendRow appends a row into the vector.

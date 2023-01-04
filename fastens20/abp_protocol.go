@@ -29,8 +29,16 @@ func updateProtocol(p *ABPProver, v *ABPVerifier, ps *ABPProverState, vs *ABPVer
 	// As = u
 	lrb.AppendEqn(crypto.NewLinearEquation(u, A.Cols()).AppendTerm(A, s))
 	// RAs + y = z
+	// Clear the parts of A that are out of the target slice.
+	A = A.Copy()
+	zeroCol := fastmath.NewIntVec(A.Rows(), p.params.config.RingParams.BaseRing)
+	for i := 0; i < A.Cols(); i++ {
+		if i < p.Slice.Start || i >= p.Slice.End {
+			A.SetCol(i, zeroCol)
+		}
+	}
 	lrb.AppendEqn(crypto.NewABPEquation(vs.ABPVerifierChal, A, 0, ps.ABPProverMask, ps.ABPMaskedOpening, p.params.config.BaseRing))
-	fmt.Printf("building: %s\n", lrb.SizesString())
+	fmt.Printf("building:\n%s\n", lrb.SizesString())
 	newRel := lrb.Build(p.params.config.BaseRing)
 	if !newRel.IsValid() {
 		panic("invalid abp embedding")
@@ -53,7 +61,8 @@ func updateProtocol(p *ABPProver, v *ABPVerifier, ps *ABPProverState, vs *ABPVer
 
 type ABPProver struct {
 	Prover
-	Tau int
+	Slice fastmath.Slice
+	Tau   int
 }
 
 type ABPProverState struct {
@@ -62,18 +71,18 @@ type ABPProverState struct {
 	ABPMaskedOpening *fastmath.IntVec
 }
 
-func NewABPProver(params PublicParams, tau int) ABPProver {
+func NewABPProver(params PublicParams, slice fastmath.Slice, tau int) ABPProver {
 	extendPublicParameters(&params, tau)
 	p := NewProver(params)
 	return ABPProver{
 		Prover: p,
+		Slice:  slice,
 		Tau:    tau,
 	}
 }
 
 func (p ABPProver) CommitToMessage(s *fastmath.IntVec) (*fastmath.PolyNTTVec, *fastmath.PolyNTTVec, *fastmath.PolyNTTMatrix, ABPProverState) {
 	abpMask := crypto.CreateABPMask(p.Tau, p.params.config.TernarySampler, p.params.config.BaseRing)
-	fmt.Println("y (abp mask) =", abpMask.String())
 	abpMaskPolys := abpMask.UnderlyingPolysAsPolyNTTVec()
 	t0, t, w, ps := p.Prover.CommitToMessage(s)
 	// Append the new commitment t_i = b_i * r + y.
@@ -88,7 +97,9 @@ func (p ABPProver) CommitToMessage(s *fastmath.IntVec) (*fastmath.PolyNTTVec, *f
 
 func (p ABPProver) CreateABPMaskedOpening(abpVerifierChal *fastmath.IntMatrix, state ABPProverState) (*fastmath.IntVec, ABPProverState, error) {
 	// TODO rejection sampling
-	abpMaskedOpening := crypto.CreateABPMaskedOpening(abpVerifierChal, state.ABPProverMask, p.params.U, p.params.config.BaseRing)
+	// Get the u' from sliced s.
+	up := p.params.A.SubsectionCopy(0, p.params.A.Rows(), p.Slice.Start, p.Slice.End).MulVec(state.S.Slice(p.Slice))
+	abpMaskedOpening := crypto.CreateABPMaskedOpening(abpVerifierChal, state.ABPProverMask, up, p.params.config.BaseRing)
 	state.ABPMaskedOpening = abpMaskedOpening
 	return abpMaskedOpening, state, nil
 }
@@ -107,7 +118,8 @@ func (p ABPProver) MaskedOpening(c *fastmath.Poly, state ABPProverState) (*fastm
 
 type ABPVerifier struct {
 	Verifier
-	Tau int
+	Slice fastmath.Slice
+	Tau   int
 }
 
 type ABPVerifierState struct {
@@ -116,11 +128,12 @@ type ABPVerifierState struct {
 	ABPMaskedOpening *fastmath.IntVec
 }
 
-func NewABPVerifier(params PublicParams, tau int) ABPVerifier {
+func NewABPVerifier(params PublicParams, slice fastmath.Slice, tau int) ABPVerifier {
 	extendPublicParameters(&params, tau)
 	v := NewVerifier(params)
 	return ABPVerifier{
 		Verifier: v,
+		Slice:    slice,
 		Tau:      tau,
 	}
 }
@@ -144,11 +157,6 @@ func (vf ABPVerifier) CreateChallenge(t *fastmath.PolyNTTVec, h, v *fastmath.Pol
 }
 
 func (vf ABPVerifier) Verify(z *fastmath.PolyNTTMatrix, state ABPVerifierState) bool {
-	res := vf.Verifier.Verify(z, state.VerifierState)
-	if !res {
-		fmt.Println("abp verifier original failed")
-		return false
-	}
 	bound := big.NewInt(0).Sqrt(
 		big.NewInt(0).Div(
 			vf.params.config.Q,
@@ -159,12 +167,17 @@ func (vf ABPVerifier) Verify(z *fastmath.PolyNTTMatrix, state ABPVerifierState) 
 		fmt.Printf("** bound = %d, norm = %d, q = %d\n", bound, state.ABPMaskedOpening.Max(), vf.params.config.Q)
 		return false
 	}
+	res := vf.Verifier.Verify(z, state.VerifierState)
+	if !res {
+		fmt.Println("abp verifier original failed")
+		return false
+	}
 	return true
 }
 
-func ExecuteWithBoundProof(s *fastmath.IntVec, tau int, params PublicParams) bool {
-	prover := NewABPProver(params, tau)
-	verifier := NewABPVerifier(params, tau)
+func ExecuteWithBoundProof(s *fastmath.IntVec, slice fastmath.Slice, tau int, params PublicParams) bool {
+	prover := NewABPProver(params, slice, tau)
+	verifier := NewABPVerifier(params, slice, tau)
 	fmt.Println("abp exchange initiated")
 	// Commit to the message.
 	t0, t, w, ps := prover.CommitToMessage(s)
