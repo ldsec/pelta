@@ -1,6 +1,7 @@
 package tests
 
 import (
+	"math/big"
 	"testing"
 	"time"
 
@@ -201,15 +202,19 @@ func TestMultiSplitMultiReplication(t *testing.T) {
 	ExecuteAndTestCorrectness(t, s, params)
 }
 
-func TestTernaryPrefix(t *testing.T) {
+func TestTernarySlice(t *testing.T) {
 	bfvRing := fastmath.BFVZeroLevelRing()
 	m := 16
 	n := bfvRing.D * 4
 	A := fastmath.NewRandomIntMatrix(m, n, bfvRing.Q, bfvRing.BaseRing)
-	s := fastmath.NewRandomTernaryIntVec(n, bfvRing.BaseRing)
+	s := fastmath.NewRandomIntVec(n, big.NewInt(5), bfvRing.BaseRing)
+	ternarySlice := fastmath.NewSlice(n/2, n)
+	for i := ternarySlice.Start; i < ternarySlice.End; i++ {
+		s.Set(i, 4)
+	}
 	rel := crypto.NewLinearRelation(A, s)
 	config := fastens20.DefaultProtocolConfig(bfvRing, rel).
-		WithTernaryPrefix(n / 2)
+		WithTernarySlice(ternarySlice)
 	params := fastens20.GeneratePublicParameters(rel, config)
 	ExecuteAndTestCorrectness(t, s, params)
 }
@@ -280,7 +285,6 @@ func TestPerformanceSimple(tst *testing.T) {
 	params := fastens20.GeneratePublicParameters(rel, config)
 	prover := fastens20.NewProver(params)
 	verifier := fastens20.NewVerifier(params)
-	// Commit to the message.
 	var t0, t *fastmath.PolyNTTVec
 	var w *fastmath.PolyNTTMatrix
 	var ps fastens20.ProverState

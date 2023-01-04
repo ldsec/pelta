@@ -30,7 +30,7 @@ func updateProtocol(p *ABPProver, v *ABPVerifier, ps *ABPProverState, vs *ABPVer
 	lrb.AppendEqn(crypto.NewLinearEquation(u, A.Cols()).AppendTerm(A, s))
 	// RAs + y = z
 	lrb.AppendEqn(crypto.NewABPEquation(vs.ABPVerifierChal, A, 0, ps.ABPProverMask, ps.ABPMaskedOpening, p.params.config.BaseRing))
-	fmt.Println("building")
+	fmt.Printf("building: %s\n", lrb.SizesString())
 	newRel := lrb.Build(p.params.config.BaseRing)
 	if !newRel.IsValid() {
 		panic("invalid abp embedding")
@@ -46,9 +46,6 @@ func updateProtocol(p *ABPProver, v *ABPVerifier, ps *ABPProverState, vs *ABPVer
 	// Update the configuration parameters.
 	p.params.config.M = newRel.A.Rows()
 	v.params.config.M = newRel.A.Rows()
-	// Maintain the ternary length.
-	p.params.config.TernaryLength = p.params.config.N
-	v.params.config.TernaryLength = v.params.config.N
 	// Update the N.
 	p.params.config.N = newRel.A.Cols()
 	v.params.config.N = newRel.A.Cols()

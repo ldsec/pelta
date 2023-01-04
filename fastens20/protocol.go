@@ -14,16 +14,16 @@ import (
 // ProtocolConfig contains the settings for the ENS20 protocol.
 type ProtocolConfig struct {
 	RingParams      fastmath.RingParams
-	D               int
-	Q               *big.Int
-	M               int
-	N               int
-	K               int
-	InvK            uint64
+	D               int      // poly. degree
+	Q               *big.Int // ring modulus
+	M               int      // # rows
+	N               int      // # cols
+	K               int      // replication degree
+	InvK            uint64   // k^{-1} mod q
 	Delta1          int
-	Lambda          int
-	Kappa           int
-	TernaryLength   int
+	Lambda          int            // security parameter
+	Kappa           int            // security parameter
+	TernarySlice    fastmath.Slice // slice of s that should be ternary
 	BaseRing        *ring.Ring
 	UniformSampler  fastmath.PolySampler
 	TernarySampler  fastmath.PolySampler
@@ -36,7 +36,7 @@ func DefaultProtocolConfig(ringParams fastmath.RingParams, rel crypto.LinearRela
 	// Create the samplers.
 	prng, err := utils.NewPRNG()
 	if err != nil {
-		panic("could not initialize the prng: %s")
+		panic("could not initialize the prng")
 	}
 	// Construct the augmented ternary sampler.
 	originalTernarySampler := ring.NewTernarySampler(prng, ringParams.BaseRing, 1.0/3.0, false)
@@ -56,7 +56,7 @@ func DefaultProtocolConfig(ringParams fastmath.RingParams, rel crypto.LinearRela
 		Delta1:          delta1,
 		Lambda:          1,
 		Kappa:           1,
-		TernaryLength:   numCols,
+		TernarySlice:    fastmath.NewSlice(0, numCols),
 		BaseRing:        ringParams.BaseRing,
 		UniformSampler:  ring.NewUniformSampler(prng, ringParams.BaseRing),
 		TernarySampler:  ternarySampler,
@@ -64,8 +64,8 @@ func DefaultProtocolConfig(ringParams fastmath.RingParams, rel crypto.LinearRela
 	}
 }
 
-func (c ProtocolConfig) WithTernaryPrefix(ternaryLength int) ProtocolConfig {
-	c.TernaryLength = ternaryLength
+func (c ProtocolConfig) WithTernarySlice(ternarySlice fastmath.Slice) ProtocolConfig {
+	c.TernarySlice = ternarySlice
 	return c
 }
 
@@ -86,9 +86,9 @@ func (c ProtocolConfig) NumSplits() int {
 	return c.N / c.D
 }
 
-// NumTernarySplits returns the number of splits that are in ternary.
+// NumTernarySplits returns the number of splits that should be checked to be ternary.
 func (c ProtocolConfig) NumTernarySplits() int {
-	return c.TernaryLength / c.D
+	return c.TernarySlice.Size() / c.D
 }
 
 // Beta returns the norm Gaussian limit.

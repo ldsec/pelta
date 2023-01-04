@@ -164,12 +164,13 @@ func (p *Poly) SumCoeffsAllLevels(level int) uint64 {
 }
 
 // SumCoeffs returns the sum of the coefficients of this polynomial.
+// Warning: `mod` parameter is not used
 func (p *Poly) SumCoeffs(level int, mod uint64) uint64 {
 	out := uint64(0)
 	for _, c := range p.ref.Coeffs[level] {
-		c += out
+		out = (out + c) % mod
 	}
-	return out % mod
+	return out
 }
 
 // Sum sums the elements of this vector.

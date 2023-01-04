@@ -4,15 +4,11 @@ import (
 	"testing"
 
 	"github.com/ldsec/codeBase/commitment/fastmath"
-	"github.com/tuneinsight/lattigo/v4/bfv"
 	"github.com/tuneinsight/lattigo/v4/ring"
 )
 
 func getBaseRing() *ring.Ring {
-	ringParamDef := bfv.PN13QP218
-	ringParamDef.T = 0x3ee0001
-	ringParams, _ := bfv.NewParametersFromLiteral(ringParamDef)
-	return ringParams.CopyNew().Parameters.RingQP().RingQ
+	return fastmath.BFVZeroLevelRing().BaseRing
 }
 
 func TestPolySumCoeffs(t *testing.T) {
@@ -82,7 +78,7 @@ func TestIntVecBigDot(t *testing.T) {
 	for i := 0; i < size; i++ {
 		a.Set(i, uint64(i+1))
 		b.Set(i, uint64(i+2))
-		expected += uint64(i+1) * uint64(i+2)
+		expected = (expected + uint64(i+1)*uint64(i+2)) % baseRing.ModulusAtLevel[0].Uint64()
 	}
 	actual := a.Dot(b)
 	if actual != expected {

@@ -2,8 +2,8 @@ package fastmath
 
 // Slice represents a slice [start, end) over a list of values.
 type Slice struct {
-	start int
-	end   int
+	Start int
+	End   int
 }
 
 func NewSlice(start, end int) Slice {
@@ -11,7 +11,7 @@ func NewSlice(start, end int) Slice {
 }
 
 func (s Slice) Size() int {
-	return s.end - s.start
+	return s.End - s.Start
 }
 
 func (p *Poly) Slice(s Slice) *Poly {
@@ -20,8 +20,8 @@ func (p *Poly) Slice(s Slice) *Poly {
 
 func (v *IntVec) Slice(s Slice) *IntVec {
 	sliced := NewIntVec(s.Size(), v.baseRing)
-	for i := s.start; i < s.end; i++ {
-		sliced.Set(i-s.start, v.Get(i))
+	for i := s.Start; i < s.End; i++ {
+		sliced.Set(i-s.Start, v.Get(i))
 	}
 	return sliced
 }

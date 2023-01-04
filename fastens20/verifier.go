@@ -100,12 +100,13 @@ func (vf Verifier) Verify(z *fastmath.PolyNTTMatrix, state VerifierState) bool {
 			Neg())
 	vTest := CommitmentSum(vf.params.config.K, vf.params.config.NumTernarySplits(), state.Alpha,
 		func(i int, j int) *fastmath.PolyNTT {
+			jp := vf.params.config.TernarySlice.Start/vf.params.config.D + j
 			// f[i][j]
-			p1 := f.Get(i, j).Copy()
+			p1 := f.Get(i, jp).Copy()
 			// f[i][j] + sig^i(c)
-			p2 := f.Get(i, j).Copy().Add(state.c.Permute(int64(i), vf.params.Sig).NTT())
+			p2 := f.Get(i, jp).Copy().Add(state.c.Permute(int64(i), vf.params.Sig).NTT())
 			// f[i][j] + 2sig^i(c)
-			p3 := f.Get(i, j).Copy().Add(state.c.Permute(int64(i), vf.params.Sig).Scale(2).NTT())
+			p3 := f.Get(i, jp).Copy().Add(state.c.Permute(int64(i), vf.params.Sig).Scale(2).NTT())
 			// f[i][j] * (f[i][j] + sig^i(c)) * (f[i][j] + 2sig^i(c))
 			return p1.Mul(p2).Mul(p3)
 		}, vf.params)

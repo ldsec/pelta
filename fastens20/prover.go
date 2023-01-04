@@ -63,14 +63,15 @@ func (p Prover) CommitToMessage(s *fastmath.IntVec) (*fastmath.PolyNTTVec, *fast
 // CommitToRelation commits to the ternary structure of the secret and the knowledge of the secret s, s.t. As = U.
 // Returns t, h, v, vp
 func (p Prover) CommitToRelation(alpha *fastmath.PolyNTTVec, gamma *fastmath.IntMatrix, state ProverState) (*fastmath.PolyNTTVec, *fastmath.PolyNTT, *fastmath.PolyNTT, *fastmath.PolyNTTVec, ProverState) {
-	// Prover further set up.
+	// Get the ternary part of the s.
 	sum1 := CommitmentSum(p.params.config.K, p.params.config.NumTernarySplits(), alpha,
 		func(i int, j int) *fastmath.PolyNTT {
+			jp := p.params.config.TernarySlice.Start/p.params.config.D + j
 			// (b[j]*y[i])^2
-			tmp := p.params.B.Row(j).Dot(state.Y.Row(i)).
+			tmp := p.params.B.Row(jp).Dot(state.Y.Row(i)).
 				Pow(2, p.params.config.Q.Uint64())
 			// 3s[j]-3
-			tmp2 := state.SHat.Get(j).Copy().
+			tmp2 := state.SHat.Get(jp).Copy().
 				Scale(3).
 				Add(fastmath.NewOnePoly(3, p.params.config.BaseRing).NTT().Neg())
 			// (3s[j]-3) * (b[j]*y[i])^2
@@ -78,23 +79,25 @@ func (p Prover) CommitToRelation(alpha *fastmath.PolyNTTVec, gamma *fastmath.Int
 		}, p.params)
 	sum2 := CommitmentSum(p.params.config.K, p.params.config.NumTernarySplits(), alpha,
 		func(i int, j int) *fastmath.PolyNTT {
+			jp := p.params.config.TernarySlice.Start/p.params.config.D + j
 			// b[j]*y[i]
-			tmp := p.params.B.Row(j).Dot(state.Y.Row(i))
+			tmp := p.params.B.Row(jp).Dot(state.Y.Row(i))
 			// 2s[j]-1
 			neg1 := fastmath.NewOnePoly(1, p.params.config.BaseRing).NTT().Neg()
-			tmp1 := state.SHat.Get(j).Copy().Scale(2).Add(neg1)
+			tmp1 := state.SHat.Get(jp).Copy().Scale(2).Add(neg1)
 			// s[j]-2
-			tmp2 := state.SHat.Get(j).Copy().
+			tmp2 := state.SHat.Get(jp).Copy().
 				Add(fastmath.NewOnePoly(2, p.params.config.BaseRing).NTT().Neg())
 			// (s[j]-1)*s[j]
-			tmp3 := state.SHat.Get(j).Copy().Add(neg1).Mul(state.SHat.Get(j))
+			tmp3 := state.SHat.Get(jp).Copy().Add(neg1).Mul(state.SHat.Get(jp))
 			// [(2s[j]-1) * (s[j]-2) + s[j](s[j]-1)] * (b[j]*y[i])
 			return tmp.Mul(tmp1.Mul(tmp2).Add(tmp3))
 		}, p.params)
 	sum3 := CommitmentSum(p.params.config.K, p.params.config.NumTernarySplits(), alpha,
 		func(i int, j int) *fastmath.PolyNTT {
+			jp := p.params.config.TernarySlice.Start/p.params.config.D + j
 			// (b[j] * y[i])^3
-			by := p.params.B.Row(j).Dot(state.Y.Row(i))
+			by := p.params.B.Row(jp).Dot(state.Y.Row(i))
 			return by.Pow(3, p.params.config.Q.Uint64())
 		}, p.params)
 	// t[n/d+2]
