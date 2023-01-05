@@ -115,7 +115,7 @@ func (r *LinearRelation) String() string {
 }
 
 func (r *LinearRelation) SizesString() string {
-	return fmt.Sprintf("A[%dx%d] s[%d] = u[%d]", r.A.Rows(), r.A.Cols(), r.S.Size(), r.U.Size())
+	return fmt.Sprintf("A[%dx%d]s[%d] = u[%d]", r.A.Rows(), r.A.Cols(), r.S.Size(), r.U.Size())
 }
 
 // IsValid returns true iff As = u holds.

@@ -27,7 +27,7 @@ func ExecuteWithoutBoundProof(s *fastmath.IntVec, params PublicParams) bool {
 
 func ExecuteWithBoundProof(s *fastmath.IntVec, slice fastmath.Slice, params PublicParams) bool {
 	prover := NewABPProver(params, slice, params.config.Tau)
-	verifier := NewABPVerifier(params, slice, params.config.Tau)
+	verifier := NewABPVerifier(params, slice, params.config.Tau, params.config.Bound)
 	fmt.Println("abp exchange initiated")
 	// Commit to the message.
 	t0, t, w, ps := prover.CommitToMessage(s)
@@ -53,6 +53,9 @@ func Execute(s *fastmath.IntVec, val *crypto.ValidityProofDef, ter *crypto.Terna
 	config := DefaultProtocolConfig(ringParams, val.Rel).WithTernarySlice(fastmath.NewSlice(0, 0))
 	if ter != nil {
 		config = config.WithTernarySlice(ter.Target)
+	}
+	if abp != nil {
+		config = config.WithBound(abp.Bound)
 	}
 	params := GeneratePublicParameters(config, val.Rel)
 	// Either execute with or without bound proof.

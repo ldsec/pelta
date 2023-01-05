@@ -38,7 +38,6 @@ func updateProtocol(p *ABPProver, v *ABPVerifier, ps *ABPProverState, vs *ABPVer
 		}
 	}
 	lrb.AppendEqn(crypto.NewABPEquation(vs.ABPVerifierChal, 0, ps.ABPProverMask, ps.ABPMaskedOpening, p.params.config.BaseRing))
-	fmt.Printf("building:\n%s\n", lrb.SizesString())
 	newRel := lrb.Build(p.params.config.BaseRing)
 	if !newRel.IsValid() {
 		panic("invalid abp embedding")
@@ -126,7 +125,7 @@ type ABPVerifierState struct {
 	ABPMaskedOpening *fastmath.IntVec
 }
 
-func NewABPVerifier(params PublicParams, slice fastmath.Slice, tau int) ABPVerifier {
+func NewABPVerifier(params PublicParams, slice fastmath.Slice, tau int, bound *big.Int) ABPVerifier {
 	extendPublicParameters(&params, tau)
 	v := NewVerifier(params)
 	return ABPVerifier{
@@ -155,11 +154,8 @@ func (vf ABPVerifier) CreateChallenge(t *fastmath.PolyNTTVec, h, v *fastmath.Pol
 }
 
 func (vf ABPVerifier) Verify(z *fastmath.PolyNTTMatrix, state ABPVerifierState) bool {
-	bound := big.NewInt(0).Sqrt(
-		big.NewInt(0).Div(
-			vf.params.config.Q,
-			big.NewInt(int64(2*vf.params.U.Size())))).Uint64() / 2
 	// Infinity norm check.
+	bound := vf.params.config.Bound.Uint64()
 	if state.ABPMaskedOpening.Max() >= bound {
 		fmt.Println("abp verifier failed infinity norm check")
 		fmt.Printf("** bound = %d, norm = %d, q = %d\n", bound, state.ABPMaskedOpening.Max(), vf.params.config.Q)

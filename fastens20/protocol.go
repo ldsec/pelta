@@ -26,7 +26,8 @@ type ProtocolConfig struct {
 	UniformSampler  fastmath.PolySampler
 	TernarySampler  fastmath.PolySampler
 	GaussianSampler fastmath.PolySampler
-	Tau             int // abp security parameter
+	Tau             int      // abp security parameter
+	Bound           *big.Int // abp bound
 }
 
 // DefaultProtocolConfig returns the default configuration for an ENS20 execution.
@@ -61,6 +62,7 @@ func DefaultProtocolConfig(ringParams fastmath.RingParams, rel crypto.LinearRela
 		TernarySampler:  ternarySampler,
 		GaussianSampler: ring.NewGaussianSampler(prng, ringParams.BaseRing, ringParams.Sigma, delta1),
 		Tau:             128,
+		Bound:           big.NewInt(0),
 	}
 }
 
@@ -83,6 +85,11 @@ func (c ProtocolConfig) WithSecurityParameters(kappa, lambda int) ProtocolConfig
 
 func (c ProtocolConfig) WithTau(tau int) ProtocolConfig {
 	c.Tau = tau
+	return c
+}
+
+func (c ProtocolConfig) WithBound(bound *big.Int) ProtocolConfig {
+	c.Bound = bound
 	return c
 }
 
