@@ -2,13 +2,11 @@ package fastens20
 
 import (
 	"fmt"
-	"time"
-
-	"github.com/ldsec/codeBase/commitment/crypto"
 	"github.com/ldsec/codeBase/commitment/fastmath"
+	"time"
 )
 
-func ExecuteWithoutBoundProof(s *fastmath.IntVec, params PublicParams) bool {
+func executeWithoutBoundProof(s *fastmath.IntVec, params PublicParams) bool {
 	prover := NewProver(params)
 	verifier := NewVerifier(params)
 	// Commit to the message.
@@ -21,13 +19,12 @@ func ExecuteWithoutBoundProof(s *fastmath.IntVec, params PublicParams) bool {
 	for err != nil {
 		z, ps, err = prover.MaskedOpening(c, ps)
 	}
-	res := verifier.Verify(z, vs)
-	return res
+	return verifier.Verify(z, vs)
 }
 
-func ExecuteWithBoundProof(s *fastmath.IntVec, slice fastmath.Slice, params PublicParams) bool {
-	prover := NewABPProver(params, slice, params.config.Tau)
-	verifier := NewABPVerifier(params, slice, params.config.Tau, params.config.Bound)
+func executeWithBoundProof(s *fastmath.IntVec, params PublicParams) bool {
+	prover := NewABPProver(params, params.config.BoundSlice, params.config.Tau)
+	verifier := NewABPVerifier(params, params.config.BoundSlice, params.config.Tau, params.config.Bound)
 	fmt.Println("abp exchange initiated")
 	// Commit to the message.
 	t0, t, w, ps := prover.CommitToMessage(s)
@@ -47,24 +44,15 @@ func ExecuteWithBoundProof(s *fastmath.IntVec, slice fastmath.Slice, params Publ
 	return verifier.Verify(z, vs)
 }
 
-// Execute runs the augmented ENS20 protocol. `ter` and `abp` proof definitions are optional.
-func Execute(s *fastmath.IntVec, val *crypto.ValidityProofDef, ter *crypto.TernaryProofDef, abp *crypto.ApproxBoundProofDef, ringParams fastmath.RingParams) bool {
-	// Generate the public parameters
-	config := DefaultProtocolConfig(ringParams, val.Rel).WithTernarySlice(fastmath.NewSlice(0, 0))
-	if ter != nil {
-		config = config.WithTernarySlice(ter.Target)
-	}
-	if abp != nil {
-		config = config.WithBound(abp.Bound)
-	}
-	params := GeneratePublicParameters(config, val.Rel)
+// Execute runs the augmented ENS20 protocol.
+func Execute(s *fastmath.IntVec, params PublicParams) bool {
 	// Either execute with or without bound proof.
 	var res bool
 	t0 := time.Now()
-	if abp != nil {
-		res = ExecuteWithBoundProof(s, abp.Target, params)
+	if params.config.ABPEnabled {
+		res = executeWithBoundProof(s, params)
 	} else {
-		res = ExecuteWithoutBoundProof(s, params)
+		res = executeWithoutBoundProof(s, params)
 	}
 	dt := time.Now().Sub(t0)
 	fmt.Printf("protocol execution took %dms\n", dt.Milliseconds())

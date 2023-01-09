@@ -36,6 +36,11 @@ func (p *Poly) Set(index int, value uint64) {
 	}
 }
 
+// SetLevel sets the coefficient of this polynomial at the given level to the given value.
+func (p *Poly) SetLevel(index, level int, value uint64) {
+	p.ref.Coeffs[level][index] = value
+}
+
 // Get returns the coefficient of this polynomial.
 func (p *Poly) Get(index int, level int) uint64 {
 	return p.ref.Coeffs[level][index]

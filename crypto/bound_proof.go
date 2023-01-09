@@ -16,7 +16,7 @@ func CreateABPChallenge(tau, n int, ternarySampler fastmath.PolySampler, baseRin
 // Warning: Returned y is in the NTT domain.
 func CreateABPMask(tau int, ternarySampler fastmath.PolySampler, baseRing *ring.Ring) *fastmath.IntVec {
 	// Create y of tau
-	return fastmath.NewRandomTernaryIntVec(tau, baseRing)
+	return fastmath.NewRandomIntVecFast(tau, ternarySampler, baseRing)
 }
 
 // CreateABPMaskedOpening returns R (abpChal) * s + y (abpMask)

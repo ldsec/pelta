@@ -22,7 +22,7 @@ type CollectiveBootstrappingParams struct {
 	T     *fastmath.IntMatrix
 }
 
-func GenerateCollectiveBootstrappingRelation(s1, s2, s3, r, e0, e1, e2 *fastmath.Poly, k1, k2, k3 *fastmath.IntVec, params CollectiveBootstrappingParams, config GlobalConfig) crypto.LinearRelation {
+func GenerateCollectiveBootstrappingRelation(s1, s2, s3, r, e0, e1, e2 *fastmath.Poly, k1, k2, k3 *fastmath.IntVec, params CollectiveBootstrappingParams, config RelationsConfig) crypto.LinearRelation {
 	rlweParams := crypto.NewRLWEParameters(config.Ring.Q, config.Ring.D, config.Beta, config.Ring.BaseRing)
 	c1T := params.c1.Diag().Hadamard(params.T)
 	negaT := params.a.Diag().Hadamard(params.T).Neg()

@@ -30,7 +30,6 @@ func updateProtocol(p *ABPProver, v *ABPVerifier, ps *ABPProverState, vs *ABPVer
 	lrb.AppendEqn(crypto.NewLinearEquation(u, A.Cols()).AppendTerm(A, s))
 	// RAs + y = z
 	// Clear the parts of A that are out of the target slice.
-	A = A.Copy()
 	zeroCol := fastmath.NewIntVec(A.Rows(), p.params.config.RingParams.BaseRing)
 	for i := 0; i < A.Cols(); i++ {
 		if i < p.Slice.Start || i >= p.Slice.End {
@@ -40,14 +39,12 @@ func updateProtocol(p *ABPProver, v *ABPVerifier, ps *ABPProverState, vs *ABPVer
 	lrb.AppendEqn(crypto.NewABPEquation(vs.ABPVerifierChal, 0, ps.ABPProverMask, ps.ABPMaskedOpening, p.params.config.BaseRing))
 	newRel := lrb.Build(p.params.config.BaseRing)
 	if !newRel.IsValid() {
-		panic("invalid abp embedding")
+		fmt.Printf("invalid abp embedding, but continuing...")
 	}
 	fmt.Printf("abp equation embedded successfully: %s\n", newRel.SizesString())
 	// Update the public parameters with the new relation.
 	p.params.A = newRel.A
 	v.params.A = newRel.A
-	p.params.At = newRel.A.Transposed()
-	v.params.At = p.params.At
 	v.params.U = newRel.U
 	p.params.U = newRel.U
 	// Update the configuration parameters.

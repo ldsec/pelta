@@ -15,7 +15,7 @@ type KeyGenPublicParams struct {
 	P  *big.Int
 }
 
-func GenerateKeyGenRelation(s, r, e *fastmath.Poly, k *fastmath.IntVec, params KeyGenPublicParams, config GlobalConfig) crypto.LinearRelation {
+func GenerateKeyGenRelation(s, r, e *fastmath.Poly, k *fastmath.IntVec, params KeyGenPublicParams, config RelationsConfig) crypto.LinearRelation {
 	rlweParams := crypto.NewRLWEParameters(config.Ring.Q, config.Ring.D, config.Beta, config.Ring.BaseRing)
 	_, comP := crypto.GetAjtaiCommitments(params.A1, params.A2, s.Coeffs(), r.Coeffs(), params.P)
 	ajtaiEqn := crypto.NewPaddedAjtaiEquation(comP, params.A1, params.A2, s.Coeffs(), r.Coeffs(), k, params.P, config.Ring.Q, config.Ring.BaseRing)
@@ -37,7 +37,7 @@ type RelinKeyGenPublicParams struct {
 	T  *fastmath.IntMatrix
 }
 
-func GenerateRelinKeyGenRelation(s, u, e0, e1, r *fastmath.Poly, k1 *fastmath.IntVec, params RelinKeyGenPublicParams, config GlobalConfig) crypto.LinearRelation {
+func GenerateRelinKeyGenRelation(s, u, e0, e1, r *fastmath.Poly, k1 *fastmath.IntVec, params RelinKeyGenPublicParams, config RelationsConfig) crypto.LinearRelation {
 	rlweParams := crypto.NewRLWEParameters(config.Ring.Q, config.Ring.D, config.Beta, config.Ring.BaseRing)
 	aT := params.A.Coeffs().Neg().Diag().Hadamard(params.T)
 	wT := params.W.Coeffs().Diag().Hadamard(params.T)

@@ -18,7 +18,7 @@ type KeySwitchCollDecPublicParams struct {
 	QSmdg *big.Int
 }
 
-func GenerateKeySwitchCollDecRelation(s, sp, u, r, err *fastmath.Poly, k, kSmdg *fastmath.IntVec, params KeySwitchCollDecPublicParams, config GlobalConfig) crypto.LinearRelation {
+func GenerateKeySwitchCollDecRelation(s, sp, u, r, err *fastmath.Poly, k, kSmdg *fastmath.IntVec, params KeySwitchCollDecPublicParams, config RelationsConfig) crypto.LinearRelation {
 	rlweParams := crypto.NewRLWEParameters(config.Ring.Q, config.Ring.D, config.Beta, config.Ring.BaseRing)
 	c1T := params.C1.Coeffs().Diag().Hadamard(params.T)
 	h := c1T.MulVec(s.Coeffs()).Add(err.Coeffs())
@@ -51,7 +51,7 @@ type PubKeySwitchPublicParams struct {
 	qSmdg *big.Int
 }
 
-func GeneratePubKeySwitchRelation(s, u, sp, e0, e1, r *fastmath.Poly, k1, kSmdg *fastmath.IntVec, params PubKeySwitchPublicParams, config GlobalConfig) crypto.LinearRelation {
+func GeneratePubKeySwitchRelation(s, u, sp, e0, e1, r *fastmath.Poly, k1, kSmdg *fastmath.IntVec, params PubKeySwitchPublicParams, config RelationsConfig) crypto.LinearRelation {
 	rlweParams := crypto.NewRLWEParameters(config.Ring.Q, config.Ring.D, config.Beta, config.Ring.BaseRing)
 	c1T := params.c1.Coeffs().Diag().Hadamard(params.T)
 	p0T := params.p0.Coeffs().Diag().Hadamard(params.T)

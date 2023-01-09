@@ -48,7 +48,7 @@ func NewPaddedAjtaiEquation(comP *fastmath.IntVec, A, B *fastmath.IntMatrix, s, 
 	paddedB := B.Copy().ExtendRows(fastmath.NewIntMatrix(padLength, d, baseRing))
 	paddedKappa := kappa.Copy().Append(fastmath.NewIntVec(padLength, baseRing))
 	paddedComP := comP.Copy().Append(fastmath.NewIntVec(padLength, baseRing))
-	negP := big.NewInt(0).Sub(q, p).Uint64()
+	negP := big.NewInt(0).Sub(baseRing.ModulusAtLevel[0], p).Uint64() // use the 0-level modulus for negating
 	eqn := NewLinearEquation(paddedComP, d)
 	eqn.AppendTerm(paddedA, s).
 		AppendTerm(paddedB, r).

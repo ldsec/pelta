@@ -13,7 +13,7 @@ import (
 
 func TestKeyGen(t *testing.T) {
 	t.Logf("reading config")
-	config := relations.NewGlobalConfig(crypto.GetDefaultCryptoConfig())
+	config := relations.NewRelationsConfig(crypto.GetDefaultCryptoConfig())
 	q := config.Ring.Q
 	logD := int(math.Log2(float64(config.Ring.D)))
 
@@ -39,17 +39,20 @@ func TestKeyGen(t *testing.T) {
 	}
 
 	t.Logf("running the protocol...")
-	val := rel.CreateValidityProofDef()
-	ter := rel.CreateTernaryProofDef(0, config.Ring.D)
-	abp := rel.CreateApproxBoundProofDef(config.Ring.D*6, config.Ring.D*7, config.Ring.Q)
-	if !fastens20.Execute(rel.S, &val, &ter, &abp, config.Ring) {
+	// Generate the public parameters
+	protocolConfig := fastens20.DefaultProtocolConfig(config.Ring, rel).
+		WithABP(128, config.Ring.Q, fastmath.NewSlice(config.Ring.D*6, config.Ring.D*7)).
+		WithTernarySlice(fastmath.NewSlice(0, config.Ring.D)).
+		WithReplication(4)
+	protocolParams := fastens20.GeneratePublicParameters(protocolConfig, rel)
+	if !fastens20.Execute(rel.S, protocolParams) {
 		t.Errorf("execution failed")
 	}
 }
 
 func TestRelinKeyGen(t *testing.T) {
 	t.Logf("reading config")
-	config := relations.NewGlobalConfig(crypto.GetDefaultCryptoConfig())
+	config := relations.NewRelationsConfig(crypto.GetDefaultCryptoConfig())
 	q := config.Ring.Q
 	logD := int(math.Log2(float64(config.Ring.D)))
 
@@ -89,7 +92,7 @@ func TestRelinKeyGen(t *testing.T) {
 
 func TestKeySwitchCollDec(t *testing.T) {
 	t.Logf("reading config")
-	config := relations.NewGlobalConfig(crypto.GetDefaultCryptoConfig())
+	config := relations.NewRelationsConfig(crypto.GetDefaultCryptoConfig())
 	q := config.Ring.Q
 	logD := int(math.Log2(float64(config.Ring.D)))
 

@@ -17,10 +17,9 @@ func TestABPSimple(t *testing.T) {
 	s := fastmath.NewRandomTernaryIntVec(n, bfvRing.BaseRing)
 	rel := crypto.NewLinearRelation(A, s)
 	config := fastens20.DefaultProtocolConfig(bfvRing, rel).
-		WithTau(tau).
-		WithBound(bfvRing.Q)
+		WithABP(tau, bfvRing.Q, fastmath.NewSlice(0, n))
 	params := fastens20.GeneratePublicParameters(config, rel)
-	if !fastens20.ExecuteWithBoundProof(s, fastmath.NewSlice(0, n), params) {
+	if !fastens20.Execute(s, params) {
 		t.Errorf("execution failed!")
 	}
 }
@@ -34,10 +33,9 @@ func TestABPSlice(t *testing.T) {
 	s := fastmath.NewRandomTernaryIntVec(n, bfvRing.BaseRing)
 	rel := crypto.NewLinearRelation(A, s)
 	config := fastens20.DefaultProtocolConfig(bfvRing, rel).
-		WithTau(tau).
-		WithBound(bfvRing.Q)
+		WithABP(tau, bfvRing.Q, fastmath.NewSlice(0, n/2))
 	params := fastens20.GeneratePublicParameters(config, rel)
-	if !fastens20.ExecuteWithBoundProof(s, fastmath.NewSlice(0, n/2), params) {
+	if !fastens20.Execute(s, params) {
 		t.Errorf("execution failed!")
 	}
 }

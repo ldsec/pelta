@@ -10,7 +10,6 @@ import (
 // Returns the ternary decomposition matrix and the basis vector.
 func TernaryDecomposition(v *IntVec, beta uint64, logBeta int, mod *big.Int, baseRing *ring.Ring) (*IntMatrix, *IntVec) {
 	base := uint64(3)
-	modUint := mod.Uint64()
 	basis := GenerateBasis(base, logBeta, mod, baseRing)
 	decomposed := NewIntMatrix(v.Size(), logBeta, baseRing)
 	decomposed.PopulateRows(func(i int) *IntVec {
@@ -18,7 +17,7 @@ func TernaryDecomposition(v *IntVec, beta uint64, logBeta int, mod *big.Int, bas
 		// Work with the absolute value.
 		isNeg := false
 		if num > beta {
-			num = modUint - num
+			num = big.NewInt(0).Sub(mod, big.NewInt(int64(num))).Uint64()
 			isNeg = true
 		}
 		basisRepr := IntoBasisRepr(num, base, logBeta, baseRing)

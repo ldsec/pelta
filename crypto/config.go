@@ -11,11 +11,10 @@ import (
 type CryptoConfig struct {
 	fastmath.RingParams
 	P               *big.Int // Ajtai prime mod (~20 bit prime)
-	M               int      // # rows
-	N               int      // # cols, must be >= D
 	Delta1          int      // Width of the uniform distribution
-	Lambda          int      // M-LWE dimension
-	Kappa           int      // M-SIS dimension
+	Beta            int
+	Lambda          int // M-LWE dimension
+	Kappa           int // M-SIS dimension
 	UniformSampler  fastmath.PolySampler
 	TernarySampler  fastmath.PolySampler
 	GaussianSampler fastmath.PolySampler
@@ -23,8 +22,9 @@ type CryptoConfig struct {
 
 func GetDefaultCryptoConfig() CryptoConfig {
 	// Initialize the ring parameters.
-	defaultRing := fastmath.BFVZeroLevelRing()
-	delta1 := 19
+	defaultRing := fastmath.BFVFullRing()
+	delta1 := 128
+	beta := delta1
 	// Create the samplers.
 	prng, err := utils.NewPRNG()
 	if err != nil {
@@ -37,9 +37,8 @@ func GetDefaultCryptoConfig() CryptoConfig {
 	return CryptoConfig{
 		RingParams:      defaultRing,
 		P:               big.NewInt(5857),
-		N:               defaultRing.D,
-		M:               16,
 		Delta1:          delta1,
+		Beta:            beta,
 		Lambda:          1,
 		Kappa:           1,
 		UniformSampler:  uniformSampler,

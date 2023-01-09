@@ -11,6 +11,7 @@ import (
 type RLWEParameters struct {
 	BaseRing *ring.Ring
 	Q        *big.Int
+	QDecomp  *big.Int
 	Beta     uint64
 	LogD     int
 	LogBeta  int
@@ -22,6 +23,7 @@ func NewRLWEParameters(q *big.Int, d int, beta uint64, baseRing *ring.Ring) RLWE
 	return RLWEParameters{
 		BaseRing: baseRing,
 		Q:        q,
+		QDecomp:  baseRing.ModulusAtLevel[0], // Decompose with the 0 level modulus.
 		Beta:     beta,
 		LogD:     logD,
 		LogBeta:  logBeta,
@@ -36,7 +38,8 @@ func GetRLWEP0(p1, s, e *fastmath.Poly) *fastmath.PolyNTT {
 // RLWEErrorDecomposition returns the ternary decomposition of the error {e_i}, b.
 func RLWEErrorDecomposition(err *fastmath.Poly, params RLWEParameters) (*fastmath.IntMatrix, *fastmath.IntVec) {
 	eCoeffs := err.Coeffs()
-	eDecomp, ternaryBasis := fastmath.TernaryDecomposition(eCoeffs, params.Beta, params.LogBeta, params.Q, params.BaseRing)
+	// Decompose with the 0th level modulus.
+	eDecomp, ternaryBasis := fastmath.TernaryDecomposition(eCoeffs, params.Beta, params.LogBeta, params.QDecomp, params.BaseRing)
 	return eDecomp.Transposed(), ternaryBasis
 }
 

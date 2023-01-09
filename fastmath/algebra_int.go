@@ -59,6 +59,13 @@ func (v *IntVec) Get(index int) uint64 {
 	return v.polys[polyIndex].Get(coeffIndex, 0)
 }
 
+// GetLevel returns the element at the given index.
+func (v *IntVec) GetLevel(index, level int) uint64 {
+	polyIndex := index / v.baseRing.N
+	coeffIndex := index % v.baseRing.N
+	return v.polys[polyIndex].Get(coeffIndex, level)
+}
+
 // UnderlyingPolys returns the polynomials that are being used to represent this vector.
 func (v *IntVec) UnderlyingPolys() []*Poly {
 	return v.polys
@@ -91,6 +98,11 @@ func (v *IntVec) Set(index int, newValue uint64) {
 	coeffIndex := index % v.baseRing.N
 	v.polys[polyIndex].Set(coeffIndex, newValue)
 }
+func (v *IntVec) SetLevel(index, level int, newValue uint64) {
+	polyIndex := index / v.baseRing.N
+	coeffIndex := index % v.baseRing.N
+	v.polys[polyIndex].SetLevel(coeffIndex, level, newValue)
+}
 
 // Copy copies the vector.
 func (v *IntVec) Copy() *IntVec {
@@ -108,7 +120,7 @@ func (v *IntVec) String() string {
 	for i := 0; i < v.Size(); i++ {
 		elemStrs = append(elemStrs, fmt.Sprintf("%d", v.Get(i)))
 	}
-	return s + strings.Join(elemStrs, ",") + "}"
+	return s + strings.Join(elemStrs[:10], ",") + "}"
 }
 
 // Append appends the contents of the given vector into this one.
@@ -278,6 +290,14 @@ func (m *IntMatrix) Get(row, col int) uint64 {
 	return m.rows[row].Get(col)
 }
 
+// Get returns the element at the given coordinates.
+func (m *IntMatrix) GetLevel(row, col, level int) uint64 {
+	if row >= m.Rows() || col >= m.Cols() {
+		panic("IntMatrix.Get indices incorrect")
+	}
+	return m.rows[row].GetLevel(col, level)
+}
+
 // Set updates the given element of this matrix.
 func (m *IntMatrix) Set(row, col int, newValue uint64) {
 	if row >= m.Rows() || col >= m.Cols() {
@@ -364,7 +384,7 @@ func (m *IntMatrix) Copy() *IntMatrix {
 // String returns a string representation of the matrix.
 func (m *IntMatrix) String() string {
 	s := fmt.Sprintf("IntMatrix[%d,%d]{\n", m.Rows(), m.Cols())
-	for _, row := range m.rows {
+	for _, row := range m.rows[:10] {
 		s += "\t" + row.String() + "\n"
 	}
 	return s + ", ...}"

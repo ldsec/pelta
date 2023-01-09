@@ -50,8 +50,8 @@ func TestAjtaiEquation(t *testing.T) {
 	// Create the Ajtai commitment.
 	comSize := 4
 	d := 256
-	s := fastmath.NewRandomTernaryIntVec(d, config.BaseRing)
-	r := fastmath.NewRandomTernaryIntVec(d, config.BaseRing)
+	s := fastmath.NewRandomIntVecFast(d, config.TernarySampler, config.BaseRing)
+	r := fastmath.NewRandomIntVecFast(d, config.TernarySampler, config.BaseRing)
 	A := fastmath.NewRandomIntMatrix(comSize, s.Size(), config.P, config.BaseRing)
 	B := fastmath.NewRandomIntMatrix(comSize, s.Size(), config.P, config.BaseRing)
 	comQ, comP := crypto.GetAjtaiCommitments(A, B, s, r, config.P)
@@ -59,5 +59,8 @@ func TestAjtaiEquation(t *testing.T) {
 	lrb := crypto.NewLinearRelationBuilder().
 		AppendEqn(crypto.NewLinearEquation(z, w.Size()).AppendTerm(M, w)).
 		AppendEqn(crypto.NewPaddedAjtaiEquation(comP, A, B, s, r, kappa, config.P, config.Q, config.BaseRing))
-	verifyRelation(t, lrb.Build(config.BaseRing))
+	rel := lrb.Build(config.BaseRing)
+	if !rel.IsValid() {
+		t.Errorf("linearized ajtai eqn ill-formed")
+	}
 }

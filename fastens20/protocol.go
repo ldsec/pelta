@@ -22,12 +22,14 @@ type ProtocolConfig struct {
 	Lambda          int            // security parameter
 	Kappa           int            // security parameter
 	TernarySlice    fastmath.Slice // slice of s that should be ternary
+	ABPEnabled      bool
+	BoundSlice      fastmath.Slice // slice of s that should be abp checked
+	Tau             int            // abp security parameter
+	Bound           *big.Int       // abp bound
 	BaseRing        *ring.Ring
 	UniformSampler  fastmath.PolySampler
 	TernarySampler  fastmath.PolySampler
 	GaussianSampler fastmath.PolySampler
-	Tau             int      // abp security parameter
-	Bound           *big.Int // abp bound
 }
 
 // DefaultProtocolConfig returns the default configuration for an ENS20 execution.
@@ -63,6 +65,8 @@ func DefaultProtocolConfig(ringParams fastmath.RingParams, rel crypto.LinearRela
 		GaussianSampler: ring.NewGaussianSampler(prng, ringParams.BaseRing, ringParams.Sigma, delta1),
 		Tau:             128,
 		Bound:           big.NewInt(0),
+		ABPEnabled:      false,
+		BoundSlice:      fastmath.NewSlice(0, 0),
 	}
 }
 
@@ -83,13 +87,11 @@ func (c ProtocolConfig) WithSecurityParameters(kappa, lambda int) ProtocolConfig
 	return c
 }
 
-func (c ProtocolConfig) WithTau(tau int) ProtocolConfig {
+func (c ProtocolConfig) WithABP(tau int, bound *big.Int, boundSlice fastmath.Slice) ProtocolConfig {
+	c.ABPEnabled = true
 	c.Tau = tau
-	return c
-}
-
-func (c ProtocolConfig) WithBound(bound *big.Int) ProtocolConfig {
 	c.Bound = bound
+	c.BoundSlice = boundSlice
 	return c
 }
 
@@ -112,7 +114,6 @@ func (c ProtocolConfig) Beta() int {
 type PublicParams struct {
 	config ProtocolConfig
 	A      *fastmath.IntMatrix
-	At     *fastmath.IntMatrix
 	U      *fastmath.IntVec
 	B0     *fastmath.PolyNTTMatrix
 	B      *fastmath.PolyNTTMatrix
@@ -130,7 +131,6 @@ func GeneratePublicParameters(config ProtocolConfig, rel crypto.LinearRelation) 
 	return PublicParams{
 		config: config,
 		A:      rel.A,
-		At:     rel.A.Transposed(),
 		U:      rel.U,
 		B0:     B0.NTT(),
 		B:      b.NTT(),

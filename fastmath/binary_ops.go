@@ -1,5 +1,9 @@
 package fastmath
 
+import (
+	"math/big"
+)
+
 // Add adds two polynomials.
 func (p *Poly) Add(q *Poly) *Poly {
 	p.baseRing.Add(p.ref, q.ref, p.ref)
@@ -130,7 +134,7 @@ func (p *Poly) Eq(q *Poly) bool {
 	return p.baseRing.Equal(p.ref, q.ref)
 }
 
-// EqLevel checks the equality of the coefficients of the two rings at the given level.
+// EqLevel checks the equality of the coefficients of the two rings up to the given level.
 func (p *Poly) EqLevel(level int, q *Poly) bool {
 	return p.baseRing.EqualLvl(level, p.ref, q.ref)
 }
@@ -153,6 +157,8 @@ func (v *IntVec) Eq(r *IntVec) bool {
 		minPolySize = len(r.polys)
 	}
 	for i := 0; i < minPolySize; i++ {
+		v.baseRing.Reduce(v.polys[i].ref, v.polys[i].ref)
+		v.baseRing.Reduce(r.polys[i].ref, r.polys[i].ref)
 		if !v.polys[i].EqLevel(0, r.polys[i]) {
 			return false
 		}
@@ -213,14 +219,31 @@ func (m *IntMatrix) MulVec(v *IntVec) *IntVec {
 	}
 	out := NewIntVec(m.Rows(), m.baseRing)
 	dotResult := NewPoly(m.baseRing)
-	modUint := m.mod.Uint64()
 	for i, row := range m.rows {
 		row.MulAddElems(v, dotResult)
-		out.Set(i, dotResult.SumCoeffs(0, modUint))
+		out.Set(i, dotResult.SumCoeffs(0, m.mod.Uint64()))
 		dotResult.ref.Zero()
 	}
 	return out
 }
+
+func (m *IntMatrix) MulVecTransposed(v *IntVec) *IntVec {
+	if m.Rows() != v.Size() {
+		panic("IntMatrix.MulVecTransposed sizes incorrect")
+	}
+	out := NewIntVec(m.Cols(), m.baseRing)
+	for j := 0; j < m.Cols(); j++ {
+		dotResult := big.NewInt(0)
+		for i := 0; i < m.Rows(); i++ {
+			mult := big.NewInt(0).Mul(big.NewInt(int64(v.Get(i))), big.NewInt(int64(m.Get(i, j))))
+			dotResult.Add(dotResult, mult)
+			dotResult.Mod(dotResult, m.mod)
+		}
+		out.Set(j, dotResult.Mod(dotResult, m.mod).Uint64())
+	}
+	return out
+}
+
 func (m *PolyNTTMatrix) MulVec(b *PolyNTTVec) *PolyNTTVec {
 	out := NewPolyVec(m.Rows(), m.baseRing).NTT()
 	for i, row := range m.rows {

@@ -281,7 +281,8 @@ func TestPerformanceSimple(tst *testing.T) {
 	A := fastmath.NewRandomIntMatrix(m, n, bfvRing.Q, bfvRing.BaseRing)
 	s := fastmath.NewRandomTernaryIntVec(n, bfvRing.BaseRing)
 	rel := crypto.NewLinearRelation(A, s)
-	config := fastens20.DefaultProtocolConfig(bfvRing, rel)
+	config := fastens20.DefaultProtocolConfig(bfvRing, rel).
+		WithReplication(4)
 	params := fastens20.GeneratePublicParameters(config, rel)
 	prover := fastens20.NewProver(params)
 	verifier := fastens20.NewVerifier(params)

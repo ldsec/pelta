@@ -115,8 +115,8 @@ func (p Prover) CommitToRelation(alpha *fastmath.PolyNTTVec, gamma *fastmath.Int
 	v := p.params.B.Row(p.params.config.NumSplits() + 1).Dot(state.Y.Row(0)).Add(sum3)
 	psi := fastmath.NewPolyMatrix(p.params.config.K, p.params.config.NumSplits(), p.params.config.BaseRing).NTT()
 	psi.PopulateRows(func(mu int) *fastmath.PolyNTTVec {
-		tmp := p.params.At.MulVec(gamma.RowView(mu))
-		return SplitInvNTT(tmp, p.params).NTT()
+		tmp2 := p.params.A.MulVecTransposed(gamma.RowView(mu))
+		return SplitInvNTT(tmp2, p.params).NTT()
 	})
 	gMask := LmuSum(p.params.config.K, p.params.config.InvK,
 		func(mu int, v int) *fastmath.PolyNTT {

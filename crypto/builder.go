@@ -10,10 +10,11 @@ import (
 
 // term represents A*b
 type term struct {
-	A           *fastmath.IntMatrix
-	b           *fastmath.IntVec
-	dependent   bool
-	depVecIndex int
+	A            *fastmath.IntMatrix
+	OriginalCols int // # of cols that are originally in this term (We maintain this to not copy A in Linearize method)
+	b            *fastmath.IntVec
+	dependent    bool
+	depVecIndex  int
 }
 
 // LinearEquation represents a linear equation of form lhs = \sum_{i=1}^k A_i * b_i
@@ -34,21 +35,21 @@ func (eqn *LinearEquation) AppendTerm(A *fastmath.IntMatrix, b *fastmath.IntVec)
 	if A.Rows() != eqn.m || A.Cols() != b.Size() {
 		panic("cannot append term with invalid size")
 	}
-	eqn.rhs = append(eqn.rhs, term{A, b, false, 0})
+	eqn.rhs = append(eqn.rhs, term{A, A.Cols(), b, false, 0})
 	return eqn
 }
 
 // AppendVecTerm appends a new vector term Id*b to this equation.
 func (eqn *LinearEquation) AppendVecTerm(b *fastmath.IntVec, baseRing *ring.Ring) *LinearEquation {
 	id := fastmath.NewIdIntMatrix(b.Size(), baseRing)
-	eqn.rhs = append(eqn.rhs, term{id, b, false, 0})
+	eqn.rhs = append(eqn.rhs, term{id, id.Cols(), b, false, 0})
 	return eqn
 }
 
 // AddDependentTerm adds a dependent term to this equation with the associated vector defined in another equation,
 // indicated by its position in the system by `vecIndex`.
 func (eqn *LinearEquation) AppendDependentTerm(A *fastmath.IntMatrix, vecIndex int) *LinearEquation {
-	eqn.rhs = append(eqn.rhs, term{A, nil, true, vecIndex})
+	eqn.rhs = append(eqn.rhs, term{A, A.Cols(), nil, true, vecIndex})
 	eqn.dependent = true
 	return eqn
 }
@@ -58,7 +59,7 @@ func (eqn *LinearEquation) AppendDependentTerm(A *fastmath.IntMatrix, vecIndex i
 // Note: The referenced vector must have the correct size (i.e., m) !!
 func (eqn *LinearEquation) AppendDependentVecTerm(vecIndex int, baseRing *ring.Ring) *LinearEquation {
 	id := fastmath.NewIdIntMatrix(eqn.m, baseRing)
-	eqn.rhs = append(eqn.rhs, term{id, nil, true, vecIndex})
+	eqn.rhs = append(eqn.rhs, term{id, id.Cols(), nil, true, vecIndex})
 	eqn.dependent = true
 	return eqn
 }
@@ -110,7 +111,7 @@ func (eqn *LinearEquation) Linearize() LinearRelation {
 	if len(eqn.rhs) == 0 {
 		panic("cannot convert an empty equation into a relation")
 	}
-	linRel := NewLinearRelationWithLHS(eqn.rhs[0].A.Copy(), eqn.rhs[0].b.Copy(), eqn.lhs.Copy())
+	linRel := NewLinearRelationWithLHS(eqn.rhs[0].A, eqn.rhs[0].b, eqn.lhs)
 	for _, term := range eqn.rhs[1:] {
 		linRel.ExtendPartial(term.A, term.b)
 		if term.dependent {
@@ -191,7 +192,6 @@ func NewLinearRelationBuilder() *LinearRelationBuilder {
 
 // AppendEqn appends a new equation to this builder.
 func (lrb *LinearRelationBuilder) AppendEqn(eqn *LinearEquation) *LinearRelationBuilder {
-	fmt.Println("lrb: appending an equation")
 	lrb.eqns = append(lrb.eqns, eqn)
 	return lrb
 }
@@ -206,7 +206,7 @@ func getZeroPad(i, j int, eqns []*LinearEquation, baseRing *ring.Ring) *fastmath
 		if j < curr+len(eqnIndepTerms) {
 			// fmt.Println("found padding reference at", eqnIndex, j-curr)
 			targetTerm := eqnIndepTerms[j-curr]
-			return fastmath.NewIntMatrix(eqns[i].m, targetTerm.A.Cols(), baseRing)
+			return fastmath.NewIntMatrix(eqns[i].m, targetTerm.OriginalCols, baseRing)
 		}
 		curr += len(eqnIndepTerms)
 	}
@@ -222,6 +222,7 @@ func (lrb *LinearRelationBuilder) Build(baseRing *ring.Ring) LinearRelation {
 	}
 	linRel := lrb.eqns[0].Linearize()
 	for i, eqn := range lrb.eqns[1:] {
+		// fmt.Println("lrb: so far", linRel.SizesString())
 		// fmt.Println("lrb: built so far:", linRel.SizesString())
 		if eqn.IsDependent() {
 			// For a dependent equation we want to find a B, y s.t. (A || 0, B) (s, y) = (u, lhs) will yield
@@ -239,17 +240,17 @@ func (lrb *LinearRelationBuilder) Build(baseRing *ring.Ring) LinearRelation {
 			for _, t := range eqn.GetIndependentTerms() {
 				preB = append(preB, t.A)
 			}
-			fmt.Printf("lrb (%d): created B instruction of size %d\n", i+1, len(preB))
+			// fmt.Printf("lrb (%d): created B instruction of size %d\n", i+1, len(preB))
 			// Iteratively build up the new row in the matrix.
 			var B *fastmath.IntMatrix
 			if preB[0] == nil {
 				B = getZeroPad(i+1, 0, lrb.eqns, baseRing)
 			} else {
-				B = preB[0].Copy()
+				B = preB[0]
 			}
-			// fmt.Println("lrb: updated B:", B.SizeString())
+			// fmt.Println("lrb: initialized B:", B.SizeString())
 			for j, m := range preB[1:] { // j is the prev independent term index (overall)!
-				fmt.Printf("lrb (%d): handling term %d\n", i+1, j+1)
+				// fmt.Printf("lrb (%d): handling term %d\n", i+1, j+1)
 				if m == nil {
 					// fmt.Printf("lrb (%d): zero padding on %d %d\n", i+1, i+1, j+1)
 					B.ExtendCols(getZeroPad(i+1, j+1, lrb.eqns, baseRing))

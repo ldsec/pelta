@@ -46,10 +46,10 @@ func TestLRBTwoEqnsIndependentTerms(t *testing.T) {
 	lrb.AppendEqn(crypto.NewLinearEquation(q, n).
 		AppendTerm(C, r).
 		AppendTerm(D, p))
-	t.Logf(lrb.String())
+	// t.Logf(lrb.String())
 	// Convert into linear relation
 	linRel := lrb.Build(bfvRing.BaseRing)
-	t.Logf(linRel.String())
+	// t.Logf(linRel.String())
 	verifyRelation(t, linRel)
 }
 
@@ -87,7 +87,7 @@ func TestLRBThreeEqnsIndependentTerms(t *testing.T) {
 		AppendTerm(F, w))
 	// Convert into linear relation
 	linRel := lrb.Build(bfvRing.BaseRing)
-	t.Logf(linRel.String())
+	// t.Logf(linRel.String())
 	verifyRelation(t, linRel)
 }
 func TestLRBTwoEqnsDependentTerms(t *testing.T) {
@@ -148,6 +148,6 @@ func TestLRBThreeEqnsDependentTerms(t *testing.T) {
 		AppendTerm(E, w).
 		AppendDependentTerm(F, 1))
 	linRel := lrb.Build(bfvRing.BaseRing)
-	t.Logf(linRel.String())
+	// t.Logf(linRel.String())
 	verifyRelation(t, linRel)
 }

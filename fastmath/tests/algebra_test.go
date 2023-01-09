@@ -140,6 +140,29 @@ func TestIntMatrixMulVec(t *testing.T) {
 	}
 }
 
+func TestIntMatrixMulVecTransposed(t *testing.T) {
+	baseRing := getBaseRing()
+	a := fastmath.NewIntMatrix(3, 5, baseRing)
+	v := fastmath.NewIntVec(5, baseRing)
+	a.Populate(func(i, j int) uint64 {
+		return uint64(i + j)
+	})
+	v.Populate(func(i int) uint64 {
+		return uint64(2 * i)
+	})
+	c := a.Transposed().MulVecTransposed(v)
+	expectedSize := 3
+	if c.Size() != expectedSize {
+		t.Errorf("actualSize=%d, expectedSize=%d", c.Size(), expectedSize)
+	}
+	expectedResult := []uint64{60, 80, 100}
+	for i := 0; i < c.Size(); i++ {
+		if c.Get(i) != expectedResult[i] {
+			t.Errorf("actual[%d]=%d, expected[%d]=%d", i, c.Get(i), i, expectedResult[i])
+		}
+	}
+}
+
 func TestIntMatrixMulMat(t *testing.T) {
 	baseRing := getBaseRing()
 	a := fastmath.NewIntMatrix(3, 5, baseRing)

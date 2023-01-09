@@ -80,6 +80,18 @@ func NewRandomPolyMatrix(rows int, cols int, sampler PolySampler, baseRing *ring
 	return A
 }
 
+// NewRandomIntVecFast constructs a random vector of integers from the given poly sampler.
+func NewRandomIntVecFast(size int, sampler PolySampler, baseRing *ring.Ring) *IntVec {
+	v := NewIntVec(size, baseRing)
+	numPolys := len(v.UnderlyingPolys())
+	randomPolys := make([]*Poly, numPolys)
+	for i := 0; i < numPolys; i++ {
+		randomPolys[i] = NewRandomPoly(sampler, baseRing)
+	}
+	v.SetUnderlyingPolys(randomPolys)
+	return v
+}
+
 // NewRandomIntVec constructs a random vector of integers mod n.
 func NewRandomIntVec(size int, n *big.Int, baseRing *ring.Ring) *IntVec {
 	v := NewIntVec(size, baseRing)
@@ -97,6 +109,15 @@ func NewRandomTernaryIntVec(size int, baseRing *ring.Ring) *IntVec {
 // NewRandomTernaryIntVec constructs a random vector of integers where each element \in {0, 1, 2}.
 func NewRandomBinaryIntVec(size int, baseRing *ring.Ring) *IntVec {
 	return NewRandomIntVec(size, big.NewInt(2), baseRing)
+}
+
+// NewRandomIntMatrixFast constructs a random 2D matrix of integers from the given sampler.
+func NewRandomIntMatrixFast(rows int, cols int, sampler PolySampler, baseRing *ring.Ring) *IntMatrix {
+	A := NewIntMatrix(rows, cols, baseRing)
+	A.PopulateRows(func(_ int) *IntVec {
+		return NewRandomIntVecFast(cols, sampler, baseRing)
+	})
+	return A
 }
 
 // NewRandomIntMatrix constructs a random 2D matrix of integers mod n.

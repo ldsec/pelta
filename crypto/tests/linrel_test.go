@@ -8,8 +8,7 @@ import (
 )
 
 func verifyRelation(t *testing.T, rel crypto.LinearRelation) {
-	u := rel.A.MulVec(rel.S)
-	if !rel.U.Eq(u) {
+	if !rel.IsValid() {
 		t.Errorf("linear relation is ill-formed")
 		// t.Logf(rel.U.String())
 		// t.Logf(u.String())
