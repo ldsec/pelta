@@ -9,7 +9,7 @@ import (
 
 // CreateABPChallenge returns a random ternary polynomial matrix with dimensions tau x n.
 func CreateABPChallenge(tau, n int, ternarySampler fastmath.PolySampler, baseRing *ring.Ring) *fastmath.IntMatrix {
-	return fastmath.NewRandomTernaryIntMatrix(tau, n, baseRing)
+	return fastmath.NewRandomIntMatrixFast(tau, n, ternarySampler, baseRing)
 }
 
 // CreateABPMask returns a random ternary vector of size tau.

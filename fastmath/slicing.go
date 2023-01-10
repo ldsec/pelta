@@ -14,6 +14,10 @@ func (s Slice) Size() int {
 	return s.End - s.Start
 }
 
+func (s Slice) Contains(index int) bool {
+	return index >= s.Start && index < s.End
+}
+
 func (p *Poly) Slice(s Slice) *Poly {
 	panic("not implemented")
 }

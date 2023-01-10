@@ -76,7 +76,7 @@ func (vf Verifier) Verify(z *fastmath.PolyNTTMatrix, state VerifierState) bool {
 	if !hTestResult {
 		fmt.Println(state.h.String())
 		fmt.Println("verifier failed zero-coefficient check")
-		//return false
+		return false
 	}
 	// Constructing f
 	f := fastmath.NewPolyMatrix(vf.params.config.K, vf.params.config.NumSplits(), vf.params.config.BaseRing).NTT()
@@ -119,7 +119,7 @@ func (vf Verifier) Verify(z *fastmath.PolyNTTMatrix, state VerifierState) bool {
 	// Reconstruct psi
 	psi := fastmath.NewPolyMatrix(vf.params.config.K, vf.params.config.NumSplits(), vf.params.config.BaseRing).NTT()
 	psi.PopulateRows(func(mu int) *fastmath.PolyNTTVec {
-		tmp := vf.params.A.MulVecTransposed(state.Gamma.RowView(mu))
+		tmp := vf.params.At.MulVec(state.Gamma.RowView(mu))
 		return SplitInvNTT(tmp, vf.params).NTT()
 	})
 	// Reconstruct the commitment to f

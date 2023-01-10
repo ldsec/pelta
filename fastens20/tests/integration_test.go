@@ -1,6 +1,7 @@
 package tests
 
 import (
+	"fmt"
 	"math/big"
 	"testing"
 	"time"
@@ -275,17 +276,20 @@ func TestAllLevelsShortRing(t *testing.T) {
 }
 
 func TestPerformanceSimple(tst *testing.T) {
-	bfvRing := fastmath.BFVFullRing()
+	config := crypto.GetDefaultCryptoConfig()
+	bfvRing := config.RingParams
 	m := bfvRing.D
 	n := bfvRing.D
-	A := fastmath.NewRandomIntMatrix(m, n, bfvRing.Q, bfvRing.BaseRing)
-	s := fastmath.NewRandomTernaryIntVec(n, bfvRing.BaseRing)
+	A := fastmath.NewRandomIntMatrixFast(m, n, config.UniformSampler, bfvRing.BaseRing)
+	s := fastmath.NewRandomIntVecFast(n, config.TernarySampler, bfvRing.BaseRing)
+	fmt.Println("inputs created")
 	rel := crypto.NewLinearRelation(A, s)
-	config := fastens20.DefaultProtocolConfig(bfvRing, rel).
+	protocolConfig := fastens20.DefaultProtocolConfig(bfvRing, rel).
 		WithReplication(4)
-	params := fastens20.GeneratePublicParameters(config, rel)
+	params := fastens20.GeneratePublicParameters(protocolConfig, rel)
 	prover := fastens20.NewProver(params)
 	verifier := fastens20.NewVerifier(params)
+	tst.Logf("starting...\n")
 	var t0, t *fastmath.PolyNTTVec
 	var w *fastmath.PolyNTTMatrix
 	var ps fastens20.ProverState

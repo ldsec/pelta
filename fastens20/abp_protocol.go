@@ -24,26 +24,22 @@ func updateProtocol(p *ABPProver, v *ABPVerifier, ps *ABPProverState, vs *ABPVer
 	A := p.params.A
 	s := ps.S
 	u := p.params.U
-	// Create the new relation (A || 0, RA || Id)(s, y) = (u, z)
+	// Create the new relation (A || 0, R || Id)(s, y) = (u, z)
 	lrb := crypto.NewLinearRelationBuilder()
 	// As = u
 	lrb.AppendEqn(crypto.NewLinearEquation(u, A.Cols()).AppendTerm(A, s))
-	// RAs + y = z
-	// Clear the parts of A that are out of the target slice.
-	zeroCol := fastmath.NewIntVec(A.Rows(), p.params.config.RingParams.BaseRing)
-	for i := 0; i < A.Cols(); i++ {
-		if i < p.Slice.Start || i >= p.Slice.End {
-			A.SetCol(i, zeroCol)
-		}
-	}
+	// Rh + y = z where h is a subvector of s
+
 	lrb.AppendEqn(crypto.NewABPEquation(vs.ABPVerifierChal, 0, ps.ABPProverMask, ps.ABPMaskedOpening, p.params.config.BaseRing))
 	newRel := lrb.Build(p.params.config.BaseRing)
 	if !newRel.IsValid() {
-		fmt.Printf("invalid abp embedding, but continuing...")
+		panic("invalid abp embedding")
 	}
 	fmt.Printf("abp equation embedded successfully: %s\n", newRel.SizesString())
 	// Update the public parameters with the new relation.
 	p.params.A = newRel.A
+	p.params.At = newRel.A.Transposed()
+	v.params.At = p.params.At
 	v.params.A = newRel.A
 	v.params.U = newRel.U
 	p.params.U = newRel.U
@@ -134,6 +130,13 @@ func NewABPVerifier(params PublicParams, slice fastmath.Slice, tau int, bound *b
 
 func (vf ABPVerifier) CreateABPChallenge() (*fastmath.IntMatrix, ABPVerifierState) {
 	abpChal := crypto.CreateABPChallenge(vf.Tau, vf.params.config.N, vf.params.config.TernarySampler, vf.params.config.BaseRing)
+	// Zero the irrelevant parts of R
+	zeroCol := fastmath.NewIntVec(abpChal.Rows(), vf.params.config.BaseRing)
+	for i := 0; i < abpChal.Cols(); i++ {
+		if !vf.params.config.BoundSlice.Contains(i) {
+			abpChal.SetCol(i, zeroCol)
+		}
+	}
 	return abpChal, ABPVerifierState{ABPVerifierChal: abpChal}
 }
 

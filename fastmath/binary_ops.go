@@ -227,6 +227,25 @@ func (m *IntMatrix) MulVec(v *IntVec) *IntVec {
 	return out
 }
 
+// MulVec performs a matrix-vector multiplication.
+func (m *IntMatrix) MulVec2(v *IntVec) *IntVec {
+	if m.Cols() != v.Size() {
+		panic("IntMatrix.MulVec sizes incorrect")
+	}
+	out := NewIntVec(m.Rows(), m.baseRing)
+	for i, row := range m.rows {
+		dotResult := big.NewInt(0)
+		for j := 0; j < m.Cols(); j++ {
+			mult := big.NewInt(0).Mul(big.NewInt(int64(v.Get(j))), big.NewInt(int64(row.Get(j))))
+			dotResult.Add(dotResult, mult)
+			dotResult.Mod(dotResult, m.mod)
+		}
+		out.Set(i, dotResult.Mod(dotResult, m.mod).Uint64())
+	}
+	return out
+}
+
+// MulVecTransposed performs a matrix-vector multiplication with the transpose of this matrix.
 func (m *IntMatrix) MulVecTransposed(v *IntVec) *IntVec {
 	if m.Rows() != v.Size() {
 		panic("IntMatrix.MulVecTransposed sizes incorrect")

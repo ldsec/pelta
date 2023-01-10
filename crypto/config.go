@@ -25,15 +25,7 @@ func GetDefaultCryptoConfig() CryptoConfig {
 	defaultRing := fastmath.BFVFullRing()
 	delta1 := 128
 	beta := delta1
-	// Create the samplers.
-	prng, err := utils.NewPRNG()
-	if err != nil {
-		panic("could not initialize the prng: %s")
-	}
-	uniformSampler := ring.NewUniformSampler(prng, defaultRing.BaseRing)
-	originalTernarySampler := ring.NewTernarySampler(prng, defaultRing.BaseRing, 1.0/3.0, false)
-	ternarySampler := fastmath.NewAugmentedTernarySampler(originalTernarySampler, defaultRing.BaseRing)
-	gaussianSampler := ring.NewGaussianSampler(prng, defaultRing.BaseRing, defaultRing.Sigma, delta1)
+	uniformSampler, ternarySampler, gaussianSampler := GetSamplers(defaultRing, delta1)
 	return CryptoConfig{
 		RingParams:      defaultRing,
 		P:               big.NewInt(5857),
@@ -45,4 +37,18 @@ func GetDefaultCryptoConfig() CryptoConfig {
 		TernarySampler:  ternarySampler,
 		GaussianSampler: gaussianSampler,
 	}
+}
+
+// GetSamplers constructs and returns the uniform sampler, ternary sampler, and gaussian sampler
+func GetSamplers(samplerRing fastmath.RingParams, delta1 int) (fastmath.PolySampler, fastmath.PolySampler, fastmath.PolySampler) {
+	prng, err := utils.NewPRNG()
+	if err != nil {
+		panic("could not initialize the prng: %s")
+	}
+	uniformSampler := ring.NewUniformSampler(prng, samplerRing.BaseRing)
+	originalTernarySampler := ring.NewTernarySampler(prng, samplerRing.BaseRing, 1.0/3.0, false)
+	ternarySampler := fastmath.NewAugmentedTernarySampler(originalTernarySampler, samplerRing.BaseRing)
+	gaussianSampler := ring.NewGaussianSampler(prng, samplerRing.BaseRing, samplerRing.Sigma, delta1)
+
+	return uniformSampler, ternarySampler, gaussianSampler
 }
