@@ -10,7 +10,7 @@ import (
 
 func extendPublicParameters(params *PublicParams, tau int) {
 	extSize := tau/params.config.D + 1
-	fmt.Printf("extending public parameters with size %d\n", extSize)
+	// fmt.Printf("extending public parameters with size %d\n", extSize)
 	// Extend B0 horizontally by tau / d.
 	b0Extension := fastmath.NewRandomPolyMatrix(params.B0.Rows(), extSize, params.config.UniformSampler, params.config.BaseRing).NTT()
 	params.B0.ExtendCols(b0Extension)
@@ -35,7 +35,7 @@ func updateProtocol(p *ABPProver, v *ABPVerifier, ps *ABPProverState, vs *ABPVer
 	if !newRel.IsValid() {
 		panic("invalid abp embedding")
 	}
-	fmt.Printf("abp equation embedded successfully: %s\n", newRel.SizesString())
+	// fmt.Printf("abp equation embedded successfully: %s\n", newRel.SizesString())
 	// Update the public parameters with the new relation.
 	p.params.A = newRel.A
 	p.params.At = newRel.A.Transposed()
