@@ -5,6 +5,7 @@ import (
 	"math/big"
 
 	"github.com/ldsec/codeBase/commitment/fastmath"
+	"github.com/ldsec/codeBase/commitment/logging"
 )
 
 type VerifierState struct {
@@ -53,6 +54,7 @@ func (vf Verifier) CreateChallenge(t *fastmath.PolyNTTVec, h, v *fastmath.PolyNT
 // Returns true iff the proof is valid
 func (vf Verifier) Verify(z *fastmath.PolyNTTMatrix, state VerifierState) bool {
 	// Masked opening check
+	e := logging.LogExecStart("Verifier.Verify", "masked opening test")
 	maskedOpeningTestResult := z.AllRows(
 		func(i int, zi *fastmath.PolyNTTVec) bool {
 			perm := state.c.Permute(int64(i), vf.params.Sig).NTT()
@@ -61,11 +63,13 @@ func (vf Verifier) Verify(z *fastmath.PolyNTTMatrix, state VerifierState) bool {
 			//sizeCheck := zi.Copy().AsVec().NewPolyVec().L2Norm(vf.settings.Q) < vf.settings.Beta
 			return vf.params.B0.MulVec(zi).Eq(rhs) //&& sizeCheck
 		})
+	e.LogExecEnd()
 	if !maskedOpeningTestResult {
 		fmt.Println("verifier failed masked opening verification")
 		return false
 	}
 	// Zero-coefficient check
+	e = logging.LogExecStart("Verifier.Verify", "zero coefficient test")
 	hTestResult := true
 	hInvNTT := state.h.Copy().InvNTT()
 	for i := 0; i < vf.params.config.K; i++ {
@@ -74,12 +78,14 @@ func (vf Verifier) Verify(z *fastmath.PolyNTTMatrix, state VerifierState) bool {
 			break
 		}
 	}
+	e.LogExecEnd()
 	if !hTestResult {
 		fmt.Println(state.h.String())
 		fmt.Println("verifier failed zero-coefficient check")
 		return false
 	}
 	// Constructing f
+	e = logging.LogExecStart("Verifier.Verify", "relation test (v check)")
 	cNTT := state.c.Copy().NTT()
 	f := fastmath.NewPolyMatrix(vf.params.config.K, vf.params.config.NumSplits(), vf.params.config.BaseRing).NTT()
 	f.Populate(func(i int, j int) *fastmath.PolyNTT {
@@ -120,13 +126,18 @@ func (vf Verifier) Verify(z *fastmath.PolyNTTMatrix, state VerifierState) bool {
 		fmt.Println("verifier failed relation check")
 		return false
 	}
+	e.LogExecEnd()
+	e = logging.LogExecStart("Verifier.Verify", "function commitment test")
 	// Reconstruct psi
+	e2 := logging.LogExecStart("Verifier.Verify", "recalculating psi")
 	psi := fastmath.NewPolyMatrix(vf.params.config.K, vf.params.config.NumSplits(), vf.params.config.BaseRing).NTT()
 	psi.PopulateRows(func(mu int) *fastmath.PolyNTTVec {
 		tmp := vf.params.At.MulVec(state.Gamma.RowView(mu))
 		return SplitInvNTT(tmp, vf.params).NTT()
 	})
+	e2.LogExecEnd()
 	// Reconstruct the commitment to f
+	e2 = logging.LogExecStart("Verifier.Verify", "calculating tao, the function commitment")
 	tao := LmuSum(vf.params.config.K, vf.params.config.InvK,
 		func(mu int, v int) *fastmath.PolyNTT {
 			// (u * gamma_mu)
@@ -141,6 +152,8 @@ func (vf Verifier) Verify(z *fastmath.PolyNTTMatrix, state VerifierState) bool {
 			})
 			return presum.Sum().Add(dec.Neg())
 		}, vf.params)
+	e2.LogExecEnd()
+	e2 = logging.LogExecStart("Verifier.Verify", "calculating lhs")
 	// Verify the function commitment
 	functionCommitmentTest := fastmath.NewPolyVec(vf.params.config.K, vf.params.config.BaseRing).NTT()
 	functionCommitmentTest.Populate(func(i int) *fastmath.PolyNTT {
@@ -161,6 +174,7 @@ func (vf Verifier) Verify(z *fastmath.PolyNTTMatrix, state VerifierState) bool {
 		// outerSum + (b[n/d] * z[i])
 		return outerSum.Add(add)
 	})
+	e2.LogExecEnd()
 	hNeg := state.h.Copy().Neg()
 	functionCommitmentTestResult := functionCommitmentTest.All(
 		func(i int, lhs *fastmath.PolyNTT) bool {
@@ -169,6 +183,7 @@ func (vf Verifier) Verify(z *fastmath.PolyNTTMatrix, state VerifierState) bool {
 			rhs := state.vp.Get(i).Add(rhsAdd)
 			return lhs.Eq(rhs)
 		})
+	e.LogExecEnd()
 	if !functionCommitmentTestResult {
 		fmt.Println("verifier failed function commitment check")
 		return false

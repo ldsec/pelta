@@ -220,6 +220,8 @@ type IntMatrix struct {
 	rows     []*IntVec
 	mod      *big.Int
 	baseRing *ring.Ring
+
+	CachedTranspose *IntMatrix
 }
 
 func NewIntMatrix(numRows, numCols int, baseRing *ring.Ring) *IntMatrix {
@@ -227,7 +229,7 @@ func NewIntMatrix(numRows, numCols int, baseRing *ring.Ring) *IntMatrix {
 	for i := 0; i < len(rows); i++ {
 		rows[i] = NewIntVec(numCols, baseRing)
 	}
-	return &IntMatrix{numRows, numCols, rows, baseRing.ModulusAtLevel[0], baseRing}
+	return &IntMatrix{numRows, numCols, rows, baseRing.ModulusAtLevel[0], baseRing, nil}
 }
 
 // NewIdIntMatrix returns an n by n identity matrix.
@@ -240,7 +242,7 @@ func NewIdIntMatrix(numRows int, baseRing *ring.Ring) *IntMatrix {
 }
 
 func NewIntMatrixFromRows(rows []*IntVec, baseRing *ring.Ring) *IntMatrix {
-	return &IntMatrix{len(rows), rows[0].Size(), rows, baseRing.ModulusAtLevel[0], baseRing}
+	return &IntMatrix{len(rows), rows[0].Size(), rows, baseRing.ModulusAtLevel[0], baseRing, nil}
 }
 
 func NewIntMatrixFromSlice(elems [][]uint64, baseRing *ring.Ring) *IntMatrix {
@@ -391,7 +393,7 @@ func (m *IntMatrix) Copy() *IntMatrix {
 	for i, row := range m.rows {
 		rows[i] = row.Copy()
 	}
-	return &IntMatrix{m.numRows, m.numCols, rows, m.mod, m.baseRing}
+	return &IntMatrix{m.numRows, m.numCols, rows, m.mod, m.baseRing, nil}
 }
 
 // String returns a string representation of the matrix.

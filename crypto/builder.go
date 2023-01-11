@@ -127,9 +127,9 @@ func (eqn *LinearEquation) SizesString() string {
 	for _, term := range eqn.rhs {
 		var s string
 		if term.dependent {
-			s = fmt.Sprintf("[%d, %d][dep=%d]", term.A.Rows(), term.A.Cols(), term.depVecIndex)
+			s = fmt.Sprintf("[%d,%d][dep=%d]", term.A.Rows(), term.A.Cols(), term.depVecIndex)
 		} else {
-			s = fmt.Sprintf("[%d, %d][%d]", term.A.Rows(), term.A.Cols(), term.b.Size())
+			s = fmt.Sprintf("[%d,%d][%d]", term.A.Rows(), term.A.Cols(), term.b.Size())
 		}
 		termStrs = append(termStrs, s)
 	}

@@ -22,10 +22,10 @@ func NewLinearRelation(A *fastmath.IntMatrix, s *fastmath.IntVec) LinearRelation
 
 // NewLinearRelationWithLHS constructs a new linear relation with explicit u.
 func NewLinearRelationWithLHS(A *fastmath.IntMatrix, s, u *fastmath.IntVec) LinearRelation {
-	return LinearRelation{A, A.Transposed(), s, u}
-}
-
-func NewLinearRelationWithLHSAndAt(A, At *fastmath.IntMatrix, s, u *fastmath.IntVec) LinearRelation {
+	At := A.CachedTranspose
+	if At == nil {
+		At = A.Transposed()
+	}
 	return LinearRelation{A, At, s, u}
 }
 

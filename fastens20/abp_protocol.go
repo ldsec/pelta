@@ -27,6 +27,7 @@ func updateProtocol(p *ABPProver, v *ABPVerifier, ps *ABPProverState, vs *ABPVer
 	// Create the new relation (A || 0, R || Id)(s, y) = (u, z)
 	lrb := crypto.NewLinearRelationBuilder()
 	// As = u
+	A.CachedTranspose = p.params.At
 	lrb.AppendEqn(crypto.NewLinearEquation(u, A.Cols()).AppendTerm(A, s))
 	// Rh + y = z where h is a subvector of s
 
