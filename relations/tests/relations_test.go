@@ -11,45 +11,54 @@ import (
 	"github.com/ldsec/codeBase/commitment/relations"
 )
 
-func TestKeyGen(t *testing.T) {
-	t.Logf("reading config")
-	config := relations.NewRelationsConfig(crypto.GetDefaultCryptoConfig())
+func getRandomKeyGenPublicParams(config relations.RelationsConfig) relations.KeyGenPublicParams {
 	q := config.Ring.Q
 	logD := int(math.Log2(float64(config.Ring.D)))
-
-	t.Logf("creating public parameters")
 	p1 := fastmath.NewRandomPoly(config.UniformSampler, config.Ring.BaseRing)
-	A1 := fastmath.NewIntMatrix(config.Ring.D, config.Ring.D, config.Ring.BaseRing)
-	A2 := fastmath.NewIntMatrix(config.Ring.D, config.Ring.D, config.Ring.BaseRing)
+	A1 := fastmath.PersistentIntMatrix("KeyGenA1.test", func() *fastmath.IntMatrix {
+		return fastmath.NewIntMatrix(config.Ring.D, config.Ring.D, config.Ring.BaseRing)
+	}, config.Ring.BaseRing)
+	A2 := fastmath.PersistentIntMatrix("KeyGenA1.test", func() *fastmath.IntMatrix {
+		return fastmath.NewIntMatrix(config.Ring.D, config.Ring.D, config.Ring.BaseRing)
+	}, config.Ring.BaseRing)
 	T := fastmath.LoadNTTTransform("test", q, logD, config.Ring.BaseRing)
 	p := config.P
 	params := relations.KeyGenPublicParams{P1: p1, A1: A1, A2: A2, T: T, P: p}
+	return params
+}
 
-	t.Logf("creating input")
+func TestKeyGen(t *testing.T) {
+	config := relations.NewRelationsConfig(crypto.GetDefaultCryptoConfig())
+	t.Logf("creating public parameters\n")
+	params := getRandomKeyGenPublicParams(config)
+
+	t.Logf("creating input\n")
 	s := fastmath.NewRandomPoly(config.TernarySampler, config.Ring.BaseRing)
 	r := fastmath.NewRandomPoly(config.UniformSampler, config.Ring.BaseRing)
 	e := fastmath.NewRandomPoly(config.GaussianSampler, config.Ring.BaseRing)
-	comQ, comP := crypto.GetAjtaiCommitments(A1, A2, s.Coeffs(), r.Coeffs(), config.P)
-	k := crypto.GetAjtaiKappa(comP, comQ, config.P, config.Ring.BaseRing)
+	comQ, comP := crypto.GetAjtaiCommitments(params.A1, params.A2, s.Coeffs(), r.Coeffs(), params.P)
+	k := crypto.GetAjtaiKappa(comP, comQ, params.P, config.Ring.BaseRing)
 
-	t.Logf("generating the relation")
+	t.Logf("generating the relation\n")
 	rel := relations.GenerateKeyGenRelation(s, r, e, k, params, config)
 	if !rel.IsValid() {
 		t.Errorf("relation invalid")
 	}
-	// rebase
+
+	t.Logf("rebasing...\n")
 	commitmentRing := fastmath.BFVFullShortCommtRing(7)
 	rebasedRel := rel.Rebased(commitmentRing)
 
-	t.Logf("creating protocol configuration...")
-	// Generate the public parameters
+	t.Logf("creating protocol configuration...\n")
 	protocolConfig := fastens20.DefaultProtocolConfig(commitmentRing, rebasedRel).
-		// WithABP(128, config.Ring.Q, fastmath.NewSlice(config.Ring.D*6, config.Ring.D*7)).
+		WithABP(128, config.Ring.Q, fastmath.NewSlice(config.Ring.D*6, config.Ring.D*7)).
 		WithTernarySlice(fastmath.NewSlice(0, config.Ring.D)).
 		WithReplication(4)
-	t.Logf("creating protocol parameters...")
+
+	t.Logf("creating protocol parameters...\n")
 	protocolParams := fastens20.GeneratePublicParameters(protocolConfig)
-	t.Logf("running the protocol...")
+
+	t.Logf("running the protocol...\n")
 	if !fastens20.Execute(rebasedRel.S, protocolParams) {
 		t.Errorf("execution failed")
 	}
@@ -140,7 +149,5 @@ func TestKeySwitchCollDec(t *testing.T) {
 }
 
 func TestCollectiveBootstrapping(t *testing.T) {
-	
-}
 
-func Test
+}
