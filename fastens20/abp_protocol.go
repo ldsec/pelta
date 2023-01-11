@@ -38,7 +38,7 @@ func updateProtocol(p *ABPProver, v *ABPVerifier, ps *ABPProverState, vs *ABPVer
 	// fmt.Printf("abp equation embedded successfully: %s\n", newRel.SizesString())
 	// Update the public parameters with the new relation.
 	p.params.A = newRel.A
-	p.params.At = newRel.A.Transposed()
+	p.params.At = newRel.At
 	v.params.At = p.params.At
 	v.params.A = newRel.A
 	v.params.U = newRel.U

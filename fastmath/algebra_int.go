@@ -5,6 +5,7 @@ import (
 	"math/big"
 	"strings"
 
+	"github.com/ldsec/codeBase/commitment/logging"
 	"github.com/tuneinsight/lattigo/v4/ring"
 )
 
@@ -410,9 +411,11 @@ func (m *IntMatrix) SizeString() string {
 
 // RebaseRowsLossless rebases each row.
 func (m *IntMatrix) RebaseRowsLossless(newRing RingParams, level int) *IntMatrix {
-	m.baseRing = newRing.BaseRing
-	for _, row := range m.rows {
-		row.RebaseLossless(newRing, level)
-	}
-	return m
+	return logging.LogShortExecution("IntMatrix.RebaseRowsLossless", "rebasing", func() interface{} {
+		m.baseRing = newRing.BaseRing
+		for _, row := range m.rows {
+			row.RebaseLossless(newRing, level)
+		}
+		return m
+	}).(*IntMatrix)
 }

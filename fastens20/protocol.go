@@ -148,6 +148,6 @@ func generate(config ProtocolConfig, rel *crypto.LinearRelation, At *fastmath.In
 }
 
 func GeneratePublicParameters(config ProtocolConfig) PublicParams {
-	At := config.TargetRel.A.Transposed()
+	At := config.TargetRel.At
 	return generate(config, config.TargetRel, At)
 }
