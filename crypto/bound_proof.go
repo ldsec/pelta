@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/ldsec/codeBase/commitment/fastmath"
+	"github.com/ldsec/codeBase/commitment/logging"
 	"github.com/tuneinsight/lattigo/v4/ring"
 )
 
@@ -27,14 +28,15 @@ func CreateABPMaskedOpening(abpChal *fastmath.IntMatrix, abpMask *fastmath.IntVe
 
 // NewABPEquation creates an equation of form Rs + y = z with s dependent where abpChal: R, abpMask: y, abpMaskedOpening: z.
 func NewABPEquation(abpChal *fastmath.IntMatrix, sIndex int, abpMask, abpMaskedOpening *fastmath.IntVec, baseRing *ring.Ring) *LinearEquation {
-	fmt.Println("creating ABP equation")
+	e := logging.LogExecStart("NewABPEquation", "creating")
 	// Add the equation Rs + y = z
 	R := abpChal.Copy()
 	y := abpMask
 	z := abpMaskedOpening
 	if y.Size()%baseRing.N != 0 {
 		padLength := baseRing.N - (y.Size() % baseRing.N)
-		fmt.Printf("y (mask) is not a multiple of poly degree (size = %d), padding accordingly (+%d)\n", abpMask.Size(), padLength)
+		logging.Log("NewABPEquation",
+			fmt.Sprintf("y (mask) is not a multiple of poly degree (size = %d), padding accordingly (+%d)", abpMask.Size(), padLength))
 		y.Append(fastmath.NewIntVec(padLength, baseRing))
 		z.Append(fastmath.NewIntVec(padLength, baseRing))
 		R.ExtendRows(fastmath.NewIntMatrix(padLength, R.Cols(), baseRing))
@@ -42,6 +44,6 @@ func NewABPEquation(abpChal *fastmath.IntMatrix, sIndex int, abpMask, abpMaskedO
 	eqn := NewLinearEquation(z, R.Cols())
 	eqn.AppendDependentTerm(R, sIndex)
 	eqn.AppendVecTerm(y, baseRing)
-	fmt.Println("created ABP equation")
+	e.LogExecEnd()
 	return eqn
 }

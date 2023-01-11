@@ -22,7 +22,6 @@ func executeAndTestCorrectness(tst *testing.T, s *fastmath.IntVec, params fasten
 	prover := fastens20.NewProver(params)
 	verifier := fastens20.NewVerifier(params)
 	// Commit to the message.
-	start_t := time.Now()
 	t0, t, w, ps := prover.CommitToMessage(s)
 	alpha, gamma, vs := verifier.CreateMasks(t0, t, w)
 	t, h, v, vp, ps := prover.CommitToRelation(alpha, gamma, ps)
@@ -35,9 +34,6 @@ func executeAndTestCorrectness(tst *testing.T, s *fastmath.IntVec, params fasten
 	if !verifier.Verify(z, vs) {
 		tst.Errorf("verification failed")
 	}
-	end_t := time.Now()
-	delta_t := end_t.Sub(start_t)
-	tst.Logf("protocol execution took %dms", delta_t.Milliseconds())
 }
 
 func TestConsistency(tst *testing.T) {

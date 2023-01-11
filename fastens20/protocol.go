@@ -33,10 +33,8 @@ type ProtocolConfig struct {
 	UniformSampler  fastmath.PolySampler
 	TernarySampler  fastmath.PolySampler
 	GaussianSampler fastmath.PolySampler
-	// rebase
-	RebaseEnabled      bool
-	OriginalRingParams *fastmath.RingParams
-	OriginalRel        *crypto.LinearRelation
+	// Cache
+	ValueCache *Cache
 }
 
 // DefaultProtocolConfig returns the default configuration for an ENS20 execution.
@@ -55,40 +53,28 @@ func DefaultProtocolConfig(ringParams fastmath.RingParams, rel crypto.LinearRela
 	numCols := rel.A.Cols()
 	invK := big.NewInt(0).ModInverse(big.NewInt(int64(1)), ringParams.Q).Uint64()
 	return ProtocolConfig{
-		RingParams:         ringParams,
-		TargetRel:          &rel,
-		D:                  ringParams.D,
-		Q:                  ringParams.Q,
-		N:                  numCols,
-		M:                  numRows,
-		K:                  1,
-		InvK:               invK,
-		Delta1:             delta1,
-		Lambda:             1,
-		Kappa:              1,
-		TernarySlice:       fastmath.NewSlice(0, numCols),
-		BaseRing:           ringParams.BaseRing,
-		UniformSampler:     ring.NewUniformSampler(prng, ringParams.BaseRing),
-		TernarySampler:     ternarySampler,
-		GaussianSampler:    ring.NewGaussianSampler(prng, ringParams.BaseRing, ringParams.Sigma, delta1),
-		Tau:                128,
-		Bound:              big.NewInt(0),
-		ABPEnabled:         false,
-		BoundSlice:         fastmath.NewSlice(0, 0),
-		RebaseEnabled:      false,
-		OriginalRingParams: nil,
-		OriginalRel:        nil,
+		RingParams:      ringParams,
+		TargetRel:       &rel,
+		D:               ringParams.D,
+		Q:               ringParams.Q,
+		N:               numCols,
+		M:               numRows,
+		K:               1,
+		InvK:            invK,
+		Delta1:          delta1,
+		Lambda:          1,
+		Kappa:           1,
+		TernarySlice:    fastmath.NewSlice(0, numCols),
+		BaseRing:        ringParams.BaseRing,
+		UniformSampler:  ring.NewUniformSampler(prng, ringParams.BaseRing),
+		TernarySampler:  ternarySampler,
+		GaussianSampler: ring.NewGaussianSampler(prng, ringParams.BaseRing, ringParams.Sigma, delta1),
+		Tau:             128,
+		Bound:           big.NewInt(0),
+		ABPEnabled:      false,
+		BoundSlice:      fastmath.NewSlice(0, 0),
+		ValueCache:      NewEmptyCache(),
 	}
-}
-
-func DefaultProtocolConfigWithRebase(originalRingParams fastmath.RingParams, targetRingParams fastmath.RingParams, rel crypto.LinearRelation) ProtocolConfig {
-	originalRel := rel
-	rebasedRel := rel.Rebased(targetRingParams)
-	config := DefaultProtocolConfig(targetRingParams, rebasedRel)
-	config.RebaseEnabled = true
-	config.OriginalRingParams = &originalRingParams
-	config.OriginalRel = &originalRel
-	return config
 }
 
 func (c ProtocolConfig) WithTernarySlice(ternarySlice fastmath.Slice) ProtocolConfig {
@@ -162,5 +148,6 @@ func generate(config ProtocolConfig, rel *crypto.LinearRelation, At *fastmath.In
 }
 
 func GeneratePublicParameters(config ProtocolConfig) PublicParams {
-	return generate(config, config.TargetRel, config.TargetRel.A.Transposed())
+	At := config.TargetRel.A.Transposed()
+	return generate(config, config.TargetRel, At)
 }

@@ -17,7 +17,7 @@ func TestPolyPerm(t *testing.T) {
 	for exp := 1; exp < 10000; exp++ {
 		p := p0.Permute(int64(exp), sig)
 		// Compute (galEl ^ exp)
-		newExpMult := sig.Exponent(uint64(exp))
+		newExpMult := sig.Exponent(int64(exp))
 		// Perform checks X^i => X^(i*galEl^exp)
 		// Note that we check consistency only for the first p.Ref.N() / (galEl^exp) elements
 		for i := 0; i < int(uint64(p.N())/newExpMult); i++ {

@@ -9,59 +9,54 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/ldsec/codeBase/commitment/logging"
 	"github.com/tuneinsight/lattigo/v4/ring"
 )
 
 // PersistentIntMatrix either loads the matrix in the file with `name` or generates and saves it using the generator.
 func PersistentIntMatrix(name string, generator func() *IntMatrix, baseRing *ring.Ring) *IntMatrix {
+	procName := fmt.Sprintf("PersistentIntMatrix(%s)", name)
 	var M *IntMatrix
 	if _, err := os.Stat(name); errors.Is(err, os.ErrNotExist) {
-		fmt.Printf("PersistentIntMatrix: couldn't find the file %s, generating...", name)
-		M = generator()
-		fmt.Printf("done\n")
-		fmt.Printf("PersistentIntMatrix: saving...")
-		err := SaveIntMatrix(M, name)
-		fmt.Printf("done\n")
+		M = logging.LogShortExecution(procName, "generating", func() interface{} { return generator() }).(*IntMatrix)
+		err := logging.LogShortExecution(procName, "saving", func() interface{} { return SaveIntMatrix(M, name) }).(error)
 		if err != nil {
-			fmt.Printf("PersistentIntMatrix: couldn't save matrix %s: %s\n", name, err.Error())
+			logging.Log(procName, fmt.Sprintf("couldn't save matrix %s", err.Error()))
 		}
 	} else {
-		fmt.Printf("PersistentIntMatrix: loading %s...", name)
-		M, err = LoadIntMatrix(name, baseRing)
-		fmt.Printf("done\n")
-		if err != nil {
-			fmt.Printf("PersistentIntMatrix: couldn't load matrix %s, regenerating: %s", name, err.Error())
-			M = generator()
-			fmt.Printf("done\n")
-		}
+		M = logging.LogShortExecution(procName, "loading", func() interface{} {
+			M, err := LoadIntMatrix(name, baseRing)
+			if err != nil {
+				logging.Log(procName, fmt.Sprintf("couldn't load matrix %s", err.Error()))
+				M = logging.LogShortExecution(procName, "generating", func() interface{} { return generator() }).(*IntMatrix)
+			}
+			return M
+		}).(*IntMatrix)
 	}
 	return M
 }
 
 // PersistentIntVec either loads the vector in the file with `name` or generates and saves it using the generator.
 func PersistentIntVec(name string, generator func() *IntVec, baseRing *ring.Ring) *IntVec {
-	var v *IntVec
+	procName := fmt.Sprintf("PersistentIntVec(%s)", name)
+	var M *IntVec
 	if _, err := os.Stat(name); errors.Is(err, os.ErrNotExist) {
-		fmt.Printf("PersistentIntVec: couldn't find the file %s, generating...", name)
-		v = generator()
-		fmt.Printf("done\n")
-		fmt.Printf("PersistentIntVec: saving...")
-		err := SaveIntVec(v, name)
-		fmt.Printf("done\n")
+		M = logging.LogShortExecution(procName, "generating", func() interface{} { return generator() }).(*IntVec)
+		err := logging.LogShortExecution(procName, "saving", func() interface{} { return SaveIntVec(M, name) }).(error)
 		if err != nil {
-			fmt.Printf("PersistentIntVec: couldn't save matrix %s: %s\n", name, err.Error())
+			logging.Log(procName, fmt.Sprintf("couldn't save vector %s", err.Error()))
 		}
 	} else {
-		fmt.Printf("PersistentIntVec: loading %s...", name)
-		v, err = LoadIntVec(name, baseRing)
-		fmt.Printf("done\n")
-		if err != nil {
-			fmt.Printf("PersistentIntVec: couldn't load matrix %s, regenerating: %s", name, err.Error())
-			v = generator()
-			fmt.Printf("done\n")
-		}
+		M = logging.LogShortExecution(procName, "loading", func() interface{} {
+			M, err := LoadIntVec(name, baseRing)
+			if err != nil {
+				logging.Log(procName, fmt.Sprintf("couldn't load matrix %s", err.Error()))
+				M = logging.LogShortExecution(procName, "generating", func() interface{} { return generator() }).(*IntVec)
+			}
+			return M
+		}).(*IntVec)
 	}
-	return v
+	return M
 }
 
 // SaveIntVec saves the given vector into the specified file.
@@ -117,7 +112,6 @@ func LoadIntMatrix(name string, baseRing *ring.Ring) (*IntMatrix, error) {
 		line, err := bufReader.ReadString('\n')
 		// Handle unexpected error.
 		if err != nil && !errors.Is(err, io.EOF) {
-			fmt.Printf("encountered an unexpected error while loading the int matrix: %s\n", err.Error())
 			return nil, err
 		}
 		// Discard the newline character.

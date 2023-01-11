@@ -56,7 +56,7 @@ func (vf Verifier) Verify(z *fastmath.PolyNTTMatrix, state VerifierState) bool {
 	maskedOpeningTestResult := z.AllRows(
 		func(i int, zi *fastmath.PolyNTTVec) bool {
 			perm := state.c.Permute(int64(i), vf.params.Sig).NTT()
-			rhs := state.W.Row(i).Copy().Add(state.T0.Copy().MulAll(perm))
+			rhs := state.T0.Copy().MulAll(perm).Add(state.W.Row(i))
 			// TODO masked opening bound check (need a good delta1 parameter)
 			//sizeCheck := zi.Copy().AsVec().NewPolyVec().L2Norm(vf.settings.Q) < vf.settings.Beta
 			return vf.params.B0.MulVec(zi).Eq(rhs) //&& sizeCheck
@@ -67,8 +67,9 @@ func (vf Verifier) Verify(z *fastmath.PolyNTTMatrix, state VerifierState) bool {
 	}
 	// Zero-coefficient check
 	hTestResult := true
+	hInvNTT := state.h.Copy().InvNTT()
 	for i := 0; i < vf.params.config.K; i++ {
-		if state.h.Copy().InvNTT().Get(i, 0) != 0 {
+		if hInvNTT.Get(i, 0) != 0 {
 			hTestResult = false
 			break
 		}
@@ -79,38 +80,41 @@ func (vf Verifier) Verify(z *fastmath.PolyNTTMatrix, state VerifierState) bool {
 		return false
 	}
 	// Constructing f
+	cNTT := state.c.Copy().NTT()
 	f := fastmath.NewPolyMatrix(vf.params.config.K, vf.params.config.NumSplits(), vf.params.config.BaseRing).NTT()
 	f.Populate(func(i int, j int) *fastmath.PolyNTT {
 		// t[j]*sig^i(c)
-		tmp := state.T.Get(j).Copy().Mul(state.c.Permute(int64(i), vf.params.Sig).NTT())
+		tmp := state.c.Permute(int64(i), vf.params.Sig).NTT().Mul(state.T.Get(j))
 		// (b[j] * z[i]) - (t[j]*sig^i(c))
 		return vf.params.B.Row(j).Dot(z.Row(i)).Add(tmp.Neg())
 	})
 	// (b[n/d+2] * z[0]) - c*t[n/d+2])
 	f2 := vf.params.B.Row(vf.params.config.NumSplits() + 1).
 		Dot(z.Row(0)).
-		Add(state.c.Copy().NTT().
+		Add(cNTT.Copy().
 			Mul(state.T.Get(vf.params.config.NumSplits() + 1)).
 			Neg())
 	// (b[n/d+3] * z[0]) - c*t[n/d+3]
 	f3 := vf.params.B.Row(vf.params.config.NumSplits() + 2).
 		Dot(z.Row(0)).
-		Add(state.c.Copy().NTT().
+		Add(cNTT.Copy().
 			Mul(state.T.Get(vf.params.config.NumSplits() + 2)).
 			Neg())
 	vTest := CommitmentSum(vf.params.config.K, vf.params.config.NumTernarySplits(), state.Alpha,
 		func(i int, j int) *fastmath.PolyNTT {
+			// Ternary subvector index
 			jp := vf.params.config.TernarySlice.Start/vf.params.config.D + j
 			// f[i][j]
 			p1 := f.Get(i, jp).Copy()
 			// f[i][j] + sig^i(c)
-			p2 := f.Get(i, jp).Copy().Add(state.c.Permute(int64(i), vf.params.Sig).NTT())
+			sigic := state.c.Permute(int64(i), vf.params.Sig).NTT()
+			p2 := f.Get(i, jp).Copy().Add(sigic)
 			// f[i][j] + 2sig^i(c)
-			p3 := f.Get(i, jp).Copy().Add(state.c.Permute(int64(i), vf.params.Sig).Scale(2).NTT())
+			p3 := p2.Copy().Add(sigic)
 			// f[i][j] * (f[i][j] + sig^i(c)) * (f[i][j] + 2sig^i(c))
 			return p1.Mul(p2).Mul(p3)
 		}, vf.params)
-	vTest.Add(f2).Add(f3.Copy().Mul(state.c.Copy().NTT()))
+	vTest.Add(f2).Add(f3.Mul(cNTT))
 	vTestResult := vTest.Eq(state.v)
 	if !vTestResult {
 		fmt.Println("verifier failed relation check")
@@ -118,8 +122,6 @@ func (vf Verifier) Verify(z *fastmath.PolyNTTMatrix, state VerifierState) bool {
 	}
 	// Reconstruct psi
 	psi := fastmath.NewPolyMatrix(vf.params.config.K, vf.params.config.NumSplits(), vf.params.config.BaseRing).NTT()
-	fmt.Println("At", vf.params.At.SizeString())
-	fmt.Println("Gamma", state.Gamma.SizeString())
 	psi.PopulateRows(func(mu int) *fastmath.PolyNTTVec {
 		tmp := vf.params.At.MulVec(state.Gamma.RowView(mu))
 		return SplitInvNTT(tmp, vf.params).NTT()
@@ -151,20 +153,20 @@ func (vf Verifier) Verify(z *fastmath.PolyNTTMatrix, state VerifierState) bool {
 						big.NewInt(int64(vf.params.config.K))).
 					Int64()
 				// b[j] * z[i - v]
-				mul := vf.params.B.Row(j).Copy().Dot(z.Row(int(index)))
+				dotResult := vf.params.B.Row(j).Dot(z.Row(int(index)))
 				// d * psi[mu][j] * (b[j] * z[i - v])
-				return psi.Get(mu, j).Copy().
-					Scale(uint64(vf.params.config.D)).
-					Mul(mul)
+				return dotResult.Scale(uint64(vf.params.config.D)).
+					Mul(psi.Get(mu, j))
 			}, vf.params)
 		// outerSum + (b[n/d] * z[i])
 		return outerSum.Add(add)
 	})
+	hNeg := state.h.Copy().Neg()
 	functionCommitmentTestResult := functionCommitmentTest.All(
 		func(i int, lhs *fastmath.PolyNTT) bool {
 			rhsAdd := state.c.Permute(int64(i), vf.params.Sig).NTT().Mul(
-				tao.Copy().Add(state.T.Get(vf.params.config.NumSplits())).Add(state.h.Copy().Neg()))
-			rhs := state.vp.Get(i).Copy().Add(rhsAdd)
+				tao.Copy().Add(state.T.Get(vf.params.config.NumSplits())).Add(hNeg))
+			rhs := state.vp.Get(i).Add(rhsAdd)
 			return lhs.Eq(rhs)
 		})
 	if !functionCommitmentTestResult {

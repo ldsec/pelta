@@ -48,6 +48,8 @@ func TestKeyGen(t *testing.T) {
 	t.Logf("rebasing...\n")
 	commitmentRing := fastmath.BFVFullShortCommtRing(7)
 	rebasedRel := rel.Rebased(commitmentRing)
+	// commitmentRing := config.Ring
+	// rebasedRel := rel
 
 	t.Logf("creating protocol configuration...\n")
 	protocolConfig := fastens20.DefaultProtocolConfig(commitmentRing, rebasedRel).

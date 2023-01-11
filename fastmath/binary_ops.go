@@ -1,37 +1,39 @@
 package fastmath
 
 import (
+	"fmt"
 	"math/big"
+
+	"github.com/ldsec/codeBase/commitment/logging"
 )
 
 // Add adds two polynomials.
 func (p *Poly) Add(q *Poly) *Poly {
-	// if q.IsZero() {
-	// 	return p
-	// }
-	p.unset = false
+	if q.IsUnset() {
+		return p
+	}
+	p.SetDirty()
 	p.baseRing.Add(p.ref, q.ref, p.ref)
 	return p
 }
 
 // MulCoeffs multiplies the coefficients of two polynomials.
 func (p *Poly) MulCoeffs(q *Poly) *Poly {
-	// if q.IsZero() {
-	// 	return p.Zero()
-	// }
-	p.unset = false
+	if q.IsUnset() || p.IsUnset() {
+		return p.Zero()
+	}
+	p.SetDirty()
 	p.baseRing.MulCoeffs(p.ref, q.ref, p.ref)
 	return p
 }
 
 // MulCoeffsAndAdd multiplies the coefficients of two polynomials and adds it to `out`.
-func (p *Poly) MulCoeffsAndAdd(q *Poly, out *Poly) *Poly {
-	// if q.IsZero() {
-	// 	return p.Zero()
-	// }
-	out.unset = false
+func (p *Poly) MulCoeffsAndAdd(q *Poly, out *Poly) {
+	if q.IsUnset() || p.IsUnset() {
+		return
+	}
+	out.SetDirty()
 	p.baseRing.MulCoeffsAndAdd(p.ref, q.ref, out.ref)
-	return p
 }
 
 // Mul multiplies two polynomials.
@@ -97,19 +99,6 @@ func (v *PolyNTTVec) MulAll(r *PolyNTT) *PolyNTTVec {
 		p.Mul(r)
 	}
 	return v
-}
-
-// MulAddElems multiplies the elements and adds it to the coefficients of the
-// given `out` polynomial.
-func (v *IntVec) MulAddElems(r *IntVec, out *Poly) {
-	if v.size != r.size {
-		panic("IntVec.Dot sizes do not match")
-	}
-	for i := 0; i < len(v.polys); i++ {
-		a := v.polys[i]
-		b := r.polys[i]
-		a.MulCoeffsAndAdd(b, out)
-	}
 }
 
 // Dot returns the dot product of the given two vectors.
@@ -252,12 +241,14 @@ func (m *IntMatrix) MulVec(v *IntVec) *IntVec {
 	if m.Cols() != v.Size() {
 		panic("IntMatrix.MulVec sizes incorrect")
 	}
-	out := NewIntVec(m.Rows(), m.baseRing)
-	for i, row := range m.rows {
-		dotResult := row.Dot(v)
-		out.Set(i, dotResult)
-	}
-	return out
+	return logging.LogShortExecution("IntMatrix.MulVec", fmt.Sprintf("%s * [%d]", m.SizeString(), v.Size()), func() interface{} {
+		out := NewIntVec(m.Rows(), m.baseRing)
+		for i, row := range m.rows {
+			dotResult := row.Dot(v)
+			out.Set(i, dotResult)
+		}
+		return out
+	}).(*IntVec)
 }
 
 // MulVec performs a matrix-vector multiplication.

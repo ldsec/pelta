@@ -17,17 +17,22 @@ func NewAutomorphism(d, k uint64) Automorphism {
 
 // Permute returns the permutation of this polynomial, i.e, sig^exp(p).
 func (p *Poly) Permute(exp int64, sig Automorphism) *Poly {
-	var gen uint64
-	if exp >= 0 {
-		gen = sig.Exponent(uint64(exp))
-	} else {
-		// Get the additive inverse of g^exp under mod d => (exp mod d) for exp < 0
-		//invExp := ring.ModExp(uint64(int64(sig.D)+exp), 1, sig.D)
-		invExp := big.NewInt(0).Mod(big.NewInt(exp), big.NewInt(int64(sig.D))).Uint64()
-		gen = sig.Exponent(invExp)
+	if p.IsUnset() {
+		return p
+	}
+	// Calculate the exponent
+	gen := sig.Exponent(exp)
+	return p.PermuteWithGen(gen)
+}
+
+// Permute returns the permutation of this polynomial, i.e, sig^exp(p).
+func (p *Poly) PermuteWithGen(gen uint64) *Poly {
+	if p.IsUnset() || p.IsZero() {
+		return p
 	}
 	// Write the permuted result on out
 	out := NewPoly(p.baseRing)
+	out.SetDirty()
 	p.baseRing.Permute(p.ref, gen, out.ref)
 	return out
 }
@@ -43,8 +48,14 @@ func Trace(sig Automorphism, f func(int) *Poly, k int, baseRing *ring.Ring) *Pol
 }
 
 // Exponent computes the exponent multiplier g^exp
-func (sig Automorphism) Exponent(exp uint64) uint64 {
-	return big.NewInt(0).Exp(big.NewInt(int64(sig.G)), big.NewInt(int64(exp)), nil).Uint64()
+func (sig Automorphism) Exponent(exp int64) uint64 {
+	var posExp int64
+	if exp >= 0 {
+		posExp = exp
+	} else {
+		posExp = big.NewInt(0).Mod(big.NewInt(exp), big.NewInt(int64(sig.D))).Int64()
+	}
+	return big.NewInt(0).Exp(big.NewInt(int64(sig.G)), big.NewInt(int64(posExp)), nil).Uint64()
 	// NOTE: 2d works up to some degree. May need to tune a bit.
-	//return ring.ModExp(sig.G, exp, 2*sig.D)
+	// return ring.ModExp(sig.G, posExp, 2*sig.D)
 }

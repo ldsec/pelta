@@ -33,7 +33,7 @@ func NewOnePoly(scale uint64, baseRing *ring.Ring) *Poly {
 // Set sets the coefficient of this polynomial at every level to the given value.
 func (p *Poly) Set(index int, value uint64) {
 	if value != 0 {
-		p.unset = false
+		p.SetDirty()
 	}
 	for level := 0; level < len(p.ref.Coeffs); level++ {
 		p.ref.Coeffs[level][index] = value
@@ -43,7 +43,7 @@ func (p *Poly) Set(index int, value uint64) {
 // SetLevel sets the coefficient of this polynomial at the given level to the given value.
 func (p *Poly) SetLevel(index, level int, value uint64) {
 	if value != 0 {
-		p.unset = false
+		p.SetDirty()
 	}
 	p.ref.Coeffs[level][index] = value
 }
@@ -63,9 +63,13 @@ func (p *Poly) Coeffs() *IntVec {
 	return &IntVec{size: p.N(), polys: []*Poly{p}, baseRing: p.baseRing}
 }
 
+func (p *Poly) IsUnset() bool {
+	return p.unset
+}
+
 // IsZero returns true if all the coefficients of this polynomial are zero.
 func (p *Poly) IsZero() bool {
-	if p.unset {
+	if p.IsUnset() {
 		return true
 	}
 	for _, coeff := range p.ref.Coeffs[0] {
@@ -74,6 +78,10 @@ func (p *Poly) IsZero() bool {
 		}
 	}
 	return true
+}
+
+func (p *Poly) SetDirty() {
+	p.unset = false
 }
 
 // Reduce performs the appropriate coefficient reductions over all the levels.

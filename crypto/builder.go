@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/ldsec/codeBase/commitment/fastmath"
+	"github.com/ldsec/codeBase/commitment/logging"
 	"github.com/tuneinsight/lattigo/v4/ring"
 )
 
@@ -126,9 +127,9 @@ func (eqn *LinearEquation) SizesString() string {
 	for _, term := range eqn.rhs {
 		var s string
 		if term.dependent {
-			s = fmt.Sprintf("[%dx%d][dep=%d]", term.A.Rows(), term.A.Cols(), term.depVecIndex)
+			s = fmt.Sprintf("[%d, %d][dep=%d]", term.A.Rows(), term.A.Cols(), term.depVecIndex)
 		} else {
-			s = fmt.Sprintf("[%dx%d][%d]", term.A.Rows(), term.A.Cols(), term.b.Size())
+			s = fmt.Sprintf("[%d, %d][%d]", term.A.Rows(), term.A.Cols(), term.b.Size())
 		}
 		termStrs = append(termStrs, s)
 	}
@@ -138,47 +139,7 @@ func (eqn *LinearEquation) SizesString() string {
 // String returns a string representation of this equation.
 // TODO: fix
 func (eqn *LinearEquation) String() string {
-	strs := make([]string, 0)
-	for i := 0; ; i++ {
-		shouldStop := true
-		rowStr := make([]string, 0)
-		if eqn.lhs.Size() > i {
-			rowStr = append(rowStr, fmt.Sprintf("[ %5d ]", eqn.lhs.Get(i)))
-			shouldStop = false
-		} else {
-			rowStr = append(rowStr, "         ")
-		}
-		// Equal sign
-		if i == eqn.lhs.Size()/2 {
-			rowStr = append(rowStr, " = ")
-		} else {
-			rowStr = append(rowStr, "   ")
-		}
-		terms := make([]string, 0, len(eqn.rhs))
-		for _, term := range eqn.rhs {
-			termStrs := make([]string, 0, len(eqn.rhs))
-			// TODO: handle empty rows
-			if term.A.Rows() > i {
-				termStrs = append(termStrs, term.A.RowView(i).String())
-				shouldStop = false
-			}
-			if term.b.Size() > i {
-				termStrs = append(termStrs, fmt.Sprintf("[ %5d ] ", term.b.Get(i)))
-				shouldStop = false
-			}
-			terms = append(terms, strings.Join(termStrs, ""))
-		}
-		if shouldStop {
-			break
-		}
-		termJoiner := "   "
-		if eqn.lhs.Size()/2 == i {
-			termJoiner = " + "
-		}
-		rowStr = append(rowStr, strings.Join(terms, termJoiner))
-		strs = append(strs, strings.Join(rowStr, " "))
-	}
-	return strings.Join(strs, "\n")
+	return "eqn"
 }
 
 type LinearRelationBuilder struct {
@@ -215,15 +176,17 @@ func getZeroPad(i, j int, eqns []*LinearEquation, baseRing *ring.Ring) *fastmath
 
 // Build constructs the linear relation of the form As = u from the appended equations.
 func (lrb *LinearRelationBuilder) Build(baseRing *ring.Ring) LinearRelation {
-	fmt.Println("lrb: building...")
-	fmt.Println(lrb.SizesString())
+	procName := "LinearRelationBuilder.Build"
 	if len(lrb.eqns) == 0 {
 		panic("cannot build a linear relation without any equations")
 	}
+	e := logging.LogExecStart(procName, "building")
+	logging.Log(procName, lrb.SizesString())
+	// Then construct.
 	linRel := lrb.eqns[0].Linearize()
 	for i, eqn := range lrb.eqns[1:] {
-		// fmt.Println("lrb: so far", linRel.SizesString())
-		// fmt.Println("lrb: built so far:", linRel.SizesString())
+		// fmt.Println("LinearRelationBuilder: so far", linRel.SizesString())
+		// fmt.Println("LinearRelationBuilder: built so far:", linRel.SizesString())
 		if eqn.IsDependent() {
 			// For a dependent equation we want to find a B, y s.t. (A || 0, B) (s, y) = (u, lhs) will yield
 			// the correct linear relation.
@@ -248,7 +211,7 @@ func (lrb *LinearRelationBuilder) Build(baseRing *ring.Ring) LinearRelation {
 			} else {
 				B = preB[0]
 			}
-			// fmt.Println("lrb: initialized B:", B.SizeString())
+			// fmt.Println("LinearRelationBuilder: initialized B:", B.SizeString())
 			for j, m := range preB[1:] { // j is the prev independent term index (overall)!
 				// fmt.Printf("lrb (%d): handling term %d\n", i+1, j+1)
 				if m == nil {
@@ -257,20 +220,21 @@ func (lrb *LinearRelationBuilder) Build(baseRing *ring.Ring) LinearRelation {
 				} else {
 					B.ExtendCols(m)
 				}
-				// fmt.Println("lrb: updated B:", B.SizeString())
+				// fmt.Println("LinearRelationBuilder: updated B:", B.SizeString())
 			}
 			// Build the y, the concetanation of term vectors.
 			y := eqn.GetIndependentTerms()[0].b
 			for _, t := range eqn.GetIndependentTerms()[1:] {
 				y.Append(t.b)
 			}
-			// fmt.Println("lrb: extending with B:", B.SizeString())
+			// fmt.Println("LinearRelationBuilder: extending with B:", B.SizeString())
 			linRel.AppendDependent(B, y, eqn.lhs)
 		} else {
 			linRel.AppendIndependent(eqn.Linearize())
 		}
 	}
-	fmt.Println("lrb: built:", linRel.SizesString())
+	logging.Log(procName, linRel.SizesString())
+	e.LogExecEnd()
 	return linRel
 }
 

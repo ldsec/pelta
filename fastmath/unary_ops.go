@@ -4,12 +4,19 @@ import (
 	"math"
 	"math/big"
 
+	"github.com/ldsec/codeBase/commitment/logging"
 	"github.com/tuneinsight/lattigo/v4/ring"
 )
 
 // Scale scales this polynomial with the given scalar factor.
 func (p *Poly) Scale(factor uint64) *Poly {
-	p.unset = false
+	if p.IsUnset() {
+		return p
+	}
+	if factor == 0 {
+		return p.Zero()
+	}
+	p.SetDirty()
 	p.baseRing.MulScalar(p.ref, factor, p.ref)
 	return p
 }
@@ -98,7 +105,7 @@ func (v *IntVec) Diag() *IntMatrix {
 
 // Max returns the maximum coefficient at the given level.
 func (p *Poly) Max(level int) uint64 {
-	if p.unset {
+	if p.IsUnset() {
 		return 0
 	}
 	max := p.ref.Coeffs[level][0]
@@ -164,9 +171,6 @@ func (v *IntVec) Reduce(mod *big.Int) *IntVec {
 
 // SumCoeffsFast returns the sum of the coefficients of this polynomial.
 func (p *Poly) SumCoeffsFast(level int) uint64 {
-	if p.unset {
-		return 0
-	}
 	logN := int(math.Log2(float64(p.baseRing.N)))
 	tmp := p.Copy()
 	tmp2 := NewPoly(p.baseRing)
@@ -179,7 +183,7 @@ func (p *Poly) SumCoeffsFast(level int) uint64 {
 
 // SumCoeffs returns the sum of the coefficients of this polynomial.
 func (p *Poly) SumCoeffs(level int, mod *big.Int) uint64 {
-	if p.unset {
+	if p.IsUnset() {
 		return 0
 	}
 	out := uint64(0)
@@ -275,7 +279,7 @@ func (m *PolyNTTMatrix) InvNTT() *PolyMatrix {
 
 // PowCoeffs takes the `exp`-th power of the coefficients modulo `mod`.
 func (p *Poly) PowCoeffs(exp uint64, mod uint64) *Poly {
-	if p.unset {
+	if p.IsUnset() {
 		return p
 	}
 	for i := 0; i < p.baseRing.N; i++ {
@@ -293,18 +297,20 @@ func (p *PolyNTT) Pow(exp, mod uint64) *PolyNTT {
 
 // Transposed returns the transposed version of this matrix.
 func (m *IntMatrix) Transposed() *IntMatrix {
-	At := make([]uint64, m.Cols()*m.Rows())
-	for row := 0; row < m.Rows(); row++ {
-		for col := 0; col < m.Cols(); col++ {
-			index := col*m.Rows() + row
-			At[index] = m.Get(row, col)
+	return logging.LogShortExecution("IntMatrix.Transposed", m.SizeString(), func() interface{} {
+		At := make([]uint64, m.Cols()*m.Rows())
+		for row := 0; row < m.Rows(); row++ {
+			for col := 0; col < m.Cols(); col++ {
+				index := col*m.Rows() + row
+				At[index] = m.Get(row, col)
+			}
 		}
-	}
-	mt := NewIntMatrix(m.Cols(), m.Rows(), m.BaseRing())
-	for row := 0; row < mt.Rows(); row++ {
-		for col := 0; col < mt.Cols(); col++ {
-			mt.Set(row, col, At[row*mt.Cols()+col])
+		mt := NewIntMatrix(m.Cols(), m.Rows(), m.BaseRing())
+		for row := 0; row < mt.Rows(); row++ {
+			for col := 0; col < mt.Cols(); col++ {
+				mt.Set(row, col, At[row*mt.Cols()+col])
+			}
 		}
-	}
-	return mt
+		return mt
+	}).(*IntMatrix)
 }

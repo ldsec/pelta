@@ -32,6 +32,7 @@ func NewAugmentedTernarySampler(ternarySampler PolySampler, baseRing *ring.Ring)
 func NewRandomPoly(sampler PolySampler, baseRing *ring.Ring) *Poly {
 	g := NewPoly(baseRing)
 	sampler.Read(g.ref)
+	g.SetDirty()
 	return g
 }
 
@@ -41,6 +42,7 @@ func NewRandomTernaryPoly(baseRing *ring.Ring) *Poly {
 		rand := ring.RandInt(big.NewInt(3)).Uint64()
 		g.Set(i, rand)
 	}
+	g.SetDirty()
 	return g
 }
 

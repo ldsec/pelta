@@ -1,31 +1,43 @@
 package fastens20
 
 import (
-	"fmt"
 	"github.com/ldsec/codeBase/commitment/fastmath"
-	"time"
+	"github.com/ldsec/codeBase/commitment/logging"
 )
 
 func executeWithoutBoundProof(s *fastmath.IntVec, params PublicParams) bool {
 	prover := NewProver(params)
 	verifier := NewVerifier(params)
 	// Commit to the message.
-	fmt.Println("executing Prover.CommitToMessage")
+	e := logging.LogExecStart("Execute", "Prover.CommitToMessage")
 	t0, t, w, ps := prover.CommitToMessage(s)
-	fmt.Println("executing Verifier.CreateMasks")
+	e.LogExecEnd()
+
+	e = logging.LogExecStart("Execute", "Verifier.CreateMasks")
 	alpha, gamma, vs := verifier.CreateMasks(t0, t, w)
-	fmt.Println("executing Prover.CommitToRelation")
+	e.LogExecEnd()
+
+	e = logging.LogExecStart("Execute", "Prover.CommitToRelation")
 	t, h, v, vp, ps := prover.CommitToRelation(alpha, gamma, ps)
-	fmt.Println("executing Verifier.CreateChallenge")
+	e.LogExecEnd()
+
+	e = logging.LogExecStart("Execute", "Verifier.CreateChallenge")
 	c, vs := verifier.CreateChallenge(t, h, v, vp, vs)
+	e.LogExecEnd()
+
 	// Recreate the masked opening until it satisfies the shortness condition.
-	fmt.Println("executing Prover.MaskedOpening")
+	e = logging.LogExecStart("Execute", "Prover.MaskedOpening")
 	z, ps, err := prover.MaskedOpening(c, ps)
 	for err != nil {
 		z, ps, err = prover.MaskedOpening(c, ps)
 	}
-	fmt.Println("executing Verifier.Verify")
-	return verifier.Verify(z, vs)
+	e.LogExecEnd()
+
+	e = logging.LogExecStart("Execute", "Verifier.Verify")
+	res := verifier.Verify(z, vs)
+	e.LogExecEnd()
+
+	return res
 }
 
 func executeWithBoundProof(s *fastmath.IntVec, params PublicParams) bool {
@@ -33,36 +45,55 @@ func executeWithBoundProof(s *fastmath.IntVec, params PublicParams) bool {
 	verifier := NewABPVerifier(params, params.config.BoundSlice, params.config.Tau, params.config.Bound)
 	// fmt.Println("abp exchange initiated")
 	// Commit to the message.
+	e := logging.LogExecStart("Execute", "Prover.CommitToMessage")
 	t0, t, w, ps := prover.CommitToMessage(s)
+	e.LogExecEnd()
 	// ABP exchange.
+	e = logging.LogExecStart("Execute", "Verifier.CreateABPChallenge")
 	abpVerifierChal, vs := verifier.CreateABPChallenge()
+	e.LogExecEnd()
+
+	e = logging.LogExecStart("Execute", "Prover.CreateABPMaskedOpening")
 	abpMaskedOpening, ps, _ := prover.CreateABPMaskedOpening(abpVerifierChal, ps)
+	e.LogExecEnd()
 	// fmt.Println("updating the protocol")
 	// Update the relation to embed the approximate bound proof.
-	updateProtocol(&prover, &verifier, &ps, &vs)
+	logging.LogExecution("Execute", "updating", func() interface{} { updateProtocol(&prover, &verifier, &ps, &vs); return nil })
 	// fmt.Println("continuing the executing of the protocol")
 	// Resume the normal execution.
+	e = logging.LogExecStart("Execute", "Verifier.CreateMasks")
 	alpha, gamma, vs := verifier.CreateMasks(t0, t, w, abpMaskedOpening, vs)
+	e.LogExecEnd()
 	// Continue the execution.
+	e = logging.LogExecStart("Execute", "Prover.CommitToRelation")
 	t, h, v, vp, ps := prover.CommitToRelation(alpha, gamma, ps)
+	e.LogExecEnd()
+
+	e = logging.LogExecStart("Execute", "Verifier.CreateChallenge")
 	c, vs := verifier.CreateChallenge(t, h, v, vp, vs)
+	e.LogExecEnd()
+
+	e = logging.LogExecStart("Execute", "Prover.MaskedOpening")
 	z, ps, _ := prover.MaskedOpening(c, ps)
-	return verifier.Verify(z, vs)
+	e.LogExecEnd()
+
+	e = logging.LogExecStart("Execute", "Verifier.Verify")
+	res := verifier.Verify(z, vs)
+	e.LogExecEnd()
+
+	return res
 }
 
 // Execute runs the augmented ENS20 protocol.
 func Execute(s *fastmath.IntVec, params PublicParams) bool {
 	// Either execute with or without bound proof.
 	var res bool
-	t0 := time.Now()
+	e := logging.LogExecStart("Execute", "Protocol execution")
 	if params.config.ABPEnabled {
-		fmt.Printf("abp enabled execution")
 		res = executeWithBoundProof(s, params)
 	} else {
-		fmt.Printf("abp disabled execution")
 		res = executeWithoutBoundProof(s, params)
 	}
-	dt := time.Now().Sub(t0)
-	fmt.Printf("protocol execution took %dms\n", dt.Milliseconds())
+	e.LogExecEnd()
 	return res
 }
