@@ -6,7 +6,43 @@ import (
 
 // Add adds two polynomials.
 func (p *Poly) Add(q *Poly) *Poly {
+	// if q.IsZero() {
+	// 	return p
+	// }
+	p.unset = false
 	p.baseRing.Add(p.ref, q.ref, p.ref)
+	return p
+}
+
+// MulCoeffs multiplies the coefficients of two polynomials.
+func (p *Poly) MulCoeffs(q *Poly) *Poly {
+	// if q.IsZero() {
+	// 	return p.Zero()
+	// }
+	p.unset = false
+	p.baseRing.MulCoeffs(p.ref, q.ref, p.ref)
+	return p
+}
+
+// MulCoeffsAndAdd multiplies the coefficients of two polynomials and adds it to `out`.
+func (p *Poly) MulCoeffsAndAdd(q *Poly, out *Poly) *Poly {
+	// if q.IsZero() {
+	// 	return p.Zero()
+	// }
+	out.unset = false
+	p.baseRing.MulCoeffsAndAdd(p.ref, q.ref, out.ref)
+	return p
+}
+
+// Mul multiplies two polynomials.
+func (p *PolyNTT) Mul(q *PolyNTT) *PolyNTT {
+	p.actual.MulCoeffs(q.actual)
+	return p
+}
+
+// Add adds two polynomials.
+func (p *PolyNTT) Add(q *PolyNTT) *PolyNTT {
+	p.actual.Add(q.actual)
 	return p
 }
 
@@ -49,11 +85,6 @@ func (v *PolyNTTVec) AddAll(q *PolyNTT) *PolyNTTVec {
 	return v
 }
 
-// MulCoeffs multiplies the coefficients of two polynomials.
-func (p *Poly) MulCoeffs(q *Poly) *Poly {
-	p.baseRing.MulCoeffs(p.ref, q.ref, p.ref)
-	return p
-}
 func (v *PolyNTTVec) Mul(r *PolyNTTVec) *PolyNTTVec {
 	for i, p := range v.elems {
 		p.Mul(r.Get(i))
@@ -77,7 +108,7 @@ func (v *IntVec) MulAddElems(r *IntVec, out *Poly) {
 	for i := 0; i < len(v.polys); i++ {
 		a := v.polys[i]
 		b := r.polys[i]
-		v.baseRing.MulCoeffsAndAdd(a.ref, b.ref, out.ref)
+		a.MulCoeffsAndAdd(b, out)
 	}
 }
 
@@ -93,19 +124,19 @@ func (v *IntVec) Dot(r *IntVec) uint64 {
 	for i := 0; i < len(v.polys); i++ {
 		a := v.polys[i]
 		b := r.polys[i]
-		v.baseRing.MulCoeffsAndAdd(a.ref, b.ref, preSum.ref)
+		a.MulCoeffsAndAdd(b, preSum)
 	}
-	return preSum.SumCoeffs(0, v.mod.Uint64())
+	return preSum.SumCoeffs(0, v.mod)
 }
 
 func (v *PolyNTTVec) Dot(r *PolyNTTVec) *PolyNTT {
-	out := NewPoly(v.baseRing).NTT()
+	out := NewPoly(v.baseRing)
 	for i, p := range v.elems {
-		a := p.actual.ref
-		b := r.Get(i).actual.ref
-		v.baseRing.MulCoeffsAndAdd(a, b, out.actual.ref)
+		a := p.actual
+		b := r.Get(i).actual
+		a.MulCoeffsAndAdd(b, out)
 	}
-	return out
+	return ForceNTT(out)
 }
 
 // Hadamard performs coefficient-wise multiplication.
@@ -116,7 +147,7 @@ func (v *IntVec) Hadamard(r *IntVec) *IntVec {
 	for i := 0; i < len(v.polys); i++ {
 		a := v.polys[i]
 		b := r.polys[i]
-		v.baseRing.MulCoeffs(a.ref, b.ref, a.ref)
+		a.MulCoeffs(b)
 	}
 	return v
 }
@@ -221,8 +252,8 @@ func (m *IntMatrix) MulVec(v *IntVec) *IntVec {
 	dotResult := NewPoly(m.baseRing)
 	for i, row := range m.rows {
 		row.MulAddElems(v, dotResult)
-		out.Set(i, dotResult.SumCoeffs(0, m.mod.Uint64()))
-		dotResult.ref.Zero()
+		out.Set(i, dotResult.SumCoeffs(0, m.mod))
+		dotResult.Zero()
 	}
 	return out
 }

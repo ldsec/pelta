@@ -24,8 +24,8 @@ func NewLinearRelationWithLHS(A *fastmath.IntMatrix, s, u *fastmath.IntVec) Line
 	return LinearRelation{A, s, u}
 }
 
-// Rebase rebases A, s, u on the new given ring.
-func (r *LinearRelation) Rebase(newRing fastmath.RingParams) LinearRelation {
+// Rebased rebases A, s, u on the new given ring.
+func (r *LinearRelation) Rebased(newRing fastmath.RingParams) LinearRelation {
 	return LinearRelation{
 		A: r.A.Copy().RebaseRowsLossless(newRing, 0),
 		S: r.S.Copy().RebaseLossless(newRing, 0),

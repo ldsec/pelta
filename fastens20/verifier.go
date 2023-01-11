@@ -118,6 +118,8 @@ func (vf Verifier) Verify(z *fastmath.PolyNTTMatrix, state VerifierState) bool {
 	}
 	// Reconstruct psi
 	psi := fastmath.NewPolyMatrix(vf.params.config.K, vf.params.config.NumSplits(), vf.params.config.BaseRing).NTT()
+	fmt.Println("At", vf.params.At.SizeString())
+	fmt.Println("Gamma", state.Gamma.SizeString())
 	psi.PopulateRows(func(mu int) *fastmath.PolyNTTVec {
 		tmp := vf.params.At.MulVec(state.Gamma.RowView(mu))
 		return SplitInvNTT(tmp, vf.params).NTT()

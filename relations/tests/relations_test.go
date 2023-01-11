@@ -37,15 +37,20 @@ func TestKeyGen(t *testing.T) {
 	if !rel.IsValid() {
 		t.Errorf("relation invalid")
 	}
+	// rebase
+	commitmentRing := fastmath.BFVFullShortCommtRing(7)
+	rebasedRel := rel.Rebased(commitmentRing)
 
-	t.Logf("running the protocol...")
+	t.Logf("creating protocol configuration...")
 	// Generate the public parameters
-	protocolConfig := fastens20.DefaultProtocolConfig(config.Ring, rel).
-		WithABP(128, config.Ring.Q, fastmath.NewSlice(config.Ring.D*6, config.Ring.D*7)).
+	protocolConfig := fastens20.DefaultProtocolConfig(commitmentRing, rebasedRel).
+		// WithABP(128, config.Ring.Q, fastmath.NewSlice(config.Ring.D*6, config.Ring.D*7)).
 		WithTernarySlice(fastmath.NewSlice(0, config.Ring.D)).
 		WithReplication(4)
-	protocolParams := fastens20.GeneratePublicParameters(protocolConfig, rel)
-	if !fastens20.Execute(rel.S, protocolParams) {
+	t.Logf("creating protocol parameters...")
+	protocolParams := fastens20.GeneratePublicParameters(protocolConfig)
+	t.Logf("running the protocol...")
+	if !fastens20.Execute(rebasedRel.S, protocolParams) {
 		t.Errorf("execution failed")
 	}
 }
@@ -133,3 +138,9 @@ func TestKeySwitchCollDec(t *testing.T) {
 	// 	t.Errorf("execution failed")
 	// }
 }
+
+func TestCollectiveBootstrapping(t *testing.T) {
+	
+}
+
+func Test

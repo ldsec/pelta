@@ -17,7 +17,7 @@ func TestPolySumCoeffs(t *testing.T) {
 	for i := 0; i < 5; i++ {
 		v.Set(i, uint64(i+1))
 	}
-	actual := v.SumCoeffsAllLevels(0)
+	actual := v.SumCoeffsFast(0)
 	expected := uint64(1 + 2 + 3 + 4 + 5)
 	if actual != expected {
 		t.Errorf("actual=%d, expected=%d", actual, expected)

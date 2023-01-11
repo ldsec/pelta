@@ -46,7 +46,7 @@ func TestConsistency(tst *testing.T) {
 	n := bfvRing.D
 	rel := createRandomRelation(m, n, bfvRing)
 	config := fastens20.DefaultProtocolConfig(bfvRing, rel)
-	params := fastens20.GeneratePublicParameters(config, rel)
+	params := fastens20.GeneratePublicParameters(config)
 	ACopy := params.A.Copy()
 	BCopy := params.B.Copy()
 	B0Copy := params.B0.Copy()
@@ -164,7 +164,7 @@ func TestSimple(t *testing.T) {
 	n := bfvRing.D
 	rel := createRandomRelation(m, n, bfvRing)
 	config := fastens20.DefaultProtocolConfig(bfvRing, rel)
-	params := fastens20.GeneratePublicParameters(config, rel)
+	params := fastens20.GeneratePublicParameters(config)
 	executeAndTestCorrectness(t, rel.S, params)
 }
 
@@ -175,7 +175,7 @@ func TestMultiReplication(t *testing.T) {
 	rel := createRandomRelation(m, n, bfvRing)
 	config := fastens20.DefaultProtocolConfig(bfvRing, rel).
 		WithReplication(4)
-	params := fastens20.GeneratePublicParameters(config, rel)
+	params := fastens20.GeneratePublicParameters(config)
 	executeAndTestCorrectness(t, rel.S, params)
 }
 
@@ -185,7 +185,7 @@ func TestMultiSplit(t *testing.T) {
 	n := bfvRing.D * 4
 	rel := createRandomRelation(m, n, bfvRing)
 	config := fastens20.DefaultProtocolConfig(bfvRing, rel)
-	params := fastens20.GeneratePublicParameters(config, rel)
+	params := fastens20.GeneratePublicParameters(config)
 	executeAndTestCorrectness(t, rel.S, params)
 }
 
@@ -196,7 +196,7 @@ func TestMultiSplitMultiReplication(t *testing.T) {
 	rel := createRandomRelation(m, n, bfvRing)
 	config := fastens20.DefaultProtocolConfig(bfvRing, rel).
 		WithReplication(4)
-	params := fastens20.GeneratePublicParameters(config, rel)
+	params := fastens20.GeneratePublicParameters(config)
 	executeAndTestCorrectness(t, rel.S, params)
 }
 
@@ -213,7 +213,7 @@ func TestTernarySlice(t *testing.T) {
 	rel := crypto.NewLinearRelation(A, s)
 	config := fastens20.DefaultProtocolConfig(bfvRing, rel).
 		WithTernarySlice(ternarySlice)
-	params := fastens20.GeneratePublicParameters(config, rel)
+	params := fastens20.GeneratePublicParameters(config)
 	executeAndTestCorrectness(t, s, params)
 }
 
@@ -223,7 +223,7 @@ func TestDRows(t *testing.T) {
 	n := bfvRing.D
 	rel := createRandomRelation(m, n, bfvRing)
 	config := fastens20.DefaultProtocolConfig(bfvRing, rel)
-	params := fastens20.GeneratePublicParameters(config, rel)
+	params := fastens20.GeneratePublicParameters(config)
 	executeAndTestCorrectness(t, rel.S, params)
 }
 
@@ -233,7 +233,7 @@ func TestMultiSplitDRows(t *testing.T) {
 	n := bfvRing.D * 4
 	rel := createRandomRelation(m, n, bfvRing)
 	config := fastens20.DefaultProtocolConfig(bfvRing, rel)
-	params := fastens20.GeneratePublicParameters(config, rel)
+	params := fastens20.GeneratePublicParameters(config)
 	executeAndTestCorrectness(t, rel.S, params)
 }
 
@@ -243,7 +243,7 @@ func TestFullRing(t *testing.T) {
 	n := bfvRing.D
 	rel := createRandomRelation(m, n, bfvRing)
 	config := fastens20.DefaultProtocolConfig(bfvRing, rel)
-	params := fastens20.GeneratePublicParameters(config, rel)
+	params := fastens20.GeneratePublicParameters(config)
 	executeAndTestCorrectness(t, rel.S, params)
 }
 
@@ -253,7 +253,7 @@ func TestFullRingDRows(t *testing.T) {
 	n := bfvRing.D
 	rel := createRandomRelation(m, n, bfvRing)
 	config := fastens20.DefaultProtocolConfig(bfvRing, rel)
-	params := fastens20.GeneratePublicParameters(config, rel)
+	params := fastens20.GeneratePublicParameters(config)
 	executeAndTestCorrectness(t, rel.S, params)
 }
 
@@ -265,25 +265,49 @@ func TestFullRingRebaseDRows(t *testing.T) {
 	rel := createRandomRelation(m, n, bfvRing)
 	// Run the protocol over a smaller ring of degree 2^7.
 	commitmentRing := fastmath.BFVFullShortCommtRing(7)
-	rebasedRel := rel.Rebase(commitmentRing)
+	rebasedRel := rel.Rebased(commitmentRing)
 	config := fastens20.DefaultProtocolConfig(commitmentRing, rebasedRel)
 	if config.NumSplits() != bfvRing.D/commitmentRing.D {
 		t.Errorf("num splits not correct")
 	}
-	params := fastens20.GeneratePublicParameters(config, rebasedRel)
+	params := fastens20.GeneratePublicParameters(config)
 	executeAndTestCorrectness(t, rebasedRel.S, params)
 }
 
-func TestPerformanceDRows(tst *testing.T) {
+func TestPerformanceBig(tst *testing.T) {
 	config := crypto.GetDefaultCryptoConfig()
 	bfvRing := config.RingParams
-	m := bfvRing.D
-	n := bfvRing.D
-	rel := createRandomRelation(m, n, bfvRing)
-	fmt.Println("inputs created")
-	protocolConfig := fastens20.DefaultProtocolConfig(bfvRing, rel).
+	m := 2 * bfvRing.D
+	n := 4 * bfvRing.D
+	matrix_name := fmt.Sprintf("performance_test_A_%d_%d.test", m, n)
+	vec_name := fmt.Sprintf("performance_test_s_%d.test", n)
+
+	// get the samplers
+	uni, ter, _ := crypto.GetSamplers(bfvRing, 128)
+
+	// create the inputs
+	tst.Logf("creating the inputs...")
+	A := fastmath.PersistentIntMatrix(matrix_name, func() *fastmath.IntMatrix {
+		return fastmath.NewRandomIntMatrixFast(m, n, uni, bfvRing.BaseRing)
+	}, bfvRing.BaseRing)
+	s := fastmath.PersistentIntVec(vec_name, func() *fastmath.IntVec {
+		return fastmath.NewRandomIntVecFast(n, ter, bfvRing.BaseRing)
+	}, bfvRing.BaseRing)
+	rel := crypto.NewLinearRelation(A, s)
+	tst.Logf("inputs created\n")
+
+	commitmentRing := fastmath.BFVFullShortCommtRing(7)
+	rebasedRel := rel.Rebased(commitmentRing)
+	protocolConfig := fastens20.DefaultProtocolConfig(commitmentRing, rebasedRel).
 		WithReplication(4)
-	params := fastens20.GeneratePublicParameters(protocolConfig, rel)
+	// {
+	// 	start_t := time.Now()
+	// 	rebasedRel.A.Transposed()
+	// 	end_t := time.Now()
+	// 	delta_t := end_t.Sub(start_t)
+	// 	tst.Logf("At execution took %dms", delta_t.Milliseconds())
+	// }
+	params := fastens20.GeneratePublicParameters(protocolConfig)
 	prover := fastens20.NewProver(params)
 	verifier := fastens20.NewVerifier(params)
 	tst.Logf("starting...\n")
@@ -292,7 +316,7 @@ func TestPerformanceDRows(tst *testing.T) {
 	var ps fastens20.ProverState
 	{
 		start_t := time.Now()
-		t0, t, w, ps = prover.CommitToMessage(rel.S)
+		t0, t, w, ps = prover.CommitToMessage(rebasedRel.S)
 		end_t := time.Now()
 		delta_t := end_t.Sub(start_t)
 		tst.Logf("Prover.CommitToMessage execution took %dms", delta_t.Milliseconds())

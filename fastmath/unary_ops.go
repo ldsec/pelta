@@ -9,7 +9,15 @@ import (
 
 // Scale scales this polynomial with the given scalar factor.
 func (p *Poly) Scale(factor uint64) *Poly {
+	p.unset = false
 	p.baseRing.MulScalar(p.ref, factor, p.ref)
+	return p
+}
+
+// Zero resets the coefficients of this polynomial to zero.
+func (p *Poly) Zero() *Poly {
+	p.unset = true
+	p.ref.Zero()
 	return p
 }
 
@@ -90,6 +98,9 @@ func (v *IntVec) Diag() *IntMatrix {
 
 // Max returns the maximum coefficient at the given level.
 func (p *Poly) Max(level int) uint64 {
+	if p.unset {
+		return 0
+	}
 	max := p.ref.Coeffs[level][0]
 	for _, coeff := range p.ref.Coeffs[level][1:] {
 		if coeff > max {
@@ -151,24 +162,29 @@ func (v *IntVec) Reduce(mod *big.Int) *IntVec {
 	return v
 }
 
-// SumCoeffsAllLevels returns the sum of the coefficients of this polynomial.
-func (p *Poly) SumCoeffsAllLevels(level int) uint64 {
+// SumCoeffsFast returns the sum of the coefficients of this polynomial.
+func (p *Poly) SumCoeffsFast(level int) uint64 {
+	if p.unset {
+		return 0
+	}
 	logN := int(math.Log2(float64(p.baseRing.N)))
 	tmp := p.Copy()
 	tmp2 := NewPoly(p.baseRing)
 	for i := 0; i < logN; i++ {
 		p.baseRing.Shift(tmp.ref, 1<<i, tmp2.ref)
-		p.baseRing.Add(tmp.ref, tmp2.ref, tmp.ref)
+		p.baseRing.AddLvl(level, tmp.ref, tmp2.ref, tmp.ref)
 	}
 	return tmp.ref.Coeffs[level][0]
 }
 
 // SumCoeffs returns the sum of the coefficients of this polynomial.
-// Warning: `mod` parameter is not used
-func (p *Poly) SumCoeffs(level int, mod uint64) uint64 {
+func (p *Poly) SumCoeffs(level int, mod *big.Int) uint64 {
+	if p.unset {
+		return 0
+	}
 	out := uint64(0)
 	for _, c := range p.ref.Coeffs[level] {
-		out = (out + c) % mod
+		out = (out + c) % mod.Uint64()
 	}
 	return out
 }
@@ -211,9 +227,8 @@ func (m *PolyNTTMatrix) Sum() *PolyNTT {
 
 // NTT converts this polynomial to its NTT domain.
 func (p *Poly) NTT() *PolyNTT {
-	c := p.Copy()
-	p.baseRing.NTT(c.ref, c.ref)
-	return &PolyNTT{c}
+	p.baseRing.NTT(p.ref, p.ref)
+	return ForceNTT(p)
 }
 
 // NTT converts the elements of this vector to NTT space.
@@ -260,6 +275,9 @@ func (m *PolyNTTMatrix) InvNTT() *PolyMatrix {
 
 // PowCoeffs takes the `exp`-th power of the coefficients modulo `mod`.
 func (p *Poly) PowCoeffs(exp uint64, mod uint64) *Poly {
+	if p.unset {
+		return p
+	}
 	for i := 0; i < p.baseRing.N; i++ {
 		newCoeff := ring.ModExp(p.Get(i, 0), exp, mod)
 		p.Set(i, newCoeff)
@@ -275,9 +293,18 @@ func (p *PolyNTT) Pow(exp, mod uint64) *PolyNTT {
 
 // Transposed returns the transposed version of this matrix.
 func (m *IntMatrix) Transposed() *IntMatrix {
-	newRows := make([]*IntVec, m.Cols())
-	for i := 0; i < len(newRows); i++ {
-		newRows[i] = m.ColCopy(i)
+	At := make([]uint64, m.Cols()*m.Rows())
+	for row := 0; row < m.Rows(); row++ {
+		for col := 0; col < m.Cols(); col++ {
+			index := col*m.Rows() + row
+			At[index] = m.Get(row, col)
+		}
 	}
-	return &IntMatrix{m.numCols, m.numRows, newRows, m.mod, m.baseRing}
+	mt := NewIntMatrix(m.Cols(), m.Rows(), m.BaseRing())
+	for row := 0; row < mt.Rows(); row++ {
+		for col := 0; col < mt.Cols(); col++ {
+			mt.Set(row, col, At[row*mt.Cols()+col])
+		}
+	}
+	return mt
 }

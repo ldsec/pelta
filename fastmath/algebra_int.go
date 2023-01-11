@@ -13,6 +13,8 @@ type IntVec struct {
 	polys    []*Poly
 	mod      *big.Int
 	baseRing *ring.Ring
+	// set to the version of this vector before rebasing
+	unrebased *IntVec
 }
 
 func NewIntVec(size int, baseRing *ring.Ring) *IntVec {
@@ -24,7 +26,7 @@ func NewIntVec(size int, baseRing *ring.Ring) *IntVec {
 	for i := 0; i < len(polys); i++ {
 		polys[i] = NewPoly(baseRing)
 	}
-	return &IntVec{size, polys, baseRing.ModulusAtLevel[0], baseRing}
+	return &IntVec{size, polys, baseRing.ModulusAtLevel[0], baseRing, nil}
 }
 
 func NewIntVecFromSlice(slice []uint64, baseRing *ring.Ring) *IntVec {
@@ -36,7 +38,7 @@ func NewIntVecFromSlice(slice []uint64, baseRing *ring.Ring) *IntVec {
 }
 
 func NewIntVecFromPolys(polys []*Poly, size int, baseRing *ring.Ring) *IntVec {
-	return &IntVec{size, polys, baseRing.ModulusAtLevel[0], baseRing}
+	return &IntVec{size, polys, baseRing.ModulusAtLevel[0], baseRing, nil}
 }
 
 // Size returns the size of this vector.
@@ -110,7 +112,11 @@ func (v *IntVec) Copy() *IntVec {
 	for i, p := range v.polys {
 		polys[i] = p.Copy()
 	}
-	return &IntVec{v.size, polys, v.mod, v.baseRing}
+	unrebased := v.unrebased
+	if unrebased != nil {
+		unrebased = unrebased.Copy()
+	}
+	return &IntVec{v.size, polys, v.mod, v.baseRing, unrebased}
 }
 
 // String returns the string representation of this integer vector.
@@ -165,6 +171,8 @@ func (v *IntVec) RebaseLossless(newRing RingParams, level int) *IntVec {
 	if v.baseRing.N <= newRing.D || v.baseRing.N%newRing.D != 0 {
 		panic(fmt.Sprintf("cannot rebase lossless %d to %d", v.baseRing.N, newRing.D))
 	}
+	// Copy in the unrebased version
+	v.unrebased = v.Copy()
 	// Clean up the redundant polynomials.
 	// for len(v.polys) > 0 && v.polys[len(v.polys)-1].IsZero() {
 	// 	v.polys = v.polys[0 : len(v.polys)-1]
@@ -242,6 +250,10 @@ func NewIntMatrixFromSlice(elems [][]uint64, baseRing *ring.Ring) *IntMatrix {
 		return NewIntVecFromSlice(elems[i], baseRing)
 	})
 	return m
+}
+
+func (m *IntMatrix) BaseRing() *ring.Ring {
+	return m.baseRing
 }
 
 // Rows returns the number of rows.

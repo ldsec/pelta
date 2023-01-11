@@ -11,11 +11,12 @@ import (
 type Poly struct {
 	ref      *ring.Poly
 	baseRing *ring.Ring
+	unset    bool
 }
 
 // NewPoly returns a zero polynomial.
 func NewPoly(baseRing *ring.Ring) *Poly {
-	return &Poly{baseRing.NewPoly(), baseRing}
+	return &Poly{baseRing.NewPoly(), baseRing, true}
 }
 
 func ForceInvNTT(polyNTT *PolyNTT) *Poly {
@@ -31,6 +32,9 @@ func NewOnePoly(scale uint64, baseRing *ring.Ring) *Poly {
 
 // Set sets the coefficient of this polynomial at every level to the given value.
 func (p *Poly) Set(index int, value uint64) {
+	if value != 0 {
+		p.unset = false
+	}
 	for level := 0; level < len(p.ref.Coeffs); level++ {
 		p.ref.Coeffs[level][index] = value
 	}
@@ -38,6 +42,9 @@ func (p *Poly) Set(index int, value uint64) {
 
 // SetLevel sets the coefficient of this polynomial at the given level to the given value.
 func (p *Poly) SetLevel(index, level int, value uint64) {
+	if value != 0 {
+		p.unset = false
+	}
 	p.ref.Coeffs[level][index] = value
 }
 
@@ -58,6 +65,9 @@ func (p *Poly) Coeffs() *IntVec {
 
 // IsZero returns true if all the coefficients of this polynomial are zero.
 func (p *Poly) IsZero() bool {
+	if p.unset {
+		return true
+	}
 	for _, coeff := range p.ref.Coeffs[0] {
 		if coeff != 0 {
 			return false
@@ -84,7 +94,7 @@ func (p *Poly) String() string {
 
 // Copy returns a copy of this polynomial.
 func (p *Poly) Copy() *Poly {
-	return &Poly{p.ref.CopyNew(), p.baseRing}
+	return &Poly{p.ref.CopyNew(), p.baseRing, p.unset}
 }
 
 // PolyNTT represents a polynomial in the NTT domain.
@@ -100,18 +110,6 @@ func (p *PolyNTT) Get(i, level int) uint64 {
 	return p.actual.Get(i, level)
 }
 
-// Mul multiplies two polynomials.
-func (p *PolyNTT) Mul(q *PolyNTT) *PolyNTT {
-	p.actual.MulCoeffs(q.actual)
-	return p
-}
-
-// Add adds two polynomials.
-func (p *PolyNTT) Add(q *PolyNTT) *PolyNTT {
-	p.actual.Add(q.actual)
-	return p
-}
-
 // String returns a string representation of this polynomial.
 func (p *PolyNTT) String() string {
 	s := fmt.Sprintf("PolyNTT{")
@@ -124,7 +122,7 @@ func (p *PolyNTT) String() string {
 
 // Copy returns a copy of this polynomial.
 func (p *PolyNTT) Copy() *PolyNTT {
-	return &PolyNTT{&Poly{p.actual.ref.CopyNew(), p.actual.baseRing}}
+	return &PolyNTT{&Poly{p.actual.ref.CopyNew(), p.actual.baseRing, p.actual.unset}}
 }
 
 // Coeffs returns a view into the coefficients of this polynomial.

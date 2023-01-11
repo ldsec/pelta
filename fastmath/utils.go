@@ -12,6 +12,74 @@ import (
 	"github.com/tuneinsight/lattigo/v4/ring"
 )
 
+// PersistentIntMatrix either loads the matrix in the file with `name` or generates and saves it using the generator.
+func PersistentIntMatrix(name string, generator func() *IntMatrix, baseRing *ring.Ring) *IntMatrix {
+	var M *IntMatrix
+	if _, err := os.Stat(name); errors.Is(err, os.ErrNotExist) {
+		fmt.Printf("PersistentIntMatrix: couldn't find the file %s, generating...", name)
+		M = generator()
+		fmt.Printf("done\n")
+		fmt.Printf("PersistentIntMatrix: saving...")
+		err := SaveIntMatrix(M, name)
+		fmt.Printf("done\n")
+		if err != nil {
+			fmt.Printf("PersistentIntMatrix: couldn't save matrix %s: %s\n", name, err.Error())
+		}
+	} else {
+		fmt.Printf("PersistentIntMatrix: loading %s...", name)
+		M, err = LoadIntMatrix(name, baseRing)
+		fmt.Printf("done\n")
+		if err != nil {
+			fmt.Printf("PersistentIntMatrix: couldn't load matrix %s, regenerating: %s", name, err.Error())
+			M = generator()
+			fmt.Printf("done\n")
+		}
+	}
+	return M
+}
+
+// PersistentIntVec either loads the vector in the file with `name` or generates and saves it using the generator.
+func PersistentIntVec(name string, generator func() *IntVec, baseRing *ring.Ring) *IntVec {
+	var v *IntVec
+	if _, err := os.Stat(name); errors.Is(err, os.ErrNotExist) {
+		fmt.Printf("PersistentIntVec: couldn't find the file %s, generating...", name)
+		v = generator()
+		fmt.Printf("done\n")
+		fmt.Printf("PersistentIntVec: saving...")
+		err := SaveIntVec(v, name)
+		fmt.Printf("done\n")
+		if err != nil {
+			fmt.Printf("PersistentIntVec: couldn't save matrix %s: %s\n", name, err.Error())
+		}
+	} else {
+		fmt.Printf("PersistentIntVec: loading %s...", name)
+		v, err = LoadIntVec(name, baseRing)
+		fmt.Printf("done\n")
+		if err != nil {
+			fmt.Printf("PersistentIntVec: couldn't load matrix %s, regenerating: %s", name, err.Error())
+			v = generator()
+			fmt.Printf("done\n")
+		}
+	}
+	return v
+}
+
+// SaveIntVec saves the given vector into the specified file.
+func SaveIntVec(t *IntVec, name string) error {
+	m := NewIntMatrix(1, t.Size(), t.baseRing)
+	m.SetRow(0, t)
+	return SaveIntMatrix(m, name)
+}
+
+// LoadIntVec loads the vector saved in the given file.
+func LoadIntVec(name string, baseRing *ring.Ring) (*IntVec, error) {
+	m, err := LoadIntMatrix(name, baseRing)
+	if err != nil {
+		return nil, err
+	}
+	return m.RowView(0), nil
+}
+
 // SaveIntMatrix saves the given matrix into the specified file.
 func SaveIntMatrix(t *IntMatrix, name string) error {
 	file, err := os.Create(name)

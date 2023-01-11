@@ -35,7 +35,7 @@ func TestLinRelRebase(t *testing.T) {
 	rel := crypto.NewLinearRelation(A, s)
 	t.Logf("testing over original ring...")
 	verifyRelation(t, rel)
-	rebasedRel := rel.Rebase(smallRing)
+	rebasedRel := rel.Rebased(smallRing)
 	t.Logf("testing over small ring...")
 	verifyRelation(t, rebasedRel)
 }

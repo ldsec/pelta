@@ -11,25 +11,32 @@ import (
 
 // ProtocolConfig contains the settings for the ENS20 protocol.
 type ProtocolConfig struct {
-	RingParams      fastmath.RingParams
-	D               int      // poly. degree
-	Q               *big.Int // ring modulus
-	M               int      // # rows
-	N               int      // # cols
-	K               int      // replication degree
-	InvK            uint64   // k^{-1} mod q
-	Delta1          int
-	Lambda          int            // security parameter
-	Kappa           int            // security parameter
-	TernarySlice    fastmath.Slice // slice of s that should be ternary
-	ABPEnabled      bool
-	BoundSlice      fastmath.Slice // slice of s that should be abp checked
-	Tau             int            // abp security parameter
-	Bound           *big.Int       // abp bound
-	BaseRing        *ring.Ring
+	RingParams   fastmath.RingParams
+	TargetRel    *crypto.LinearRelation
+	BaseRing     *ring.Ring
+	D            int      // poly. degree
+	Q            *big.Int // ring modulus
+	M            int      // # rows
+	N            int      // # cols
+	K            int      // replication degree
+	InvK         uint64   // k^{-1} mod q
+	Delta1       int
+	Lambda       int            // security parameter
+	Kappa        int            // security parameter
+	TernarySlice fastmath.Slice // slice of s that should be ternary
+	// abp
+	ABPEnabled bool
+	BoundSlice fastmath.Slice // slice of s that should be abp checked
+	Tau        int            // abp security parameter
+	Bound      *big.Int       // abp bound
+	// samplers
 	UniformSampler  fastmath.PolySampler
 	TernarySampler  fastmath.PolySampler
 	GaussianSampler fastmath.PolySampler
+	// rebase
+	RebaseEnabled      bool
+	OriginalRingParams *fastmath.RingParams
+	OriginalRel        *crypto.LinearRelation
 }
 
 // DefaultProtocolConfig returns the default configuration for an ENS20 execution.
@@ -48,26 +55,40 @@ func DefaultProtocolConfig(ringParams fastmath.RingParams, rel crypto.LinearRela
 	numCols := rel.A.Cols()
 	invK := big.NewInt(0).ModInverse(big.NewInt(int64(1)), ringParams.Q).Uint64()
 	return ProtocolConfig{
-		RingParams:      ringParams,
-		D:               ringParams.D,
-		Q:               ringParams.Q,
-		N:               numCols,
-		M:               numRows,
-		K:               1,
-		InvK:            invK,
-		Delta1:          delta1,
-		Lambda:          1,
-		Kappa:           1,
-		TernarySlice:    fastmath.NewSlice(0, numCols),
-		BaseRing:        ringParams.BaseRing,
-		UniformSampler:  ring.NewUniformSampler(prng, ringParams.BaseRing),
-		TernarySampler:  ternarySampler,
-		GaussianSampler: ring.NewGaussianSampler(prng, ringParams.BaseRing, ringParams.Sigma, delta1),
-		Tau:             128,
-		Bound:           big.NewInt(0),
-		ABPEnabled:      false,
-		BoundSlice:      fastmath.NewSlice(0, 0),
+		RingParams:         ringParams,
+		TargetRel:          &rel,
+		D:                  ringParams.D,
+		Q:                  ringParams.Q,
+		N:                  numCols,
+		M:                  numRows,
+		K:                  1,
+		InvK:               invK,
+		Delta1:             delta1,
+		Lambda:             1,
+		Kappa:              1,
+		TernarySlice:       fastmath.NewSlice(0, numCols),
+		BaseRing:           ringParams.BaseRing,
+		UniformSampler:     ring.NewUniformSampler(prng, ringParams.BaseRing),
+		TernarySampler:     ternarySampler,
+		GaussianSampler:    ring.NewGaussianSampler(prng, ringParams.BaseRing, ringParams.Sigma, delta1),
+		Tau:                128,
+		Bound:              big.NewInt(0),
+		ABPEnabled:         false,
+		BoundSlice:         fastmath.NewSlice(0, 0),
+		RebaseEnabled:      false,
+		OriginalRingParams: nil,
+		OriginalRel:        nil,
 	}
+}
+
+func DefaultProtocolConfigWithRebase(originalRingParams fastmath.RingParams, targetRingParams fastmath.RingParams, rel crypto.LinearRelation) ProtocolConfig {
+	originalRel := rel
+	rebasedRel := rel.Rebased(targetRingParams)
+	config := DefaultProtocolConfig(targetRingParams, rebasedRel)
+	config.RebaseEnabled = true
+	config.OriginalRingParams = &originalRingParams
+	config.OriginalRel = &originalRel
+	return config
 }
 
 func (c ProtocolConfig) WithTernarySlice(ternarySlice fastmath.Slice) ProtocolConfig {
@@ -121,7 +142,7 @@ type PublicParams struct {
 	Sig    fastmath.Automorphism
 }
 
-func GeneratePublicParameters(config ProtocolConfig, rel crypto.LinearRelation) PublicParams {
+func generate(config ProtocolConfig, rel *crypto.LinearRelation, At *fastmath.IntMatrix) PublicParams {
 	bSize := config.NumSplits() + 3
 	B0 := fastmath.NewRandomPolyMatrix(config.Kappa,
 		config.Lambda+config.Kappa+bSize,
@@ -132,10 +153,14 @@ func GeneratePublicParameters(config ProtocolConfig, rel crypto.LinearRelation) 
 	return PublicParams{
 		config: config,
 		A:      rel.A,
-		At:     rel.A.Transposed(),
+		At:     At,
 		U:      rel.U,
 		B0:     B0.NTT(),
 		B:      b.NTT(),
 		Sig:    sig,
 	}
+}
+
+func GeneratePublicParameters(config ProtocolConfig) PublicParams {
+	return generate(config, config.TargetRel, config.TargetRel.A.Transposed())
 }
