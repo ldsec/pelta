@@ -120,6 +120,10 @@ func (v *IntVec) Dot(r *IntVec) uint64 {
 	if v.mod == nil {
 		v.mod = v.baseRing.ModulusAtLevel[0]
 	}
+	// if the vectors are both rebased, do the dot product with the unrebased version
+	if v.unrebased != nil && r.unrebased != nil {
+		return v.unrebased.Dot(r.unrebased)
+	}
 	preSum := NewPoly(v.baseRing)
 	for i := 0; i < len(v.polys); i++ {
 		a := v.polys[i]
@@ -249,11 +253,9 @@ func (m *IntMatrix) MulVec(v *IntVec) *IntVec {
 		panic("IntMatrix.MulVec sizes incorrect")
 	}
 	out := NewIntVec(m.Rows(), m.baseRing)
-	dotResult := NewPoly(m.baseRing)
 	for i, row := range m.rows {
-		row.MulAddElems(v, dotResult)
-		out.Set(i, dotResult.SumCoeffs(0, m.mod))
-		dotResult.Zero()
+		dotResult := row.Dot(v)
+		out.Set(i, dotResult)
 	}
 	return out
 }

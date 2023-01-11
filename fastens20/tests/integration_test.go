@@ -286,7 +286,7 @@ func TestPerformanceBig(tst *testing.T) {
 	uni, ter, _ := crypto.GetSamplers(bfvRing, 128)
 
 	// create the inputs
-	tst.Logf("creating the inputs...")
+	tst.Logf("creating the inputs...\n")
 	A := fastmath.PersistentIntMatrix(matrix_name, func() *fastmath.IntMatrix {
 		return fastmath.NewRandomIntMatrixFast(m, n, uni, bfvRing.BaseRing)
 	}, bfvRing.BaseRing)
@@ -294,8 +294,8 @@ func TestPerformanceBig(tst *testing.T) {
 		return fastmath.NewRandomIntVecFast(n, ter, bfvRing.BaseRing)
 	}, bfvRing.BaseRing)
 	rel := crypto.NewLinearRelation(A, s)
-	tst.Logf("inputs created\n")
 
+	tst.Logf("creating the parameters...\n")
 	commitmentRing := fastmath.BFVFullShortCommtRing(7)
 	rebasedRel := rel.Rebased(commitmentRing)
 	protocolConfig := fastens20.DefaultProtocolConfig(commitmentRing, rebasedRel).
@@ -310,6 +310,7 @@ func TestPerformanceBig(tst *testing.T) {
 	params := fastens20.GeneratePublicParameters(protocolConfig)
 	prover := fastens20.NewProver(params)
 	verifier := fastens20.NewVerifier(params)
+
 	tst.Logf("starting...\n")
 	var t0, t *fastmath.PolyNTTVec
 	var w *fastmath.PolyNTTMatrix
