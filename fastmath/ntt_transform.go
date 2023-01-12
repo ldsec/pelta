@@ -1,37 +1,22 @@
 package fastmath
 
 import (
-	"errors"
-	"fmt"
 	"math/big"
-	"os"
 
+	"github.com/ldsec/codeBase/commitment/logging"
 	"github.com/tuneinsight/lattigo/v4/ring"
 	"github.com/tuneinsight/lattigo/v4/utils"
 )
 
 // LoadNTTTransform gets the NTT transform associated with the given name. Either reads from the saved matrix file or generates anew.
 func LoadNTTTransform(name string, q *big.Int, logN int, baseRing *ring.Ring) *IntMatrix {
-	var T *IntMatrix
-	if _, err := os.Stat(name); errors.Is(err, os.ErrNotExist) {
-		T = GenerateNTTTransform(q, logN, baseRing)
-		err := SaveIntMatrix(T, name)
-		if err != nil {
-			fmt.Printf("couldn't save the ntt transform %s: %s\n", name, err.Error())
-		}
-	} else {
-		T, err = LoadIntMatrix(name, baseRing)
-		if err != nil {
-			fmt.Printf("couldn't load the ntt transform %s, regenerating: %s\n", name, err.Error())
-			T = GenerateNTTTransform(q, logN, baseRing)
-		}
-	}
-	return T
+	return PersistentIntMatrix(name, func() *IntMatrix { return GenerateNTTTransform(q, logN, baseRing) }, baseRing)
 }
 
 // GenerateNTTTransform computes and returns the integer NTT transformation matrix for the given base ring.
 func GenerateNTTTransform(q *big.Int, logN int, baseRing *ring.Ring) *IntMatrix {
-	fmt.Printf("generating ntt transform... this may take a while")
+	e := logging.LogExecStart("GenerateNTTTransform", "generation")
+	defer e.LogExecEnd()
 	qUint := q.Uint64()
 	w := ring.InvMForm(baseRing.NttPsi[0][baseRing.N>>1], qUint, baseRing.MredParams[0])
 	mask := uint64(2*baseRing.N - 1)

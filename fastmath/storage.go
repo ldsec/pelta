@@ -13,22 +13,25 @@ import (
 	"github.com/tuneinsight/lattigo/v4/ring"
 )
 
-// PersistentIntMatrix either loads the matrix in the file with `name` or generates and saves it using the generator.
+// PersistentIntMataaa either loads the matrix in the file with `name` or generates and saves it using the generator.
 func PersistentIntMatrix(name string, generator func() *IntMatrix, baseRing *ring.Ring) *IntMatrix {
 	procName := fmt.Sprintf("PersistentIntMatrix(%s)", name)
 	var M *IntMatrix
 	if _, err := os.Stat(name); errors.Is(err, os.ErrNotExist) {
-		M = logging.LogShortExecution(procName, "generating", func() interface{} { return generator() }).(*IntMatrix)
-		err := logging.LogShortExecution(procName, "saving", func() interface{} { return SaveIntMatrix(M, name) }).(error)
-		if err != nil {
-			logging.Log(procName, fmt.Sprintf("couldn't save matrix %s", err.Error()))
-		}
+		M = logging.LogExecution(procName, "generation", func() interface{} { return generator() }).(*IntMatrix)
+		logging.LogExecution(procName, "saving", func() interface{} {
+			err := SaveIntMatrix(M, name)
+			if err != nil {
+				logging.Log(procName, fmt.Sprintf("couldn't save matrix %s", err.Error()))
+			}
+			return nil
+		})
 	} else {
 		M = logging.LogShortExecution(procName, "loading", func() interface{} {
 			M, err := LoadIntMatrix(name, baseRing)
 			if err != nil {
 				logging.Log(procName, fmt.Sprintf("couldn't load matrix %s", err.Error()))
-				M = logging.LogShortExecution(procName, "generating", func() interface{} { return generator() }).(*IntMatrix)
+				M = logging.LogExecution(procName, "generation", func() interface{} { return generator() }).(*IntMatrix)
 			}
 			return M
 		}).(*IntMatrix)
@@ -41,7 +44,7 @@ func PersistentIntVec(name string, generator func() *IntVec, baseRing *ring.Ring
 	procName := fmt.Sprintf("PersistentIntVec(%s)", name)
 	var M *IntVec
 	if _, err := os.Stat(name); errors.Is(err, os.ErrNotExist) {
-		M = logging.LogShortExecution(procName, "generating", func() interface{} { return generator() }).(*IntVec)
+		M = logging.LogShortExecution(procName, "generation", func() interface{} { return generator() }).(*IntVec)
 		err := logging.LogShortExecution(procName, "saving", func() interface{} { return SaveIntVec(M, name) }).(error)
 		if err != nil {
 			logging.Log(procName, fmt.Sprintf("couldn't save vector %s", err.Error()))
@@ -51,7 +54,7 @@ func PersistentIntVec(name string, generator func() *IntVec, baseRing *ring.Ring
 			M, err := LoadIntVec(name, baseRing)
 			if err != nil {
 				logging.Log(procName, fmt.Sprintf("couldn't load matrix %s", err.Error()))
-				M = logging.LogShortExecution(procName, "generating", func() interface{} { return generator() }).(*IntVec)
+				M = logging.LogShortExecution(procName, "generation", func() interface{} { return generator() }).(*IntVec)
 			}
 			return M
 		}).(*IntVec)

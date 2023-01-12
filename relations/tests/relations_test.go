@@ -12,7 +12,7 @@ import (
 )
 
 func getRandomKeyGenPublicParams(config relations.RelationsConfig) relations.KeyGenPublicParams {
-	q := config.Ring.Q
+	q := config.Ring.BaseRing.ModulusAtLevel[0]
 	logD := int(math.Log2(float64(config.Ring.D)))
 	p1 := fastmath.NewRandomPoly(config.UniformSampler, config.Ring.BaseRing)
 	A1 := fastmath.PersistentIntMatrix("KeyGenA1.test", func() *fastmath.IntMatrix {
@@ -21,7 +21,7 @@ func getRandomKeyGenPublicParams(config relations.RelationsConfig) relations.Key
 	A2 := fastmath.PersistentIntMatrix("KeyGenA1.test", func() *fastmath.IntMatrix {
 		return fastmath.NewIntMatrix(config.Ring.D, config.Ring.D, config.Ring.BaseRing)
 	}, config.Ring.BaseRing)
-	T := fastmath.LoadNTTTransform("test", q, logD, config.Ring.BaseRing)
+	T := fastmath.LoadNTTTransform("NTTTransform.test", q, logD, config.Ring.BaseRing)
 	p := config.P
 	params := relations.KeyGenPublicParams{P1: p1, A1: A1, A2: A2, T: T, P: p}
 	return params

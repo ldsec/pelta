@@ -34,6 +34,8 @@ func NewProver(params PublicParams) Prover {
 // CommitToMessage commits to the given secret message s.
 // Returns t0, t, w
 func (p Prover) CommitToMessage(s *fastmath.IntVec) (*fastmath.PolyNTTVec, *fastmath.PolyNTTVec, *fastmath.PolyNTTMatrix, ProverState) {
+	e := logging.LogExecStart("Prover.CommitToMessage", "working")
+	defer e.LogExecEnd()
 	// Rebase the message into polynomial space.
 	sHat := SplitInvNTT(s, p.params).NTT()
 	// Sample a polynomial g s.t. g_0=...=g_{k-1}=0
@@ -64,6 +66,8 @@ func (p Prover) CommitToMessage(s *fastmath.IntVec) (*fastmath.PolyNTTVec, *fast
 // CommitToRelation commits to the ternary structure of the secret and the knowledge of the secret s, s.t. As = U.
 // Returns t, h, v, vp
 func (p Prover) CommitToRelation(alpha *fastmath.PolyNTTVec, gamma *fastmath.IntMatrix, state ProverState) (*fastmath.PolyNTTVec, *fastmath.PolyNTT, *fastmath.PolyNTT, *fastmath.PolyNTTVec, ProverState) {
+	e0 := logging.LogExecStart("Prover.CommitToRelation", "working")
+	defer e0.LogExecEnd()
 	// Get the ternary part of the s.
 	e := logging.LogExecStart("Prover.CommitToRelation", "commitment sums")
 	sum1 := CommitmentSum(p.params.config.K, p.params.config.NumTernarySplits(), alpha,
@@ -170,6 +174,8 @@ func (p Prover) CommitToRelation(alpha *fastmath.PolyNTTVec, gamma *fastmath.Int
 // MaskedOpening returns the masked openings to the commitments.
 // Returns z
 func (p Prover) MaskedOpening(c *fastmath.Poly, state ProverState) (*fastmath.PolyNTTMatrix, ProverState, error) {
+	e := logging.LogExecStart("Prover.MaskedOpening", "working")
+	defer e.LogExecEnd()
 	// Masked openings.
 	z := fastmath.NewPolyMatrix(p.params.config.K, state.R.Size(), p.params.config.BaseRing).NTT()
 	z.PopulateRows(func(i int) *fastmath.PolyNTTVec {

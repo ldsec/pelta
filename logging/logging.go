@@ -16,7 +16,7 @@ type LogExecData struct {
 }
 
 func getIndentation() string {
-	return strings.Repeat(" ", indentation)
+	return strings.Repeat("  ", indentation)
 }
 
 func indent() {

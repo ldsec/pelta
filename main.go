@@ -1,53 +1,71 @@
 package main
 
 import (
-	"math/big"
+	"math"
 
 	"github.com/ldsec/codeBase/commitment/crypto"
+	"github.com/ldsec/codeBase/commitment/fastens20"
 	"github.com/ldsec/codeBase/commitment/fastmath"
-	"github.com/tuneinsight/lattigo/v4/ring"
-	"github.com/tuneinsight/lattigo/v4/utils"
+	"github.com/ldsec/codeBase/commitment/logging"
+	"github.com/ldsec/codeBase/commitment/relations"
 )
 
-func KeyGen(s, e, r *fastmath.Poly) {
-
-}
-
-func KeySwitchCollDec() {
-
-}
-
-func PubKeySwitch() {
-
+func getRandomKeyGenPublicParams(config relations.RelationsConfig) relations.KeyGenPublicParams {
+	q := config.Ring.BaseRing.ModulusAtLevel[0]
+	logD := int(math.Log2(float64(config.Ring.D)))
+	p1 := fastmath.NewRandomPoly(config.UniformSampler, config.Ring.BaseRing)
+	A1 := fastmath.PersistentIntMatrix("KeyGenA1.test", func() *fastmath.IntMatrix {
+		return fastmath.NewIntMatrix(config.Ring.D, config.Ring.D, config.Ring.BaseRing)
+	}, config.Ring.BaseRing)
+	A2 := fastmath.PersistentIntMatrix("KeyGenA1.test", func() *fastmath.IntMatrix {
+		return fastmath.NewIntMatrix(config.Ring.D, config.Ring.D, config.Ring.BaseRing)
+	}, config.Ring.BaseRing)
+	T := fastmath.LoadNTTTransform("NTTTransform.test", q, logD, config.Ring.BaseRing)
+	p := config.P
+	params := relations.KeyGenPublicParams{P1: p1, A1: A1, A2: A2, T: T, P: p}
+	return params
 }
 
 func main() {
-	// Create the main ring.
-	bfvRing := fastmath.BFVZeroLevelRing()
-	delta1 := 16
-	// Create the samplers.
-	prng, err := utils.NewPRNG()
-	if err != nil {
-		panic("could not initialize the prng: %s")
+	config := relations.NewRelationsConfig(crypto.GetDefaultCryptoConfig())
+	params := getRandomKeyGenPublicParams(config)
+
+	e0 := logging.LogExecStart("Main", "creating input")
+	s := fastmath.NewRandomPoly(config.TernarySampler, config.Ring.BaseRing)
+	r := fastmath.NewRandomPoly(config.UniformSampler, config.Ring.BaseRing)
+	e := fastmath.NewRandomPoly(config.GaussianSampler, config.Ring.BaseRing)
+	comQ, comP := crypto.GetAjtaiCommitments(params.A1, params.A2, s.Coeffs(), r.Coeffs(), params.P)
+	k := crypto.GetAjtaiKappa(comP, comQ, params.P, config.Ring.BaseRing)
+	e0.LogExecEnd()
+
+	e0 = logging.LogExecStart("Main", "creating relation")
+	rel := relations.GenerateKeyGenRelation(s, r, e, k, params, config)
+	if !rel.IsValid() {
+		logging.Log("Main", "relation invalid")
 	}
-	uniformSampler := ring.NewUniformSampler(prng, bfvRing.BaseRing)
-	ternarySampler := ring.NewTernarySampler(prng, bfvRing.BaseRing, 1.0/3.0, false)
-	// gaussianSampler := ring.NewGaussianSampler(prng, bfvRing.BaseRing, bfvRing.Sigma, delta1)
-	p := big.NewInt(5857)
-	beta := uint64(delta1)
+	e0.LogExecEnd()
 
-	// Ajtai
-	s := fastmath.NewRandomPoly(ternarySampler, bfvRing.BaseRing)
-	r := fastmath.NewRandomTernaryIntVec(bfvRing.D, bfvRing.BaseRing)
-	A1 := fastmath.NewRandomIntMatrix(bfvRing.D, bfvRing.D, bfvRing.Q, bfvRing.BaseRing)
-	A2 := fastmath.NewRandomIntMatrix(bfvRing.D, bfvRing.D, bfvRing.Q, bfvRing.BaseRing)
-	aj := crypto.NewAjtaiCommitment(A1, A2, s.Coeffs(), r, p, bfvRing.BaseRing)
+	e0 = logging.LogExecStart("Main", "rebasing")
+	commitmentRing := fastmath.BFVFullShortCommtRing(7)
+	rebasedRel := rel.Rebased(commitmentRing)
+	// commitmentRing := config.Ring
+	// rebasedRel := rel
+	e0.LogExecEnd()
 
-	// RLWE
-	p1 := fastmath.NewRandomPoly(uniformSampler, bfvRing.BaseRing)
-	e := fastmath.NewRandomPoly(ternarySampler, bfvRing.BaseRing)
-	rlweParams := crypto.NewRLWEParameters(bfvRing.Q, bfvRing.D, beta, bfvRing.BaseRing)
-	rlwe := crypto.NewRLWERelation(p1, s, e, rlweParams)
-	linRel := rlwe.ToLinearRelation()
-	aj.EmbedIntoLinearRelation(&linRel, bfvRing.D, bfvRing.Q, bfvRing.BaseRing)
+	e0 = logging.LogExecStart("Main", "creating protocol config")
+	protocolConfig := fastens20.DefaultProtocolConfig(commitmentRing, rebasedRel).
+		WithABP(128, config.Ring.Q, fastmath.NewSlice(config.Ring.D*6, config.Ring.D*7)).
+		WithTernarySlice(fastmath.NewSlice(0, config.Ring.D)).
+		WithReplication(4)
+	e0.LogExecEnd()
+
+	e0 = logging.LogExecStart("Main", "creating public parameters")
+	protocolParams := fastens20.GeneratePublicParameters(protocolConfig)
+	e0.LogExecEnd()
+
+	e0 = logging.LogExecStart("Main", "executing")
+	if !fastens20.Execute(rebasedRel.S, protocolParams) {
+		panic("execution failed")
+	}
+	e0.LogExecEnd()
 }

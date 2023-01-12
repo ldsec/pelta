@@ -31,6 +31,8 @@ func NewVerifier(params PublicParams) Verifier {
 // CreateMasks returns the relation masks in response to a message commitment.
 // Returns alpha, gamma
 func (vf Verifier) CreateMasks(t0 *fastmath.PolyNTTVec, t *fastmath.PolyNTTVec, w *fastmath.PolyNTTMatrix) (*fastmath.PolyNTTVec, *fastmath.IntMatrix, VerifierState) {
+	e := logging.LogExecStart("Verifier.CreateMasks", "working")
+	defer e.LogExecEnd()
 	alpha := fastmath.NewRandomPolyVec(vf.params.config.K*vf.params.config.NumSplits(), vf.params.config.UniformSampler, vf.params.config.BaseRing).NTT()
 	gamma := fastmath.NewRandomIntMatrix(vf.params.config.K, vf.params.config.M, vf.params.config.Q, vf.params.config.BaseRing)
 	return alpha.Copy(), gamma.Copy(), VerifierState{T0: t0, T: t, W: w, Alpha: alpha, Gamma: gamma}
@@ -39,6 +41,8 @@ func (vf Verifier) CreateMasks(t0 *fastmath.PolyNTTVec, t *fastmath.PolyNTTVec, 
 // CreateChallenge returns a challenge for the relation commitment.
 // Returns c
 func (vf Verifier) CreateChallenge(t *fastmath.PolyNTTVec, h, v *fastmath.PolyNTT, vp *fastmath.PolyNTTVec, state VerifierState) (*fastmath.Poly, VerifierState) {
+	e := logging.LogExecStart("Verifier.CreateChallenge", "working")
+	defer e.LogExecEnd()
 	// Verifier challenge generation.
 	c := fastmath.NewRandomPoly(vf.params.config.TernarySampler, vf.params.config.BaseRing)
 	// Update the state.
@@ -53,6 +57,8 @@ func (vf Verifier) CreateChallenge(t *fastmath.PolyNTTVec, h, v *fastmath.PolyNT
 // Verify verifies a masked opening for the commitment to the message, verifying the proof.
 // Returns true iff the proof is valid
 func (vf Verifier) Verify(z *fastmath.PolyNTTMatrix, state VerifierState) bool {
+	e0 := logging.LogExecStart("Verifier.Verify", "working")
+	defer e0.LogExecEnd()
 	// Masked opening check
 	e := logging.LogExecStart("Verifier.Verify", "masked opening test")
 	maskedOpeningTestResult := z.AllRows(
