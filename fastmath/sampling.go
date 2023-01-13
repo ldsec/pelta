@@ -1,8 +1,10 @@
 package fastmath
 
 import (
+	"fmt"
 	"math/big"
 
+	"github.com/ldsec/codeBase/commitment/logging"
 	"github.com/tuneinsight/lattigo/v4/ring"
 )
 
@@ -28,6 +30,21 @@ func NewAugmentedTernarySampler(ternarySampler PolySampler, baseRing *ring.Ring)
 	return &AugmentedTernarySampler{ternarySampler, baseRing}
 }
 
+type AugmentedGaussianSampler struct {
+	gaussianSampler PolySampler
+	beta            *big.Int
+	baseRing        *ring.Ring
+}
+
+func (s *AugmentedGaussianSampler) Read(pol *ring.Poly) {
+	s.gaussianSampler.Read(pol)
+	s.baseRing.AddScalar(pol, s.beta.Uint64(), pol)
+}
+
+func NewAugmentedGaussianSampler(gaussianSampler PolySampler, beta *big.Int, baseRing *ring.Ring) PolySampler {
+	return &AugmentedGaussianSampler{gaussianSampler, beta, baseRing}
+}
+
 // NewRandomPoly returns a random polynomial sampled from the given `sampler`.
 func NewRandomPoly(sampler PolySampler, baseRing *ring.Ring) *Poly {
 	g := NewPoly(baseRing)
@@ -40,7 +57,7 @@ func NewRandomTernaryPoly(baseRing *ring.Ring) *Poly {
 	g := NewPoly(baseRing)
 	for i := 0; i < g.N(); i++ {
 		rand := ring.RandInt(big.NewInt(3)).Uint64()
-		g.Set(i, rand)
+		g.SetForce(i, rand)
 	}
 	g.SetDirty()
 	return g
@@ -115,36 +132,44 @@ func NewRandomBinaryIntVec(size int, baseRing *ring.Ring) *IntVec {
 
 // NewRandomIntMatrixFast constructs a random 2D matrix of integers from the given sampler.
 func NewRandomIntMatrixFast(rows int, cols int, sampler PolySampler, baseRing *ring.Ring) *IntMatrix {
-	A := NewIntMatrix(rows, cols, baseRing)
-	A.PopulateRows(func(_ int) *IntVec {
-		return NewRandomIntVecFast(cols, sampler, baseRing)
-	})
-	return A
+	return logging.LogShortExecution("NewRandomIntMatrixFast", fmt.Sprintf("sampling [%d,%d]", rows, cols), func() interface{} {
+		A := NewIntMatrix(rows, cols, baseRing)
+		A.PopulateRows(func(_ int) *IntVec {
+			return NewRandomIntVecFast(cols, sampler, baseRing)
+		})
+		return A
+	}).(*IntMatrix)
 }
 
 // NewRandomIntMatrix constructs a random 2D matrix of integers mod n.
 func NewRandomIntMatrix(rows int, cols int, n *big.Int, baseRing *ring.Ring) *IntMatrix {
-	A := NewIntMatrix(rows, cols, baseRing)
-	A.PopulateRows(func(_ int) *IntVec {
-		return NewRandomIntVec(cols, n, baseRing)
-	})
-	return A
+	return logging.LogShortExecution("NewRandomIntMatrix", fmt.Sprintf("sampling [%d,%d]", rows, cols), func() interface{} {
+		A := NewIntMatrix(rows, cols, baseRing)
+		A.PopulateRows(func(_ int) *IntVec {
+			return NewRandomIntVec(cols, n, baseRing)
+		})
+		return A
+	}).(*IntMatrix)
 }
 
 // NewRandomTernaryIntMatrix constructs a random 2D matrix of integers mod 3.
 func NewRandomTernaryIntMatrix(rows int, cols int, baseRing *ring.Ring) *IntMatrix {
-	A := NewIntMatrix(rows, cols, baseRing)
-	A.PopulateRows(func(_ int) *IntVec {
-		return NewRandomTernaryIntVec(cols, baseRing)
-	})
-	return A
+	return logging.LogShortExecution("NewRandomTernaryIntMatrix", fmt.Sprintf("sampling [%d,%d]", rows, cols), func() interface{} {
+		A := NewIntMatrix(rows, cols, baseRing)
+		A.PopulateRows(func(_ int) *IntVec {
+			return NewRandomTernaryIntVec(cols, baseRing)
+		})
+		return A
+	}).(*IntMatrix)
 }
 
 // NewRandomBinaryIntMatrix constructs a random 2D matrix of integers mod 2.
 func NewRandomBinaryIntMatrix(rows int, cols int, baseRing *ring.Ring) *IntMatrix {
-	A := NewIntMatrix(rows, cols, baseRing)
-	A.PopulateRows(func(_ int) *IntVec {
-		return NewRandomBinaryIntVec(cols, baseRing)
-	})
-	return A
+	return logging.LogShortExecution("NewRandomBinaryIntMatrix", fmt.Sprintf("sampling [%d,%d]", rows, cols), func() interface{} {
+		A := NewIntMatrix(rows, cols, baseRing)
+		A.PopulateRows(func(_ int) *IntVec {
+			return NewRandomBinaryIntVec(cols, baseRing)
+		})
+		return A
+	}).(*IntMatrix)
 }

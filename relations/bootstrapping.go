@@ -40,7 +40,7 @@ func GenerateCollectiveBootstrappingRelation(s1, s2, s3, r, e0, e1, e2 *fastmath
 		AppendDependentTerm(negaT.Copy(), 0).
 		AppendDependentVecTerm(1, config.Ring.BaseRing).
 		AppendRLWEErrorDecompositionSum(e1, params.T, rlweParams)
-	eqn3 := crypto.NewPaddedAjtaiEquation(t, params.A1, params.A2, s1.Coeffs(), r.Coeffs(), k1, params.p, config.Ring.Q, config.Ring.BaseRing)
+	eqn3 := crypto.NewPaddedAjtaiEquation(t, params.A1, params.A2, s1.Coeffs(), r.Coeffs(), k1, params.p, config.Ring.BaseRing)
 	eqn3.AddDependency(0, 0)
 	eqn4 := crypto.NewLinearEquation(e0.Coeffs(), e0.Coeffs().Size()).
 		AppendTerm(params.A3.Copy().Hadamard(params.T), s2.Coeffs()).

@@ -7,6 +7,7 @@ import (
 )
 
 var logging bool = true
+var errorLogging bool = true
 var indentation int = 0
 
 type LogExecData struct {
@@ -34,6 +35,17 @@ func Log(prefix, msg string) {
 	msg = strings.ReplaceAll(msg, "\n", fmt.Sprintf("\n%s%s: ", getIndentation(), prefix))
 	fmt.Printf("%s%s: %s\n", getIndentation(), prefix, msg)
 }
+
+// func LogError(prefix, msg string, err error, stopExecution bool) {
+// 	if err != nil {
+// 		if errorLogging {
+// 			Log(fmt.Sprintf("!! %s", prefix), fmt.Sprintf("%s"))
+// 		}
+// 		if stopExecution {
+
+// 		}
+// 	}
+// }
 
 func LogWithoutNewline(prefix, msg string) {
 	if !logging {

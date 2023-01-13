@@ -79,7 +79,7 @@ func (vf Verifier) Verify(z *fastmath.PolyNTTMatrix, state VerifierState) bool {
 	hTestResult := true
 	hInvNTT := state.h.Copy().InvNTT()
 	for i := 0; i < vf.params.config.K; i++ {
-		if hInvNTT.Get(i, 0) != 0 {
+		if hInvNTT.GetLevel(i, 0) != 0 {
 			hTestResult = false
 			break
 		}
@@ -148,7 +148,7 @@ func (vf Verifier) Verify(z *fastmath.PolyNTTMatrix, state VerifierState) bool {
 		func(mu int, v int) *fastmath.PolyNTT {
 			// (u * gamma_mu)
 			mul := vf.params.U.Dot(state.Gamma.RowView(mu))
-			dec := fastmath.NewOnePoly(mul, vf.params.config.BaseRing).NTT()
+			dec := fastmath.NewOnePolyLevels(mul, vf.params.config.BaseRing).NTT()
 			// \sum_{j=0}^{numSplits-1} (d*psi[mu][j] * (b[j] * z[i - v]))
 			presum := fastmath.NewPolyVec(vf.params.config.NumSplits(), vf.params.config.BaseRing).NTT()
 			presum.Populate(func(j int) *fastmath.PolyNTT {

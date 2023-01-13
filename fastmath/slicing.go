@@ -25,7 +25,7 @@ func (p *Poly) Slice(s Slice) *Poly {
 func (v *IntVec) Slice(s Slice) *IntVec {
 	sliced := NewIntVec(s.Size(), v.baseRing)
 	for i := s.Start; i < s.End; i++ {
-		sliced.Set(i-s.Start, v.Get(i))
+		sliced.SetCoeff(i-s.Start, v.GetCoeff(i))
 	}
 	return sliced
 }

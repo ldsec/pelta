@@ -15,11 +15,11 @@ func TestPolySumCoeffs(t *testing.T) {
 	baseRing := getBaseRing()
 	v := fastmath.NewPoly(baseRing)
 	for i := 0; i < 5; i++ {
-		v.Set(i, uint64(i+1))
+		v.SetForce(i, uint64(i+1))
 	}
-	actual := v.SumCoeffsFast(0)
+	actual := v.SumCoeffs()
 	expected := uint64(1 + 2 + 3 + 4 + 5)
-	if actual != expected {
+	if actual[0] != expected {
 		t.Errorf("actual=%d, expected=%d", actual, expected)
 	}
 }
@@ -28,7 +28,7 @@ func TestIntVecRebaseLossless(t *testing.T) {
 	largeRing := fastmath.BFVZeroLevelShortCommtRing(8)
 	v := fastmath.NewIntVec(largeRing.D, largeRing.BaseRing)
 	for i := 0; i < v.Size(); i++ {
-		v.Set(i, uint64(i+1))
+		v.SetForce(i, uint64(i+1))
 	}
 	// Before rebase.
 	// t.Logf(v.String())
@@ -38,7 +38,7 @@ func TestIntVecRebaseLossless(t *testing.T) {
 	if v.Size() != 256 {
 		t.Errorf("actual=%d, expected=%d", v.Size(), 256)
 	}
-	v.RebaseLossless(fastmath.BFVZeroLevelShortCommtRing(4), 0)
+	v.RebaseLossless(fastmath.BFVZeroLevelShortCommtRing(4))
 	// After rebase.
 	if len(v.UnderlyingPolys()) != 16 {
 		t.Errorf("actual=%d, expected=%d", len(v.UnderlyingPolys()), 16)
@@ -48,8 +48,8 @@ func TestIntVecRebaseLossless(t *testing.T) {
 	}
 	// t.Logf(v.String())
 	for i := 0; i < v.Size(); i++ {
-		if v.Get(i) != uint64(i+1) {
-			t.Errorf("actual=%d, expected=%d", v.Get(i), i+1)
+		if v.GetLevel(i, 0) != uint64(i+1) {
+			t.Errorf("actual=%d, expected=%d", v.GetCoeff(i), i+1)
 		}
 	}
 }
@@ -59,12 +59,12 @@ func TestIntVecDot(t *testing.T) {
 	a := fastmath.NewIntVec(5, baseRing)
 	b := fastmath.NewIntVec(5, baseRing)
 	for i := 0; i < 5; i++ {
-		a.Set(i, uint64(i+1))
-		b.Set(i, uint64(i+2))
+		a.SetForce(i, uint64(i+1))
+		b.SetForce(i, uint64(i+2))
 	}
 	actual := a.Dot(b)
 	expected := uint64(1*2 + 2*3 + 3*4 + 4*5 + 5*6)
-	if actual != expected {
+	if actual[0] != expected {
 		t.Errorf("actual=%d, expected=%d", actual, expected)
 	}
 }
@@ -76,12 +76,12 @@ func TestIntVecBigDot(t *testing.T) {
 	b := fastmath.NewIntVec(size, baseRing)
 	expected := uint64(0)
 	for i := 0; i < size; i++ {
-		a.Set(i, uint64(i+1))
-		b.Set(i, uint64(i+2))
+		a.SetForce(i, uint64(i+1))
+		b.SetForce(i, uint64(i+2))
 		expected = (expected + uint64(i+1)*uint64(i+2)) % baseRing.ModulusAtLevel[0].Uint64()
 	}
 	actual := a.Dot(b)
-	if actual != expected {
+	if actual[0] != expected {
 		t.Errorf("actual=%d, expected=%d", actual, expected)
 	}
 }
@@ -110,8 +110,8 @@ func TestIntMatrixTransposed(t *testing.T) {
 	}
 	for i := 0; i < at.Rows(); i++ {
 		for j := 0; j < at.Cols(); j++ {
-			if at.Get(i, j) != expectedResult[i][j] {
-				t.Errorf("actual[%d][%d] = %d, expected[%d][%d] = %d", i, j, at.Get(i, j), i, j, expectedResult[i][j])
+			if at.GetLevel(i, j, 0) != expectedResult[i][j] {
+				t.Errorf("actual[%d][%d] = %d, expected[%d][%d] = %d", i, j, at.GetCoeff(i, j), i, j, expectedResult[i][j])
 			}
 		}
 	}
@@ -134,31 +134,8 @@ func TestIntMatrixMulVec(t *testing.T) {
 	}
 	expectedResult := []uint64{60, 80, 100}
 	for i := 0; i < c.Size(); i++ {
-		if c.Get(i) != expectedResult[i] {
-			t.Errorf("actual[%d]=%d, expected[%d]=%d", i, c.Get(i), i, expectedResult[i])
-		}
-	}
-}
-
-func TestIntMatrixMulVecTransposed(t *testing.T) {
-	baseRing := getBaseRing()
-	a := fastmath.NewIntMatrix(3, 5, baseRing)
-	v := fastmath.NewIntVec(5, baseRing)
-	a.Populate(func(i, j int) uint64 {
-		return uint64(i + j)
-	})
-	v.Populate(func(i int) uint64 {
-		return uint64(2 * i)
-	})
-	c := a.Transposed().MulVecTransposed(v)
-	expectedSize := 3
-	if c.Size() != expectedSize {
-		t.Errorf("actualSize=%d, expectedSize=%d", c.Size(), expectedSize)
-	}
-	expectedResult := []uint64{60, 80, 100}
-	for i := 0; i < c.Size(); i++ {
-		if c.Get(i) != expectedResult[i] {
-			t.Errorf("actual[%d]=%d, expected[%d]=%d", i, c.Get(i), i, expectedResult[i])
+		if c.GetLevel(i, 0) != expectedResult[i] {
+			t.Errorf("actual[%d]=%d, expected[%d]=%d", i, c.GetCoeff(i), i, expectedResult[i])
 		}
 	}
 }
@@ -189,8 +166,8 @@ func TestIntMatrixMulMat(t *testing.T) {
 	}
 	for i := 0; i < c.Rows(); i++ {
 		for j := 0; j < c.Cols(); j++ {
-			if c.Get(i, j) != expectedResult[i][j] {
-				t.Errorf("actual[%d][%d]=%d, expected[%d][%d]=%d", i, j, c.Get(i, j), i, j, expectedResult[i][j])
+			if c.GetLevel(i, j, 0) != expectedResult[i][j] {
+				t.Errorf("actual[%d][%d]=%d, expected[%d][%d]=%d", i, j, c.GetCoeff(i, j), i, j, expectedResult[i][j])
 			}
 		}
 	}
@@ -201,7 +178,7 @@ func TestIntMatrixRebaseRowsLossless(t *testing.T) {
 	m := fastmath.NewIntMatrix(largeRing.D, largeRing.D, largeRing.BaseRing)
 	for i := 0; i < m.Rows(); i++ {
 		for j := 0; j < m.Cols(); j++ {
-			m.Set(i, j, uint64(i+1))
+			m.SetForce(i, j, uint64(i+1))
 		}
 	}
 	// Before rebase.
@@ -214,7 +191,7 @@ func TestIntMatrixRebaseRowsLossless(t *testing.T) {
 			t.Errorf("actual=%d, expected=%d", v.Size(), 256)
 		}
 	}
-	m.RebaseRowsLossless(fastmath.BFVZeroLevelShortCommtRing(4), 0)
+	m.RebaseRowsLossless(fastmath.BFVZeroLevelShortCommtRing(4))
 	// After rebase.
 	for _, v := range m.RowsView() {
 		if len(v.UnderlyingPolys()) != 16 {
@@ -227,8 +204,8 @@ func TestIntMatrixRebaseRowsLossless(t *testing.T) {
 	// t.Logf(m.String())
 	for i := 0; i < m.Rows(); i++ {
 		for j := 0; j < m.Cols(); j++ {
-			if m.Get(i, j) != uint64(i+1) {
-				t.Errorf("actual=%d, expected=%d", m.Get(i, j), i+1)
+			if m.GetLevel(i, j, 0) != uint64(i+1) {
+				t.Errorf("actual=%d, expected=%d", m.GetCoeff(i, j), i+1)
 			}
 		}
 	}

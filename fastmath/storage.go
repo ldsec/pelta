@@ -13,13 +13,13 @@ import (
 	"github.com/tuneinsight/lattigo/v4/ring"
 )
 
-// PersistentIntMataaa either loads the matrix in the file with `name` or generates and saves it using the generator.
+// PersistentIntMatrix either loads the matrix in the file with `name` or generates and saves it using the given generator.
 func PersistentIntMatrix(name string, generator func() *IntMatrix, baseRing *ring.Ring) *IntMatrix {
 	procName := fmt.Sprintf("PersistentIntMatrix(%s)", name)
 	var M *IntMatrix
 	if _, err := os.Stat(name); errors.Is(err, os.ErrNotExist) {
 		M = logging.LogExecution(procName, "generation", func() interface{} { return generator() }).(*IntMatrix)
-		logging.LogExecution(procName, "saving", func() interface{} {
+		logging.LogShortExecution(procName, "saving", func() interface{} {
 			err := SaveIntMatrix(M, name)
 			if err != nil {
 				logging.Log(procName, fmt.Sprintf("couldn't save matrix %s", err.Error()))
@@ -39,22 +39,25 @@ func PersistentIntMatrix(name string, generator func() *IntMatrix, baseRing *rin
 	return M
 }
 
-// PersistentIntVec either loads the vector in the file with `name` or generates and saves it using the generator.
+// PersistentIntVec either loads the vector in the file with `name` or generates and saves it using the given generator.
 func PersistentIntVec(name string, generator func() *IntVec, baseRing *ring.Ring) *IntVec {
 	procName := fmt.Sprintf("PersistentIntVec(%s)", name)
 	var M *IntVec
 	if _, err := os.Stat(name); errors.Is(err, os.ErrNotExist) {
-		M = logging.LogShortExecution(procName, "generation", func() interface{} { return generator() }).(*IntVec)
-		err := logging.LogShortExecution(procName, "saving", func() interface{} { return SaveIntVec(M, name) }).(error)
-		if err != nil {
-			logging.Log(procName, fmt.Sprintf("couldn't save vector %s", err.Error()))
-		}
+		M = logging.LogExecution(procName, "generation", func() interface{} { return generator() }).(*IntVec)
+		logging.LogShortExecution(procName, "saving", func() interface{} {
+			err := SaveIntVec(M, name)
+			if err != nil {
+				logging.Log(procName, fmt.Sprintf("couldn't save vector %s", err.Error()))
+			}
+			return nil
+		})
 	} else {
 		M = logging.LogShortExecution(procName, "loading", func() interface{} {
 			M, err := LoadIntVec(name, baseRing)
 			if err != nil {
 				logging.Log(procName, fmt.Sprintf("couldn't load matrix %s", err.Error()))
-				M = logging.LogShortExecution(procName, "generation", func() interface{} { return generator() }).(*IntVec)
+				M = logging.LogExecution(procName, "generation", func() interface{} { return generator() }).(*IntVec)
 			}
 			return M
 		}).(*IntVec)
@@ -89,8 +92,7 @@ func SaveIntMatrix(t *IntMatrix, name string) error {
 	for _, row := range t.rows {
 		colStrings := make([]string, 0, row.Size())
 		for col := 0; col < row.Size(); col++ {
-			colStr := fmt.Sprintf("%d", row.Get(col))
-			colStrings = append(colStrings, colStr)
+			colStrings = append(colStrings, unparseCoeff(row.GetCoeff(col)))
 		}
 		// Separate column values by a comma.
 		rowStr := strings.Join(colStrings, ",")
@@ -109,7 +111,7 @@ func LoadIntMatrix(name string, baseRing *ring.Ring) (*IntMatrix, error) {
 		return nil, err
 	}
 	defer file.Close()
-	loadedRows := make([][]uint64, 0)
+	loadedRows := make([][]Coeff, 0)
 	bufReader := bufio.NewReader(file)
 	for {
 		line, err := bufReader.ReadString('\n')
@@ -123,9 +125,9 @@ func LoadIntMatrix(name string, baseRing *ring.Ring) (*IntMatrix, error) {
 		}
 		// Read in the column values
 		colStrs := strings.Split(line, ",")
-		matrixRow := make([]uint64, 0, len(colStrs))
+		matrixRow := make([]Coeff, 0, len(colStrs))
 		for _, colStr := range colStrs {
-			col, err := strconv.ParseUint(colStr, 10, 64)
+			col, err := parseCoeff(colStr)
 			if err != nil {
 				return nil, err
 			}
@@ -137,6 +139,26 @@ func LoadIntMatrix(name string, baseRing *ring.Ring) (*IntMatrix, error) {
 			break
 		}
 	}
-	loadedMatrix := NewIntMatrixFromSlice(loadedRows, baseRing)
+	loadedMatrix := NewIntMatrixFromCoeffSlice(loadedRows, baseRing)
 	return loadedMatrix, nil
+}
+
+func parseCoeff(s string) (Coeff, error) {
+	vals := make([]uint64, 0)
+	for _, vstr := range strings.Split(s, ";") {
+		v, err := strconv.ParseUint(vstr, 10, 64)
+		if err != nil {
+			return nil, err
+		}
+		vals = append(vals, v)
+	}
+	return vals, nil
+}
+
+func unparseCoeff(c Coeff) string {
+	valStrs := make([]string, len(c))
+	for i, cl := range c {
+		valStrs[i] = fmt.Sprintf("%d", cl)
+	}
+	return fmt.Sprintf("%s", strings.Join(valStrs, ";"))
 }

@@ -31,14 +31,14 @@ func GetAjtaiKappa(comP, comQ *fastmath.IntVec, p *big.Int, baseRing *ring.Ring)
 	// pInv := big.NewInt(0).ModInverse(p, config.Q).Uint64()
 	kappa := fastmath.NewIntVec(diff.Size(), baseRing)
 	kappa.Populate(func(i int) uint64 {
-		return diff.Get(i) / p.Uint64()
+		return diff.GetLevel(i, 0) / p.Uint64()
 	})
 	return kappa
 }
 
 // NewPaddedAjtaiEquation returns the equation comP = As + Br - kp with rows padded up to the size of s. This is done to be able to generate
 // the Id * (-p) on the lhs.
-func NewPaddedAjtaiEquation(comP *fastmath.IntVec, A, B *fastmath.IntMatrix, s, r, kappa *fastmath.IntVec, p, q *big.Int, baseRing *ring.Ring) *LinearEquation {
+func NewPaddedAjtaiEquation(comP *fastmath.IntVec, A, B *fastmath.IntMatrix, s, r, kappa *fastmath.IntVec, p *big.Int, baseRing *ring.Ring) *LinearEquation {
 	// Num cols
 	d := s.Size()
 	// Num rows
@@ -48,11 +48,11 @@ func NewPaddedAjtaiEquation(comP *fastmath.IntVec, A, B *fastmath.IntMatrix, s, 
 	paddedB := B.Copy().ExtendRows(fastmath.NewIntMatrix(padLength, d, baseRing))
 	paddedKappa := kappa.Copy().Append(fastmath.NewIntVec(padLength, baseRing))
 	paddedComP := comP.Copy().Append(fastmath.NewIntVec(padLength, baseRing))
-	negP := big.NewInt(0).Sub(baseRing.ModulusAtLevel[0], p).Uint64() // use the 0-level modulus for negating
+	negP := fastmath.NewCoeffFromBigInt(p, baseRing.Modulus).Neg(baseRing.Modulus)
 	eqn := NewLinearEquation(paddedComP, d)
 	eqn.AppendTerm(paddedA, s).
 		AppendTerm(paddedB, r).
-		AppendTerm(fastmath.NewIdIntMatrix(d, baseRing).Scale(negP), paddedKappa)
+		AppendTerm(fastmath.NewIdIntMatrix(d, baseRing).ScaleCoeff(negP), paddedKappa)
 	return eqn
 }
 
@@ -66,7 +66,7 @@ func NewAjtaiCommitment(A, B *fastmath.IntMatrix, s, r *fastmath.IntVec, p *big.
 	// pInv := big.NewInt(0).ModInverse(p, config.Q).Uint64()
 	kappa := fastmath.NewIntVec(diff.Size(), baseRing)
 	kappa.Populate(func(i int) uint64 {
-		return diff.Get(i) / p.Uint64()
+		return diff.GetLevel(i, 0) / p.Uint64()
 	})
 	return AjtaiCommitment{A, B, s, r, kappa, comP, p}
 }
@@ -109,7 +109,7 @@ func (aj *AjtaiCommitment) EmbedIntoLinearRelation(rel *LinearRelation, d int, q
 	negP := q.Uint64() - aj.P.Uint64()
 	negPDiag := fastmath.NewIntMatrix(d, d, baseRing)
 	for i := 0; i < negPDiag.Rows(); i++ {
-		negPDiag.Set(i, i, negP)
+		negPDiag.SetForce(i, i, negP)
 	}
 	aExtensionParts[k+2] = *negPDiag
 	aVertExtension := fastmath.NewIntMatrix(d, 7*d, baseRing)

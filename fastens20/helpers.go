@@ -22,7 +22,7 @@ func SplitInvNTT(lhs *fastmath.IntVec, params PublicParams) *fastmath.PolyVec {
 func Lmu(mu int, invk uint64, Tr *fastmath.PolyNTT, params PublicParams) *fastmath.PolyNTT {
 	// Compute X^mu
 	xmu := fastmath.NewPoly(params.config.BaseRing)
-	xmu.Set(mu, 1)
+	xmu.SetForce(mu, 1)
 	return Tr.Mul(xmu.NTT()).Scale(invk)
 }
 

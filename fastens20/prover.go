@@ -41,7 +41,7 @@ func (p Prover) CommitToMessage(s *fastmath.IntVec) (*fastmath.PolyNTTVec, *fast
 	// Sample a polynomial g s.t. g_0=...=g_{k-1}=0
 	gPoly := fastmath.NewRandomPoly(p.params.config.UniformSampler, p.params.config.BaseRing)
 	for i := 0; i < p.params.config.K; i++ {
-		gPoly.Set(i, 0)
+		gPoly.SetForce(i, 0)
 	}
 	g := gPoly.NTT()
 	// Sample the randomness.
@@ -75,7 +75,7 @@ func (p Prover) CommitToRelation(alpha *fastmath.PolyNTTVec, gamma *fastmath.Int
 			jp := p.params.config.TernarySlice.Start/p.params.config.D + j
 			// (b[j]*y[i])^2
 			tmp := p.params.B.Row(jp).Dot(state.Y.Row(i)).
-				Pow(2, p.params.config.Q.Uint64())
+				Pow(2)
 			// 3s[j]-3
 			neg1 := fastmath.NewOnePoly(1, p.params.config.BaseRing).NTT().Neg()
 			tmp2 := neg1.Add(state.SHat.Get(jp)).Scale(3)
@@ -102,7 +102,7 @@ func (p Prover) CommitToRelation(alpha *fastmath.PolyNTTVec, gamma *fastmath.Int
 			jp := p.params.config.TernarySlice.Start/p.params.config.D + j
 			// (b[j] * y[i])^3
 			by := p.params.B.Row(jp).Dot(state.Y.Row(i))
-			return by.Pow(3, p.params.config.Q.Uint64())
+			return by.Pow(3)
 		}, p.params)
 	// t[n/d+2]
 	state.T.Append(
@@ -140,7 +140,7 @@ func (p Prover) CommitToRelation(alpha *fastmath.PolyNTTVec, gamma *fastmath.Int
 					Scale(uint64(p.params.config.D))
 			})
 			// (u * gamma_mu)
-			dec := fastmath.NewOnePoly(p.params.U.Dot(gamma.RowView(mu)), p.params.config.BaseRing).NTT()
+			dec := fastmath.NewOnePolyLevels(p.params.U.Dot(gamma.RowView(mu)), p.params.config.BaseRing).NTT()
 			return presum.Sum().Add(dec.Neg())
 		}, p.params)
 	h := state.G.Copy().Add(gMask)

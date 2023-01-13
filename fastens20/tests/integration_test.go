@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"math/big"
 	"testing"
-	"time"
 
 	"github.com/ldsec/codeBase/commitment/crypto"
 	"github.com/ldsec/codeBase/commitment/fastens20"
@@ -107,7 +106,7 @@ func TestConsistency(tst *testing.T) {
 			// (b[j] * y[i])^2
 			tmp := params.B.Row(j).Copy().
 				Dot(ps.Y.Row(i)).
-				Pow(2, config.Q.Uint64())
+				Pow(2)
 			// 3s[j] - 3
 			tmp2 := ps.SHat.Get(j).Copy().
 				Scale(3).
@@ -204,7 +203,7 @@ func TestTernarySlice(t *testing.T) {
 	s := fastmath.NewRandomIntVec(n, big.NewInt(5), bfvRing.BaseRing)
 	ternarySlice := fastmath.NewSlice(n/2, n)
 	for i := ternarySlice.Start; i < ternarySlice.End; i++ {
-		s.Set(i, 4)
+		s.SetForce(i, 4)
 	}
 	rel := crypto.NewLinearRelation(A, s)
 	config := fastens20.DefaultProtocolConfig(bfvRing, rel).
@@ -274,7 +273,7 @@ func TestPerformanceBig(tst *testing.T) {
 	config := crypto.GetDefaultCryptoConfig()
 	bfvRing := config.RingParams
 	m := 2 * bfvRing.D
-	n := 4 * bfvRing.D
+	n := 2 * bfvRing.D
 	matrix_name := fmt.Sprintf("performance_test_A_%d_%d.test", m, n)
 	vec_name := fmt.Sprintf("performance_test_s_%d.test", n)
 
@@ -282,7 +281,6 @@ func TestPerformanceBig(tst *testing.T) {
 	uni, ter, _ := crypto.GetSamplers(bfvRing, 128)
 
 	// create the inputs
-	tst.Logf("creating the inputs...\n")
 	A := fastmath.PersistentIntMatrix(matrix_name, func() *fastmath.IntMatrix {
 		return fastmath.NewRandomIntMatrixFast(m, n, uni, bfvRing.BaseRing)
 	}, bfvRing.BaseRing)
@@ -291,79 +289,12 @@ func TestPerformanceBig(tst *testing.T) {
 	}, bfvRing.BaseRing)
 	rel := crypto.NewLinearRelation(A, s)
 
-	tst.Logf("creating the parameters...\n")
 	commitmentRing := fastmath.BFVFullShortCommtRing(7)
 	rebasedRel := rel.Rebased(commitmentRing)
 	protocolConfig := fastens20.DefaultProtocolConfig(commitmentRing, rebasedRel).
 		WithReplication(4)
-	// {
-	// 	start_t := time.Now()
-	// 	rebasedRel.A.Transposed()
-	// 	end_t := time.Now()
-	// 	delta_t := end_t.Sub(start_t)
-	// 	tst.Logf("At execution took %dms", delta_t.Milliseconds())
-	// }
 	params := fastens20.GeneratePublicParameters(protocolConfig)
-	prover := fastens20.NewProver(params)
-	verifier := fastens20.NewVerifier(params)
-
-	tst.Logf("starting...\n")
-	var t0, t *fastmath.PolyNTTVec
-	var w *fastmath.PolyNTTMatrix
-	var ps fastens20.ProverState
-	{
-		start_t := time.Now()
-		t0, t, w, ps = prover.CommitToMessage(rebasedRel.S)
-		end_t := time.Now()
-		delta_t := end_t.Sub(start_t)
-		tst.Logf("Prover.CommitToMessage execution took %dms", delta_t.Milliseconds())
-	}
-	var alpha *fastmath.PolyNTTVec
-	var gamma *fastmath.IntMatrix
-	var vs fastens20.VerifierState
-	{
-		start_t := time.Now()
-		alpha, gamma, vs = verifier.CreateMasks(t0, t, w)
-		end_t := time.Now()
-		delta_t := end_t.Sub(start_t)
-		tst.Logf("Verifier.CreateMasks execution took %dms", delta_t.Milliseconds())
-	}
-	var h, v *fastmath.PolyNTT
-	var vp *fastmath.PolyNTTVec
-	{
-		start_t := time.Now()
-		t, h, v, vp, ps = prover.CommitToRelation(alpha, gamma, ps)
-		end_t := time.Now()
-		delta_t := end_t.Sub(start_t)
-		tst.Logf("Prover.CommitToRelation execution took %dms", delta_t.Milliseconds())
-	}
-	var c *fastmath.Poly
-	{
-		start_t := time.Now()
-		c, vs = verifier.CreateChallenge(t, h, v, vp, vs)
-		end_t := time.Now()
-		delta_t := end_t.Sub(start_t)
-		tst.Logf("Verifier.CreateChallenge execution took %dms", delta_t.Milliseconds())
-	}
-	var z *fastmath.PolyNTTMatrix
-	{
-		var err error
-		start_t := time.Now()
-		z, ps, err = prover.MaskedOpening(c, ps)
-		for err != nil {
-			z, ps, err = prover.MaskedOpening(c, ps)
-		}
-		end_t := time.Now()
-		delta_t := end_t.Sub(start_t)
-		tst.Logf("Prover.MaskedOpening execution took %dms", delta_t.Milliseconds())
-	}
-	{
-		start_t := time.Now()
-		if !verifier.Verify(z, vs) {
-			tst.Logf("verification failed")
-		}
-		end_t := time.Now()
-		delta_t := end_t.Sub(start_t)
-		tst.Logf("Verifier.Verify execution took %dms", delta_t.Milliseconds())
+	if !fastens20.Execute(rebasedRel.S, params) {
+		tst.Errorf("execution failed")
 	}
 }

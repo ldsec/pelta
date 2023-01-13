@@ -8,7 +8,7 @@ import (
 )
 
 type RelationsConfig struct {
-	Delta1          int
+	Delta1          uint64
 	Beta            uint64
 	P               *big.Int
 	UniformSampler  fastmath.PolySampler

@@ -1,6 +1,7 @@
 package crypto
 
 import (
+	"math"
 	"math/big"
 
 	"github.com/ldsec/codeBase/commitment/fastmath"
@@ -11,8 +12,8 @@ import (
 type CryptoConfig struct {
 	fastmath.RingParams
 	P               *big.Int // Ajtai prime mod (~20 bit prime)
-	Delta1          int      // Width of the uniform distribution
-	Beta            int
+	Delta1          uint64   // Width of the uniform distribution
+	Beta            uint64
 	Lambda          int // M-LWE dimension
 	Kappa           int // M-SIS dimension
 	UniformSampler  fastmath.PolySampler
@@ -23,7 +24,7 @@ type CryptoConfig struct {
 func GetDefaultCryptoConfig() CryptoConfig {
 	// Initialize the ring parameters.
 	defaultRing := fastmath.BFVFullRing()
-	delta1 := 128
+	delta1 := uint64(128)
 	beta := delta1
 	uniformSampler, ternarySampler, gaussianSampler := GetSamplers(defaultRing, delta1)
 	return CryptoConfig{
@@ -39,8 +40,28 @@ func GetDefaultCryptoConfig() CryptoConfig {
 	}
 }
 
+func GetRealCryptoConfig() CryptoConfig {
+	// Initialize the ring parameters.
+	defaultRing := fastmath.BFVFullRing()
+	delta1 := uint64(math.Pow(2, 24))
+	beta := delta1
+	p := big.NewInt(5857)
+	uniformSampler, ternarySampler, gaussianSampler := GetSamplers(defaultRing, delta1)
+	return CryptoConfig{
+		RingParams:      defaultRing,
+		P:               p,
+		Delta1:          delta1,
+		Beta:            beta - 128,
+		Lambda:          10,
+		Kappa:           9,
+		UniformSampler:  uniformSampler,
+		TernarySampler:  ternarySampler,
+		GaussianSampler: gaussianSampler,
+	}
+}
+
 // GetSamplers constructs and returns the uniform sampler, ternary sampler, and gaussian sampler
-func GetSamplers(samplerRing fastmath.RingParams, delta1 int) (fastmath.PolySampler, fastmath.PolySampler, fastmath.PolySampler) {
+func GetSamplers(samplerRing fastmath.RingParams, delta1 uint64) (fastmath.PolySampler, fastmath.PolySampler, fastmath.PolySampler) {
 	prng, err := utils.NewPRNG()
 	if err != nil {
 		panic("could not initialize the prng: %s")
@@ -48,7 +69,7 @@ func GetSamplers(samplerRing fastmath.RingParams, delta1 int) (fastmath.PolySamp
 	uniformSampler := ring.NewUniformSampler(prng, samplerRing.BaseRing)
 	originalTernarySampler := ring.NewTernarySampler(prng, samplerRing.BaseRing, 1.0/3.0, false)
 	ternarySampler := fastmath.NewAugmentedTernarySampler(originalTernarySampler, samplerRing.BaseRing)
-	gaussianSampler := ring.NewGaussianSampler(prng, samplerRing.BaseRing, samplerRing.Sigma, delta1)
-
+	originalGaussianSampler := ring.NewGaussianSampler(prng, samplerRing.BaseRing, samplerRing.Sigma, int(delta1))
+	gaussianSampler := fastmath.NewAugmentedGaussianSampler(originalGaussianSampler, big.NewInt(int64(delta1)), samplerRing.BaseRing)
 	return uniformSampler, ternarySampler, gaussianSampler
 }

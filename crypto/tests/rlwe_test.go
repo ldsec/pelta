@@ -24,14 +24,15 @@ func TestRLWEErrorDecomposition(t *testing.T) {
 	config := crypto.GetDefaultCryptoConfig()
 	// Create a random error.
 	err := fastmath.NewRandomPoly(config.GaussianSampler, config.BaseRing)
-	rlweParams := crypto.NewRLWEParameters(config.Q, config.D, uint64(config.Beta), config.BaseRing)
+	rlweParams := crypto.NewRLWEParameters(config.Q, config.D, config.Beta, config.BaseRing)
 	// Decompose error.
 	e, b := crypto.RLWEErrorDecomposition(err, rlweParams)
+	t.Logf("reconstructing")
 	// Make sure that error = sum{e_i * b_i}
 	reconstructedError := fastmath.NewIntVec(config.D, config.BaseRing)
 	for i := 0; i < b.Size(); i++ {
 		eRow := e.RowView(i).Copy()
-		eRow.Scale(b.Get(i))
+		eRow.ScaleCoeff(b.GetCoeff(i))
 		reconstructedError.Add(eRow)
 	}
 	expectedError := err.Coeffs()
@@ -48,7 +49,7 @@ func TestRLWEEquation(t *testing.T) {
 	e := fastmath.NewRandomPoly(config.GaussianSampler, config.BaseRing)
 	p0 := crypto.GetRLWEP0(p1, s, e)
 	// Construct the linear relation.
-	T := fastmath.LoadNTTTransform("ntt_transform", config.Q, config.LogD, config.BaseRing)
+	T := fastmath.LoadNTTTransform("ntt_transform", config.BaseRing)
 	rlweParams := crypto.NewRLWEParameters(config.Q, config.D, uint64(config.Beta), config.BaseRing)
 	lrb := crypto.NewLinearRelationBuilder().AppendEqn(crypto.NewIndependentRLWE(p0, p1, s, e, T, rlweParams))
 	rlweRel := lrb.Build(config.BaseRing)

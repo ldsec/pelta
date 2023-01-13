@@ -75,6 +75,35 @@ func (m *PolyMatrix) AllRows(pred func(int, *PolyVec) bool) bool {
 	}
 	return true
 }
+func (m *PolyMatrix) Sum() *Poly {
+	out := NewPoly(m.baseRing)
+	for _, row := range m.rows {
+		rowSum := row.Sum()
+		out.Add(rowSum)
+	}
+	return out
+}
+
+// NTT converts the elements of this matrix to NTT space.
+func (m *PolyMatrix) NTT() *PolyNTTMatrix {
+	nttRows := make([]*PolyNTTVec, 0, m.Rows())
+	for _, r := range m.rows {
+		nttRows = append(nttRows, r.NTT())
+	}
+	return &PolyNTTMatrix{nttRows, m.baseRing}
+}
+
+func (m *PolyMatrix) Eq(b *PolyMatrix) bool {
+	if m.Rows() != b.Rows() || m.Cols() != b.Cols() {
+		return false
+	}
+	for i, r := range m.rows {
+		if !r.Eq(b.Row(i)) {
+			return false
+		}
+	}
+	return true
+}
 
 type PolyNTTMatrix struct {
 	rows     []*PolyNTTVec
@@ -188,4 +217,59 @@ func (m *PolyNTTMatrix) ToIntMatrix() *IntMatrix {
 		return m.Row(i).ToIntVec()
 	})
 	return im
+}
+
+// InvNTT converts the polynomials of this matrix back into their poly space.
+func (m *PolyNTTMatrix) InvNTT() *PolyMatrix {
+	polyRows := make([]*PolyVec, 0, m.Rows())
+	for _, r := range m.rows {
+		polyRows = append(polyRows, r.InvNTT())
+	}
+	return &PolyMatrix{polyRows, m.baseRing}
+}
+
+func (m *PolyNTTMatrix) Sum() *PolyNTT {
+	out := NewPoly(m.baseRing).NTT()
+	for _, row := range m.rows {
+		rowSum := row.Sum()
+		out.Add(rowSum)
+	}
+	return out
+}
+
+func (m *PolyNTTMatrix) Eq(b *PolyNTTMatrix) bool {
+	if m.Rows() != b.Rows() || m.Cols() != b.Cols() {
+		return false
+	}
+	for i, r := range m.rows {
+		if !r.Eq(b.Row(i)) {
+			return false
+		}
+	}
+	return true
+}
+
+func (m *PolyNTTMatrix) MulVec(b *PolyNTTVec) *PolyNTTVec {
+	out := NewPolyVec(m.Rows(), m.baseRing).NTT()
+	for i, row := range m.rows {
+		prod := row.Dot(b)
+		out.Set(i, prod)
+	}
+	return out
+}
+
+// MulMat performs a matrix-matrix multiplication.
+func (m *PolyNTTMatrix) MulMat(b *PolyNTTMatrix) *PolyNTTMatrix {
+	if m.Cols() != b.Rows() {
+		panic("IntMatrix.MulMat sizes incorrect")
+	}
+	out := NewPolyMatrix(m.Rows(), b.Cols(), m.baseRing).NTT()
+	for i := 0; i < out.Rows(); i++ {
+		for j := 0; j < out.Cols(); j++ {
+			p := m.Row(i)
+			q := b.ColCopy(j)
+			out.Set(i, j, p.Dot(q))
+		}
+	}
+	return out
 }

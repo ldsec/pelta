@@ -10,9 +10,7 @@ import (
 
 type RLWEParameters struct {
 	BaseRing *ring.Ring
-	Q        *big.Int
-	QDecomp  *big.Int
-	Beta     uint64
+	Beta     *big.Int
 	LogD     int
 	LogBeta  int
 }
@@ -22,9 +20,7 @@ func NewRLWEParameters(q *big.Int, d int, beta uint64, baseRing *ring.Ring) RLWE
 	logD := int(math.Log2(float64(d)))
 	return RLWEParameters{
 		BaseRing: baseRing,
-		Q:        q,
-		QDecomp:  baseRing.ModulusAtLevel[0], // Decompose with the 0 level modulus.
-		Beta:     beta,
+		Beta:     big.NewInt(int64(beta)),
 		LogD:     logD,
 		LogBeta:  logBeta,
 	}
@@ -39,14 +35,15 @@ func GetRLWEP0(p1, s, e *fastmath.Poly) *fastmath.PolyNTT {
 func RLWEErrorDecomposition(err *fastmath.Poly, params RLWEParameters) (*fastmath.IntMatrix, *fastmath.IntVec) {
 	eCoeffs := err.Coeffs()
 	// Decompose with the 0th level modulus.
-	eDecomp, ternaryBasis := fastmath.TernaryDecomposition(eCoeffs, params.Beta, params.LogBeta, params.QDecomp, params.BaseRing)
-	return eDecomp.Transposed(), ternaryBasis
+	eDecomp, ternaryBasis := fastmath.TernaryDecomposition(eCoeffs, params.Beta, params.LogBeta, params.BaseRing)
+	return eDecomp, ternaryBasis
 }
 
 // NewIndependentRLWE construct an independent RLWE equation p0 = -p1 * s + e.
 func NewIndependentRLWE(p0 *fastmath.PolyNTT, p1, s, e *fastmath.Poly, T *fastmath.IntMatrix, params RLWEParameters) *LinearEquation {
 	eqn := NewLinearEquation(p0.Coeffs(), T.Cols())
-	eqn.AppendTerm(T.Copy().DiagMulMat(p1.Copy().NTT().Neg().Coeffs()), s.Coeffs()).
+	Tp1 := T.Copy().DiagMulMat(p1.Copy().NTT().Neg().Coeffs())
+	eqn.AppendTerm(Tp1, s.Coeffs()).
 		AppendRLWEErrorDecompositionSum(e, T, params)
 	return eqn
 }
@@ -54,7 +51,7 @@ func NewIndependentRLWE(p0 *fastmath.PolyNTT, p1, s, e *fastmath.Poly, T *fastma
 func (eqn *LinearEquation) AppendRLWEErrorDecompositionSum(err *fastmath.Poly, T *fastmath.IntMatrix, params RLWEParameters) *LinearEquation {
 	e, b := RLWEErrorDecomposition(err, params)
 	for i := 0; i < b.Size(); i++ {
-		eqn.AppendTerm(T.Copy().Scale(b.Get(i)), e.RowView(i))
+		eqn.AppendTerm(T.Copy().ScaleCoeff(b.GetCoeff(i)), e.RowView(i))
 	}
 	return eqn
 }
