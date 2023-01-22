@@ -38,7 +38,7 @@ func TestIntVecRebaseLossless(t *testing.T) {
 	if v.Size() != 256 {
 		t.Errorf("actual=%d, expected=%d", v.Size(), 256)
 	}
-	v.RebaseLossless(fastmath.BFVZeroLevelShortCommtRing(4))
+	v = v.RebaseLossless(fastmath.BFVZeroLevelShortCommtRing(4))
 	// After rebase.
 	if len(v.UnderlyingPolys()) != 16 {
 		t.Errorf("actual=%d, expected=%d", len(v.UnderlyingPolys()), 16)
@@ -86,9 +86,12 @@ func TestIntVecBigDot(t *testing.T) {
 	}
 }
 
-func TestIntMatrixTransposed(t *testing.T) {
+func TestIntMatrixTranspose(t *testing.T) {
 	baseRing := getBaseRing()
 	a := fastmath.NewIntMatrix(3, 5, baseRing)
+	//  0 1 2 3 4
+	//  1 2 3 4 5
+	//  2 3 4 5 6
 	a.Populate(func(i, j int) uint64 {
 		return uint64(i + j)
 	})
@@ -111,10 +114,16 @@ func TestIntMatrixTransposed(t *testing.T) {
 	for i := 0; i < at.Rows(); i++ {
 		for j := 0; j < at.Cols(); j++ {
 			if at.GetLevel(i, j, 0) != expectedResult[i][j] {
-				t.Errorf("actual[%d][%d] = %d, expected[%d][%d] = %d", i, j, at.GetCoeff(i, j), i, j, expectedResult[i][j])
+				t.Errorf("actual[%d][%d] = %d, expected[%d][%d] = %d", i, j, at.GetLevel(i, j, 0), i, j, expectedResult[i][j])
 			}
 		}
 	}
+}
+
+func TestIntMatrixBigTranspose(t *testing.T) {
+	baseRing := getBaseRing()
+	a := fastmath.NewIntMatrix(2*baseRing.N, 11*baseRing.N, baseRing)
+	a.Transposed()
 }
 
 func TestIntMatrixMulVec(t *testing.T) {

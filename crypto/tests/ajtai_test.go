@@ -60,6 +60,7 @@ func TestAjtaiEquation(t *testing.T) {
 		AppendEqn(crypto.NewLinearEquation(z, w.Size()).AppendTerm(M, w)).
 		AppendEqn(crypto.NewPaddedAjtaiEquation(comP, A, B, s, r, kappa, config.P, config.BaseRing))
 	rel := lrb.Build(config.BaseRing)
+	rel.A.Transposed()
 	if !rel.IsValid() {
 		t.Errorf("linearized ajtai eqn ill-formed")
 	}

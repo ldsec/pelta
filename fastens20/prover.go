@@ -143,7 +143,7 @@ func (p Prover) CommitToRelation(alpha *fastmath.PolyNTTVec, gamma *fastmath.Int
 			dec := fastmath.NewOnePolyLevels(p.params.U.Dot(gamma.RowView(mu)), p.params.config.BaseRing).NTT()
 			return presum.Sum().Add(dec.Neg())
 		}, p.params)
-	h := state.G.Copy().Add(gMask)
+	h := gMask.Add(state.G)
 	e.LogExecEnd()
 
 	e = logging.LogExecStart("Prover.CommitToRelation", "vp calculation")

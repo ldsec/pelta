@@ -19,7 +19,7 @@ func TernaryDecomposition(v *IntVec, beta *big.Int, logBeta int, baseRing *ring.
 		basisReprVec := NewIntVecFromCoeffSlice(basisRepr, baseRing)
 		return basisReprVec
 	})
-	return decomposed.Transposed(), NewIntVecFromCoeffSlice(basis, baseRing)
+	return decomposed.Transposed().(*IntMatrix), NewIntVecFromCoeffSlice(basis, baseRing)
 }
 
 // IntoBasisRepr returns the given number's representation under the given base, where the digits are

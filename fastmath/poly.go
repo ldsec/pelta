@@ -2,7 +2,6 @@ package fastmath
 
 import (
 	"fmt"
-	"math"
 	"strings"
 
 	"github.com/tuneinsight/lattigo/v4/ring"
@@ -38,6 +37,10 @@ func NewOnePolyLevels(scales []uint64, baseRing *ring.Ring) *Poly {
 	return p
 }
 
+func (p *Poly) isBuffInvalid() bool {
+	return p.ref.Buff == nil
+}
+
 // SetCoeff sets the coefficients of this polynomial at every level to the given values.
 func (p *Poly) SetCoeff(index int, coeff Coeff) {
 	if !coeff.IsZero() {
@@ -63,7 +66,71 @@ func (p *Poly) SetLevel(index, level int, value uint64) {
 	if value != 0 {
 		p.SetDirty()
 	}
-	p.ref.Coeffs[level][index] = value
+	if p.isBuffInvalid() {
+		p.ref.Coeffs[level][index] = value
+	} else {
+		p.ref.Buff[level*p.N()+index] = value
+	}
+}
+
+// SetLevelAll sets the coefficient of this polynomial at the given level to the given values.
+func (p *Poly) SetAllLevel(level int, values []uint64) {
+	for _, v := range values {
+		if v != 0 {
+			p.SetDirty()
+			break
+		}
+	}
+	if p.isBuffInvalid() {
+		p.ref.Coeffs[level] = values
+	} else {
+		for i, v := range values {
+			p.ref.Buff[level*p.N()+i] = v
+		}
+	}
+}
+
+// SplitCoeffs splits the coefficients of this polynomial over the new ring.
+func (p *Poly) SplitCoeffs(newRing *ring.Ring) []*Poly {
+	coeffsPerSplit := newRing.N
+	numSplits := p.baseRing.N / newRing.N
+	polys := make([]*Poly, numSplits)
+	for i := 0; i < len(polys); i++ {
+		polys[i] = &Poly{nil, newRing, p.unset}
+		polys[i].ref = &ring.Poly{
+			Coeffs:  nil,
+			Buff:    nil,
+			IsNTT:   p.ref.IsNTT,
+			IsMForm: p.ref.IsMForm,
+		}
+		// Reslice over the unrebased polys.
+		polys[i].ref.Coeffs = make([][]uint64, len(p.ref.Coeffs))
+		for lvl := 0; lvl < len(p.ref.Coeffs); lvl++ {
+			polys[i].ref.Coeffs[lvl] = p.ref.Coeffs[lvl][i*coeffsPerSplit : (i+1)*coeffsPerSplit]
+		}
+	}
+	return polys
+}
+
+func (p *Poly) Cleanup() {
+	p.refillBuff()
+}
+
+func (p *Poly) refillBuff() {
+	p.ref.Buff = make([]uint64, p.N()*len(p.ref.Coeffs))
+	for lvl := 0; lvl < len(p.ref.Coeffs); lvl++ {
+		for j := 0; j < p.N(); j++ {
+			p.ref.Buff[lvl*p.N()+j] = p.ref.Coeffs[lvl][j]
+		}
+	}
+	// Reslice
+	p.resliceCoeffs()
+}
+
+func (p *Poly) resliceCoeffs() {
+	for lvl := 0; lvl < len(p.ref.Coeffs); lvl++ {
+		p.ref.Coeffs[lvl] = p.ref.Buff[lvl*p.N() : (lvl+1)*p.N()]
+	}
 }
 
 // GetCoeff returns the coefficient of this polynomial.
@@ -129,7 +196,23 @@ func (p *Poly) String() string {
 
 // Copy returns a copy of this polynomial.
 func (p *Poly) Copy() *Poly {
-	return &Poly{p.ref.CopyNew(), p.baseRing, p.unset}
+	p2 := p.baseRing.NewPoly()
+	p2.IsMForm = p.ref.IsMForm
+	p2.IsNTT = p.ref.IsNTT
+	if p.isBuffInvalid() {
+		p.refillBuff()
+	}
+	// copy in the coeffs
+	copy(p2.Buff, p.ref.Buff)
+	// reslice
+	for lvl := 0; lvl < len(p.ref.Coeffs); lvl++ {
+		p2.Coeffs[lvl] = p2.Buff[lvl*p.N() : (lvl+1)*p.N()]
+	}
+	return &Poly{
+		ref:      p2,
+		baseRing: p.baseRing,
+		unset:    p.unset,
+	}
 }
 
 // Scale scales this polynomial with the given scalar factor.
@@ -161,7 +244,12 @@ func (p *Poly) ScaleCoeff(factors Coeff) *Poly {
 // Zero resets the coefficients of this polynomial to zero.
 func (p *Poly) Zero() *Poly {
 	p.unset = true
-	p.ref.Zero()
+	if p.isBuffInvalid() {
+		p.ref.Buff = make([]uint64, p.N()*len(p.ref.Coeffs))
+		p.resliceCoeffs()
+	} else {
+		p.ref.Zero()
+	}
 	return p
 }
 
@@ -185,16 +273,56 @@ func (p *Poly) Max(level int) uint64 {
 	return max
 }
 
+func sumVals(vals []uint64, mod uint64) uint64 {
+	acc := vals[0]
+	for _, v := range vals[1:] {
+		acc = (acc + v) % mod
+	}
+	return acc
+}
+
 // SumCoeffs returns the sum of the coefficients of this polynomial.
 func (p *Poly) SumCoeffs() Coeff {
-	logN := int(math.Log2(float64(p.baseRing.N)))
-	tmp := p.Copy()
-	tmp2 := NewPoly(p.baseRing)
-	for i := 0; i < logN; i++ {
-		p.baseRing.Shift(tmp.ref, 1<<i, tmp2.ref)
-		p.baseRing.Add(tmp.ref, tmp2.ref, tmp.ref)
+	sumRNS := NewZeroCoeff(len(p.baseRing.Modulus))
+	if p.IsUnset() {
+		return sumRNS
 	}
-	return tmp.GetCoeff(0)
+	var sum uint64
+	for i := 0; i < len(p.ref.Coeffs); i++ {
+		qi := p.baseRing.Modulus[i]
+		qiHalf := qi >> 1
+		coeffs := p.ref.Coeffs[i]
+		sum = 0
+		for j := 0; j < p.baseRing.N; j++ {
+			v := coeffs[j]
+			if v >= qiHalf {
+				sum = ring.CRed(sum+qi-v, qi)
+			} else {
+				sum = ring.CRed(sum+v, qi)
+			}
+		}
+		sumRNS[i] = sum
+	}
+	return sumRNS
+
+	// wg := sync.WaitGroup{}
+	// wg.Add(len(sum))
+	// for lvl, mod := range p.baseRing.Modulus {
+	// 	func(lvl int, mod uint64) {
+	// 		sum[lvl] = sumVals(p.ref.Coeffs[lvl], mod)
+	// 		// wg.Done()
+	// 	}(lvl, mod)
+	// }
+	// wg.Wait()
+	// return sum
+	// logN := int(math.Log2(float64(p.baseRing.N)))
+	// tmp := p.Copy()
+	// tmp2 := NewPoly(p.baseRing)
+	// for i := 0; i < logN; i++ {
+	// 	p.baseRing.Shift(tmp.ref, 1<<i, tmp2.ref)
+	// 	p.baseRing.Add(tmp.ref, tmp2.ref, tmp.ref)
+	// }
+	// return tmp.GetCoeff(0)
 }
 
 // NTT converts this polynomial to its NTT domain.
@@ -205,11 +333,12 @@ func (p *Poly) NTT() *PolyNTT {
 
 // PowCoeffs takes the `exp`-th power of the coefficients.
 func (p *Poly) PowCoeffs(exp uint) *Poly {
-	if p.IsUnset() {
+	if p.IsUnset() || exp == 1 {
 		return p
 	}
+	p.SetDirty()
 	mul := p.Copy()
-	for i := 0; i < int(exp); i++ {
+	for i := 1; i < int(exp); i++ {
 		p.MulCoeffs(mul)
 	}
 	return p

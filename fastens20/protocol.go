@@ -12,7 +12,7 @@ import (
 // ProtocolConfig contains the settings for the ENS20 protocol.
 type ProtocolConfig struct {
 	RingParams   fastmath.RingParams
-	TargetRel    *crypto.LinearRelation
+	TargetRel    *crypto.ImmutLinearRelation
 	BaseRing     *ring.Ring
 	D            int      // poly. degree
 	Q            *big.Int // ring modulus
@@ -39,7 +39,7 @@ type ProtocolConfig struct {
 
 // DefaultProtocolConfig returns the default configuration for an ENS20 execution.
 // `ringParams` denotes the ring over which `relation` is defined.
-func DefaultProtocolConfig(ringParams fastmath.RingParams, rel crypto.LinearRelation) ProtocolConfig {
+func DefaultProtocolConfig(ringParams fastmath.RingParams, rel crypto.ImmutLinearRelation) ProtocolConfig {
 	// Create the samplers.
 	prng, err := utils.NewPRNG()
 	if err != nil {
@@ -120,15 +120,15 @@ func (c ProtocolConfig) Beta() int {
 // PublicParams contains the public parameters of the protocol.
 type PublicParams struct {
 	config ProtocolConfig
-	A      *fastmath.IntMatrix
-	At     *fastmath.IntMatrix
+	A      fastmath.ImmutIntMatrix
+	At     fastmath.ImmutIntMatrix
 	U      *fastmath.IntVec
 	B0     *fastmath.PolyNTTMatrix
 	B      *fastmath.PolyNTTMatrix
 	Sig    fastmath.Automorphism
 }
 
-func generate(config ProtocolConfig, rel *crypto.LinearRelation, At *fastmath.IntMatrix) PublicParams {
+func generate(config ProtocolConfig, rel *crypto.ImmutLinearRelation) PublicParams {
 	bSize := config.NumSplits() + 3
 	B0 := fastmath.NewRandomPolyMatrix(config.Kappa,
 		config.Lambda+config.Kappa+bSize,
@@ -139,7 +139,7 @@ func generate(config ProtocolConfig, rel *crypto.LinearRelation, At *fastmath.In
 	return PublicParams{
 		config: config,
 		A:      rel.A,
-		At:     At,
+		At:     rel.A.Transposed(),
 		U:      rel.U,
 		B0:     B0.NTT(),
 		B:      b.NTT(),
@@ -148,6 +148,5 @@ func generate(config ProtocolConfig, rel *crypto.LinearRelation, At *fastmath.In
 }
 
 func GeneratePublicParameters(config ProtocolConfig) PublicParams {
-	At := config.TargetRel.At
-	return generate(config, config.TargetRel, At)
+	return generate(config, config.TargetRel)
 }

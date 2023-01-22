@@ -35,7 +35,7 @@ func (vf Verifier) CreateMasks(t0 *fastmath.PolyNTTVec, t *fastmath.PolyNTTVec, 
 	defer e.LogExecEnd()
 	alpha := fastmath.NewRandomPolyVec(vf.params.config.K*vf.params.config.NumSplits(), vf.params.config.UniformSampler, vf.params.config.BaseRing).NTT()
 	gamma := fastmath.NewRandomIntMatrix(vf.params.config.K, vf.params.config.M, vf.params.config.Q, vf.params.config.BaseRing)
-	return alpha.Copy(), gamma.Copy(), VerifierState{T0: t0, T: t, W: w, Alpha: alpha, Gamma: gamma}
+	return alpha.Copy(), gamma.Copy().(*fastmath.IntMatrix), VerifierState{T0: t0, T: t, W: w, Alpha: alpha, Gamma: gamma}
 }
 
 // CreateChallenge returns a challenge for the relation commitment.

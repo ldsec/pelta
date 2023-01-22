@@ -11,7 +11,7 @@ import (
 
 // term represents A*b
 type term struct {
-	A            *fastmath.IntMatrix
+	A            fastmath.ImmutIntMatrix
 	OriginalCols int // # of cols that are originally in this term (We maintain this to not copy A in Linearize method)
 	b            *fastmath.IntVec
 	dependent    bool
@@ -32,7 +32,7 @@ func NewLinearEquation(lhs *fastmath.IntVec, cols int) *LinearEquation {
 }
 
 // AppendTerm adds a new term A*b to this equation.
-func (eqn *LinearEquation) AppendTerm(A *fastmath.IntMatrix, b *fastmath.IntVec) *LinearEquation {
+func (eqn *LinearEquation) AppendTerm(A fastmath.ImmutIntMatrix, b *fastmath.IntVec) *LinearEquation {
 	if A.Rows() != eqn.m || A.Cols() != b.Size() {
 		panic("cannot append term with invalid size")
 	}
@@ -43,13 +43,13 @@ func (eqn *LinearEquation) AppendTerm(A *fastmath.IntMatrix, b *fastmath.IntVec)
 // AppendVecTerm appends a new vector term Id*b to this equation.
 func (eqn *LinearEquation) AppendVecTerm(b *fastmath.IntVec, baseRing *ring.Ring) *LinearEquation {
 	id := fastmath.NewIdIntMatrix(b.Size(), baseRing)
-	eqn.rhs = append(eqn.rhs, term{id, id.Cols(), b, false, 0})
+	eqn.rhs = append(eqn.rhs, term{fastmath.NewCachedIntMatrix(id), id.Cols(), b, false, 0})
 	return eqn
 }
 
 // AddDependentTerm adds a dependent term to this equation with the associated vector defined in another equation,
 // indicated by its position in the system by `vecIndex`.
-func (eqn *LinearEquation) AppendDependentTerm(A *fastmath.IntMatrix, vecIndex int) *LinearEquation {
+func (eqn *LinearEquation) AppendDependentTerm(A fastmath.MutIntMatrix, vecIndex int) *LinearEquation {
 	eqn.rhs = append(eqn.rhs, term{A, A.Cols(), nil, true, vecIndex})
 	eqn.dependent = true
 	return eqn
@@ -60,7 +60,7 @@ func (eqn *LinearEquation) AppendDependentTerm(A *fastmath.IntMatrix, vecIndex i
 // Note: The referenced vector must have the correct size (i.e., m) !!
 func (eqn *LinearEquation) AppendDependentVecTerm(vecIndex int, baseRing *ring.Ring) *LinearEquation {
 	id := fastmath.NewIdIntMatrix(eqn.m, baseRing)
-	eqn.rhs = append(eqn.rhs, term{id, id.Cols(), nil, true, vecIndex})
+	eqn.rhs = append(eqn.rhs, term{fastmath.NewCachedIntMatrix(id), id.Cols(), nil, true, vecIndex})
 	eqn.dependent = true
 	return eqn
 }
@@ -112,7 +112,11 @@ func (eqn *LinearEquation) Linearize() LinearRelation {
 	if len(eqn.rhs) == 0 {
 		panic("cannot convert an empty equation into a relation")
 	}
-	linRel := NewLinearRelationWithLHS(eqn.rhs[0].A, eqn.rhs[0].b, eqn.lhs)
+	A, ok := eqn.rhs[0].A.(*fastmath.CachedIntMatrix)
+	if !ok {
+		A = fastmath.NewCachedIntMatrix(eqn.rhs[0].A.AsIntMatrix())
+	}
+	linRel := NewLinearRelationWithLHS(A, eqn.rhs[0].b, eqn.lhs)
 	for _, term := range eqn.rhs[1:] {
 		linRel.ExtendPartial(term.A, term.b)
 		if term.dependent {
@@ -174,6 +178,33 @@ func getZeroPad(i, j int, eqns []*LinearEquation, baseRing *ring.Ring) *fastmath
 	return nil
 }
 
+func (lrb *LinearRelationBuilder) BuildFast(baseRing *ring.Ring) ImmutLinearRelation {
+	procName := "LinearRelationBuilder.BuildFast"
+	if len(lrb.eqns) == 0 {
+		panic("cannot build a linear relation without any equations")
+	}
+	e := logging.LogExecStart(procName, "building")
+	defer e.LogExecEnd()
+	logging.Log(procName, lrb.SizesString())
+	pm := fastmath.NewEmptyPartitionedIntMatrix(baseRing)
+	s := fastmath.NewIntVec(0, baseRing)
+	u := fastmath.NewIntVec(0, baseRing)
+	start := 0
+	for i, eqn := range lrb.eqns {
+		for j, t := range eqn.rhs {
+			if t.dependent {
+				pm.Emplace(i, t.depVecIndex, t.A)
+			} else {
+				pm.Emplace(i, start+j, t.A)
+				s.Append(t.b)
+			}
+		}
+		start += len(eqn.GetIndependentTerms())
+		u.Append(eqn.lhs)
+	}
+	return ImmutLinearRelation{pm.Copy(), s.Copy(), u.Copy()}
+}
+
 // Build constructs the linear relation of the form As = u from the appended equations.
 func (lrb *LinearRelationBuilder) Build(baseRing *ring.Ring) LinearRelation {
 	procName := "LinearRelationBuilder.Build"
@@ -181,6 +212,7 @@ func (lrb *LinearRelationBuilder) Build(baseRing *ring.Ring) LinearRelation {
 		panic("cannot build a linear relation without any equations")
 	}
 	e := logging.LogExecStart(procName, "building")
+	defer e.LogExecEnd()
 	logging.Log(procName, lrb.SizesString())
 	// Then construct.
 	linRel := lrb.eqns[0].Linearize()
@@ -195,7 +227,7 @@ func (lrb *LinearRelationBuilder) Build(baseRing *ring.Ring) LinearRelation {
 				prevEqnNumIndepTerms += len(lrb.eqns[j].GetIndependentTerms())
 			}
 			// First, emplace the dependent term matrices into the correct position.
-			preB := make([]*fastmath.IntMatrix, prevEqnNumIndepTerms)
+			preB := make([]fastmath.ImmutIntMatrix, prevEqnNumIndepTerms)
 			for _, t := range eqn.GetDependentTerms() {
 				preB[t.depVecIndex] = t.A
 			}
@@ -205,11 +237,11 @@ func (lrb *LinearRelationBuilder) Build(baseRing *ring.Ring) LinearRelation {
 			}
 			// fmt.Printf("lrb (%d): created B instruction of size %d\n", i+1, len(preB))
 			// Iteratively build up the new row in the matrix.
-			var B *fastmath.IntMatrix
+			var B fastmath.MutIntMatrix
 			if preB[0] == nil {
 				B = getZeroPad(i+1, 0, lrb.eqns, baseRing)
 			} else {
-				B = preB[0]
+				B = preB[0].AsIntMatrix()
 			}
 			// fmt.Println("LinearRelationBuilder: initialized B:", B.SizeString())
 			for j, m := range preB[1:] { // j is the prev independent term index (overall)!
@@ -234,7 +266,6 @@ func (lrb *LinearRelationBuilder) Build(baseRing *ring.Ring) LinearRelation {
 		}
 	}
 	logging.Log(procName, linRel.SizesString())
-	e.LogExecEnd()
 	return linRel
 }
 

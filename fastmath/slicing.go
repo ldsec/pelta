@@ -23,6 +23,10 @@ func (p *Poly) Slice(s Slice) *Poly {
 }
 
 func (v *IntVec) Slice(s Slice) *IntVec {
+	// Optimization
+	if s.Start%v.baseRing.N == 0 && s.End%v.baseRing.N == 0 {
+		return v.SliceWithPolys(s.Start/v.baseRing.N, s.End/v.baseRing.N, s.Size())
+	}
 	sliced := NewIntVec(s.Size(), v.baseRing)
 	for i := s.Start; i < s.End; i++ {
 		sliced.SetCoeff(i-s.Start, v.GetCoeff(i))

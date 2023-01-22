@@ -143,7 +143,7 @@ func (v *IntVec) String() string {
 	s := fmt.Sprintf("IntVec[%d]{", v.Size())
 	elemStrs := make([]string, 0, v.Size())
 	for i := 0; i < v.Size(); i++ {
-		elemStrs = append(elemStrs, fmt.Sprintf("%d", v.GetLevel(i, 0)))
+		elemStrs = append(elemStrs, fmt.Sprintf("%v", v.GetCoeff(i)))
 	}
 	return s + strings.Join(elemStrs[:truncatedSize], ",") + "}"
 }
@@ -176,12 +176,14 @@ func (v *IntVec) Append(r *IntVec) *IntVec {
 }
 
 // SliceCopy returns a (copied) slice of this vector.
-func (v *IntVec) SliceCopy(start, end int) *IntVec {
-	subVec := NewIntVec(end-start, v.baseRing)
-	for i := 0; i < end-start; i++ {
-		subVec.SetCoeff(i, v.GetCoeff(start+i))
+func (v *IntVec) SliceWithPolys(startPoly, endPoly, size int) *IntVec {
+	return NewIntVecFromPolys(v.polys[startPoly:endPoly], size, v.baseRing)
+}
+
+func (v *IntVec) Cleanup() {
+	for _, p := range v.polys {
+		p.Cleanup()
 	}
-	return subVec
 }
 
 // RebaseLossless rebases every underlying polynomial, splitting them when necessary so that
@@ -190,31 +192,17 @@ func (v *IntVec) RebaseLossless(newRing RingParams) *IntVec {
 	if v.baseRing.N <= newRing.D || v.baseRing.N%newRing.D != 0 {
 		panic(fmt.Sprintf("cannot rebase lossless %d to %d", v.baseRing.N, newRing.D))
 	}
-	// Copy in the unrebased version
-	v.unrebasedRef = v.Copy()
-	// Clean up the redundant polynomials.
-	// for len(v.polys) > 0 && v.polys[len(v.polys)-1].IsZero() {
-	// 	v.polys = v.polys[0 : len(v.polys)-1]
-	// }
 	// Each underlying polynomial will be represented by this many rebased polynomials.
 	splitsPerPoly := v.baseRing.N / newRing.D
-	newPolys := []*Poly{}
+	newPolys := make([]*Poly, 0, splitsPerPoly*len(v.polys))
 	for _, p := range v.polys {
 		for i := 0; i < splitsPerPoly; i++ {
-			// Extract d (i.e., degree of new base ring) many coefficients.
-			newPoly := NewPoly(newRing.BaseRing)
-			for j := 0; j < newPoly.N(); j++ {
-				newCoeff := p.GetCoeff(i*newRing.D + j)
-				newPoly.SetCoeff(j, newCoeff)
-			}
-			newPolys = append(newPolys, newPoly)
+			newPolys = append(newPolys, p.SplitCoeffs(newRing.BaseRing)...)
 		}
 	}
-	// Set the underlying polynomials.
-	v.SetUnderlyingPolys(newPolys)
-	// Update the base ring pointer.
-	v.baseRing = newRing.BaseRing
-	return v
+	vp := NewIntVecFromPolys(newPolys, v.Size(), newRing.BaseRing)
+	vp.unrebasedRef = v
+	return vp
 }
 
 func (v *IntVec) All(pred func(el uint64) bool) bool {
@@ -229,6 +217,43 @@ func (v *IntVec) All(pred func(el uint64) bool) bool {
 // BaseRing returns the polynomial ring over which this integer vector is defined.
 func (v *IntVec) BaseRing() *ring.Ring {
 	return v.baseRing
+}
+
+func (v *IntVec) GetAllLevel(level int) []uint64 {
+	// a := make([]uint64, len(v.polys[0].ref.Coeffs[level]))
+	// for i := 0; i < len(a); i++ {
+	// 	a[i] = v.polys[0].ref.Coeffs[level][i]
+	// }
+	a := v.polys[0].ref.Coeffs[level]
+	for _, b := range v.polys[1:] {
+		a = append(a, b.ref.Coeffs[level]...)
+	}
+	return a[:v.Size()]
+}
+
+func (v *IntVec) SetAllLevel(level int, vals []uint64) {
+	start := 0
+	for _, p := range v.polys {
+		end := start + p.N()
+		if end > len(vals) {
+			end = len(vals)
+			for i := start; i < end; i++ {
+				p.SetLevel(i, level, vals[i])
+			}
+			return
+		}
+		p.SetAllLevel(level, vals[start:end])
+		start += p.N()
+	}
+}
+
+func (v *IntVec) IsUnset() bool {
+	for _, p := range v.polys {
+		if !p.IsUnset() {
+			return false
+		}
+	}
+	return true
 }
 
 // Reduce reduces the elements of this vector by the given mod.
@@ -309,10 +334,17 @@ func (v *IntVec) Dot(r *IntVec) Coeff {
 	if v.unrebasedRef != nil && r.unrebasedRef != nil {
 		return v.unrebasedRef.Dot(r.unrebasedRef)
 	}
+	numPolys := len(v.polys)
+	if len(r.polys) < numPolys {
+		numPolys = len(r.polys)
+	}
 	preSum := NewPoly(v.baseRing)
-	for i := 0; i < len(v.polys); i++ {
+	for i := 0; i < numPolys; i++ {
 		a := v.polys[i]
 		b := r.polys[i]
+		if a.IsUnset() || b.IsUnset() {
+			continue
+		}
 		a.MulCoeffsAndAdd(b, preSum)
 	}
 	return preSum.SumCoeffs()

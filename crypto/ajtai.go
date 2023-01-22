@@ -44,8 +44,10 @@ func NewPaddedAjtaiEquation(comP *fastmath.IntVec, A, B *fastmath.IntMatrix, s, 
 	// Num rows
 	l := comP.Size()
 	padLength := d - l
-	paddedA := A.Copy().ExtendRows(fastmath.NewIntMatrix(padLength, d, baseRing))
-	paddedB := B.Copy().ExtendRows(fastmath.NewIntMatrix(padLength, d, baseRing))
+	paddedA := A.Copy().(*fastmath.IntMatrix)
+	paddedA.ExtendRows(fastmath.NewIntMatrix(padLength, d, baseRing))
+	paddedB := B.Copy().(*fastmath.IntMatrix)
+	paddedB.ExtendRows(fastmath.NewIntMatrix(padLength, d, baseRing))
 	paddedKappa := kappa.Copy().Append(fastmath.NewIntVec(padLength, baseRing))
 	paddedComP := comP.Copy().Append(fastmath.NewIntVec(padLength, baseRing))
 	negP := fastmath.NewCoeffFromBigInt(p, baseRing.Modulus).Neg(baseRing.Modulus)
@@ -97,8 +99,8 @@ func (aj *AjtaiCommitment) EmbedIntoLinearRelation(rel *LinearRelation, d int, q
 	rel.A.ExtendCols(zeroHorExt)
 	// Extend SIS A vertically.
 	aExtensionParts := make([]fastmath.IntMatrix, k+3)
-	aExtensionParts[0] = *aj.A.Copy()
-	aExtensionParts[k+1] = *aj.B.Copy()
+	aExtensionParts[0] = *aj.A.Copy().(*fastmath.IntMatrix)
+	aExtensionParts[k+1] = *aj.B.Copy().(*fastmath.IntMatrix)
 	// Pad the embedded A and B (# rows = l) to D rows
 	zeroVerExt := fastmath.NewIntMatrix(d-l, d, baseRing)
 	aExtensionParts[0].ExtendRows(zeroVerExt.Copy())

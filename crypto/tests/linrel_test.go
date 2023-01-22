@@ -21,7 +21,7 @@ func TestLinRelConstruction(t *testing.T) {
 	m := 300
 	A := fastmath.NewRandomIntMatrix(m, n, config.Q, config.BaseRing)
 	s := fastmath.NewRandomIntVec(n, config.Q, config.BaseRing)
-	rel := crypto.NewLinearRelation(A, s)
+	rel := crypto.NewLinearRelation(fastmath.NewCachedIntMatrix(A), s)
 	verifyRelation(t, rel)
 }
 
@@ -32,7 +32,7 @@ func TestLinRelRebase(t *testing.T) {
 	m := largeRing.D
 	A := fastmath.NewRandomIntMatrix(m, n, largeRing.Q, largeRing.BaseRing)
 	s := fastmath.NewRandomIntVec(n, largeRing.Q, largeRing.BaseRing)
-	rel := crypto.NewLinearRelation(A, s)
+	rel := crypto.NewLinearRelation(fastmath.NewCachedIntMatrix(A), s)
 	t.Logf("testing over original ring...")
 	verifyRelation(t, rel)
 	rebasedRel := rel.Rebased(smallRing)
@@ -47,14 +47,14 @@ func TestLinRelAppendIndependent(t *testing.T) {
 	// First relation: As = u
 	A := fastmath.NewRandomIntMatrix(m, n, config.Q, config.BaseRing)
 	s := fastmath.NewRandomIntVec(n, config.Q, config.BaseRing)
-	rel := crypto.NewLinearRelation(A, s)
+	rel := crypto.NewLinearRelation(fastmath.NewCachedIntMatrix(A), s)
 	verifyRelation(t, rel)
 	// Second relation: By = z
 	np := 9
 	mp := 13
 	B := fastmath.NewRandomIntMatrix(mp, np, config.Q, config.BaseRing)
 	y := fastmath.NewRandomIntVec(np, config.Q, config.BaseRing)
-	rel2 := crypto.NewLinearRelation(B, y)
+	rel2 := crypto.NewLinearRelation(fastmath.NewCachedIntMatrix(B), y)
 	verifyRelation(t, rel2)
 	// Verify the appended version.
 	rel.AppendIndependent(rel2)
@@ -68,14 +68,14 @@ func TestLinRelExtend(t *testing.T) {
 	// First relation: As = u
 	A := fastmath.NewRandomIntMatrix(m, n, config.Q, config.BaseRing)
 	s := fastmath.NewRandomIntVec(n, config.Q, config.BaseRing)
-	rel := crypto.NewLinearRelation(A, s)
+	rel := crypto.NewLinearRelation(fastmath.NewCachedIntMatrix(A), s)
 	verifyRelation(t, rel)
 	// Second relation: By = z
 	np := 9
 	mp := m
 	B := fastmath.NewRandomIntMatrix(mp, np, config.Q, config.BaseRing)
 	y := fastmath.NewRandomIntVec(np, config.Q, config.BaseRing)
-	rel2 := crypto.NewLinearRelation(B, y)
+	rel2 := crypto.NewLinearRelation(fastmath.NewCachedIntMatrix(B), y)
 	verifyRelation(t, rel2)
 	// Verify the extended version.
 	rel.Extend(rel2)
@@ -90,7 +90,7 @@ func TestLinRelAppendDependentOnS(t *testing.T) {
 	// First relation: As = u
 	A := fastmath.NewRandomIntMatrix(m, n, config.Q, config.BaseRing)
 	s := fastmath.NewRandomIntVec(n, config.Q, config.BaseRing)
-	rel := crypto.NewLinearRelation(A, s)
+	rel := crypto.NewLinearRelation(fastmath.NewCachedIntMatrix(A), s)
 	verifyRelation(t, rel)
 	// Second relation: Bs + y = z
 	B := fastmath.NewRandomIntMatrix(n, n, config.Q, config.BaseRing)

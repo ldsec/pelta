@@ -30,7 +30,7 @@ func CreateABPMaskedOpening(abpChal *fastmath.IntMatrix, abpMask *fastmath.IntVe
 func NewABPEquation(abpChal *fastmath.IntMatrix, sIndex int, abpMask, abpMaskedOpening *fastmath.IntVec, baseRing *ring.Ring) *LinearEquation {
 	e := logging.LogExecStart("NewABPEquation", "creating")
 	// Add the equation Rs + y = z
-	R := abpChal.Copy()
+	R := abpChal.Copy().(*fastmath.IntMatrix)
 	y := abpMask
 	z := abpMaskedOpening
 	if y.Size()%baseRing.N != 0 {

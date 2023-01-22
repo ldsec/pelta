@@ -32,23 +32,22 @@ func updateProtocol(p *ABPProver, v *ABPVerifier, ps *ABPProverState, vs *ABPVer
 	// Create the new relation (A || 0, R || Id)(s, y) = (u, z)
 	lrb := crypto.NewLinearRelationBuilder()
 	// As = u
-	A.CachedTranspose = p.params.At
 	lrb.AppendEqn(crypto.NewLinearEquation(u, A.Cols()).AppendTerm(A, s))
 	// Rh + y = z where h is a subvector of s
 
 	lrb.AppendEqn(crypto.NewABPEquation(vs.ABPVerifierChal, 0, ps.ABPProverMask, ps.ABPMaskedOpening, p.params.config.BaseRing))
-	newRel := lrb.Build(p.params.config.BaseRing)
+	newRel := lrb.BuildFast(p.params.config.BaseRing)
 	// if !newRel.IsValid() {
 	// 	panic("invalid abp embedding")
 	// }
 	// fmt.Printf("abp equation embedded successfully: %s\n", newRel.SizesString())
 	// Update the public parameters with the new relation.
 	p.params.A = newRel.A
-	p.params.At = newRel.At
+	v.params.A = p.params.A
+	p.params.At = newRel.A.Transposed()
 	v.params.At = p.params.At
-	v.params.A = newRel.A
-	v.params.U = newRel.U
 	p.params.U = newRel.U
+	v.params.U = p.params.U
 	// Update the configuration parameters.
 	p.params.config.M = newRel.A.Rows()
 	v.params.config.M = newRel.A.Rows()

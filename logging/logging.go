@@ -11,9 +11,10 @@ var errorLogging bool = true
 var indentation int = 0
 
 type LogExecData struct {
-	start  time.Time
+	t0     time.Time
 	prefix string
 	name   string
+	short  bool
 }
 
 func getIndentation() string {
@@ -58,12 +59,24 @@ func LogWithoutNewline(prefix, msg string) {
 func LogExecStart(prefix, name string) LogExecData {
 	Log(prefix, fmt.Sprintf("%s started", name))
 	indent()
-	return LogExecData{time.Now(), prefix, name}
+	return LogExecData{time.Now(), prefix, name, false}
+}
+
+func LogExecShortStart(prefix, name string) LogExecData {
+	LogWithoutNewline(prefix, fmt.Sprintf("%s...", name))
+	indent()
+	return LogExecData{time.Now(), prefix, name, true}
 }
 
 func (l LogExecData) LogExecEnd() {
 	unindent()
-	Log(l.prefix, fmt.Sprintf("%s complete (%dms)", l.name, time.Now().Sub(l.start).Milliseconds()))
+	t1 := time.Now()
+	if l.short {
+		fmt.Printf("done (%dms)\n", t1.Sub(l.t0).Milliseconds())
+		return
+	}
+	endStr := fmt.Sprintf("%s complete", l.name)
+	Log(l.prefix, fmt.Sprintf("%s (%dms)", endStr, t1.Sub(l.t0).Milliseconds()))
 }
 
 func LogShortExecution(prefix, name string, f func() interface{}) interface{} {

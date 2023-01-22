@@ -7,34 +7,34 @@ import (
 	"github.com/tuneinsight/lattigo/v4/ring"
 )
 
+// IntMatrix represents a matrix of integers.
 type IntMatrix struct {
 	numRows  int
 	numCols  int
 	rows     []*IntVec
 	baseRing *ring.Ring
-
-	CachedTranspose *IntMatrix
 }
 
+// NewIntMatrix returns an empty int matrix of given size.
 func NewIntMatrix(numRows, numCols int, baseRing *ring.Ring) *IntMatrix {
 	rows := make([]*IntVec, numRows)
 	for i := 0; i < len(rows); i++ {
 		rows[i] = NewIntVec(numCols, baseRing)
 	}
-	return &IntMatrix{numRows, numCols, rows, baseRing, nil}
+	return &IntMatrix{numRows, numCols, rows, baseRing}
 }
 
 // NewIdIntMatrix returns an n by n identity matrix.
-func NewIdIntMatrix(numRows int, baseRing *ring.Ring) *IntMatrix {
-	m := NewIntMatrix(numRows, numRows, baseRing)
-	for i, r := range m.RowsView() {
+func NewIdIntMatrix(n int, baseRing *ring.Ring) *IntMatrix {
+	m := NewIntMatrix(n, n, baseRing)
+	for i, r := range m.rows {
 		r.SetForce(i, 1)
 	}
 	return m
 }
 
 func NewIntMatrixFromRows(rows []*IntVec, baseRing *ring.Ring) *IntMatrix {
-	return &IntMatrix{len(rows), rows[0].Size(), rows, baseRing, nil}
+	return &IntMatrix{len(rows), rows[0].Size(), rows, baseRing}
 }
 
 func NewIntMatrixFromSlice(elems [][]uint64, baseRing *ring.Ring) *IntMatrix {
@@ -57,8 +57,8 @@ func NewIntMatrixFromCoeffSlice(elems [][]Coeff, baseRing *ring.Ring) *IntMatrix
 	return m
 }
 
-func (m *IntMatrix) BaseRing() *ring.Ring {
-	return m.baseRing
+func (m *IntMatrix) AsIntMatrix() *IntMatrix {
+	return m
 }
 
 // Rows returns the number of rows.
@@ -81,15 +81,6 @@ func (m *IntMatrix) RowView(i int) *IntVec {
 	return m.rows[i]
 }
 
-// SubsectionCopy returns a subsection (copied) of this matrix.
-func (m *IntMatrix) SubsectionCopy(rowStart, rowEnd int, colStart, colEnd int) *IntMatrix {
-	subMatrix := NewIntMatrix(rowEnd-rowStart, colEnd-colStart, m.baseRing)
-	for i := 0; i < rowEnd-rowStart; i++ {
-		subMatrix.SetRow(i, m.RowView(rowStart+i).SliceCopy(colStart, colEnd))
-	}
-	return subMatrix
-}
-
 // ColCopy returns a copy of the i-th col.
 func (m *IntMatrix) ColCopy(i int) *IntVec {
 	colVec := NewIntVec(m.Rows(), m.baseRing)
@@ -97,6 +88,15 @@ func (m *IntMatrix) ColCopy(i int) *IntVec {
 		colVec.SetCoeff(j, row.GetCoeff(i))
 	}
 	return colVec
+}
+
+// SubsectionCopy returns a subsection (copied) of this matrix.
+func (m *IntMatrix) SubsectionCopy(rowStart, rowEnd int, colStart, colEnd int) *IntMatrix {
+	subMatrix := NewIntMatrix(rowEnd-rowStart, colEnd-colStart, m.baseRing)
+	for i := 0; i < rowEnd-rowStart; i++ {
+		subMatrix.SetRow(i, m.RowView(rowStart+i).Slice(NewSlice(colStart, colEnd)))
+	}
+	return subMatrix
 }
 
 // GetCoeff returns the element at the given coordinates.
@@ -149,27 +149,17 @@ func (m *IntMatrix) SetCol(col int, newCol *IntVec) {
 	}
 }
 
-// AppendRow appends a row into the vector.
-func (m *IntMatrix) AppendRow(v *IntVec) {
-	if m.Cols() != v.Size() {
-		panic("IntMatrix.AppendRow cannot append row, invalid size")
-	}
-	m.rows = append(m.rows, v)
-	m.numRows += 1
-}
-
 // ExtendRows concatenates the matrices vertically.
-func (m *IntMatrix) ExtendRows(b *IntMatrix) *IntMatrix {
+func (m *IntMatrix) ExtendRows(b ImmutIntMatrix) {
 	if m.Cols() != b.Cols() {
 		panic("IntMatrix.ExtendRows cannot extend, invalid col size")
 	}
-	m.rows = append(m.rows, b.rows...)
+	m.rows = append(m.rows, b.RowsView()...)
 	m.numRows += b.Rows()
-	return m
 }
 
 // ExtendCols concatenates the matrices horizontally.
-func (m *IntMatrix) ExtendCols(b *IntMatrix) *IntMatrix {
+func (m *IntMatrix) ExtendCols(b ImmutIntMatrix) {
 	if m.Rows() != b.Rows() {
 		panic("IntMatrix.ExtendCols cannot extend, invalid row size")
 	}
@@ -177,7 +167,6 @@ func (m *IntMatrix) ExtendCols(b *IntMatrix) *IntMatrix {
 		m.rows[i].Append(b.RowView(i))
 	}
 	m.numCols += b.Cols()
-	return m
 }
 
 // Populate is used to initialize the elements of this matrix.
@@ -198,12 +187,12 @@ func (m *IntMatrix) PopulateRows(f func(int) *IntVec) {
 }
 
 // Copy returns a copy of this matrix.
-func (m *IntMatrix) Copy() *IntMatrix {
+func (m *IntMatrix) Copy() ImmutIntMatrix {
 	rows := make([]*IntVec, m.numRows)
 	for i, row := range m.rows {
 		rows[i] = row.Copy()
 	}
-	return &IntMatrix{m.numRows, m.numCols, rows, m.baseRing, nil}
+	return &IntMatrix{m.numRows, m.numCols, rows, m.baseRing}
 }
 
 // String returns a string representation of the matrix.
@@ -222,25 +211,27 @@ func (m *IntMatrix) SizeString() string {
 }
 
 // RebaseRowsLossless rebases each row.
-func (m *IntMatrix) RebaseRowsLossless(newRing RingParams) *IntMatrix {
-	return logging.LogShortExecution("IntMatrix.RebaseRowsLossless", "rebasing", func() interface{} {
+func (m *IntMatrix) RebaseRowsLossless(newRing RingParams) ImmutIntMatrix {
+	rebasedRows := make([]*IntVec, len(m.rows))
+	logging.LogShortExecution(fmt.Sprintf("%s.RebaseRowsLossless", m.SizeString()), "rebasing", func() interface{} {
 		m.baseRing = newRing.BaseRing
-		for _, row := range m.rows {
-			row.RebaseLossless(newRing)
+		for i, row := range m.rows {
+			rebasedRows[i] = row.RebaseLossless(newRing)
 		}
-		return m
-	}).(*IntMatrix)
+		return nil
+	})
+	return NewIntMatrixFromRows(rebasedRows, newRing.BaseRing)
 }
 
 // Scale scales the matrix by the given amount.
-func (m *IntMatrix) Scale(factor uint64) *IntMatrix {
+func (m *IntMatrix) Scale(factor uint64) MutIntMatrix {
 	for _, row := range m.rows {
 		row.Scale(factor)
 	}
 	return m
 }
 
-func (m *IntMatrix) ScaleCoeff(factors Coeff) *IntMatrix {
+func (m *IntMatrix) ScaleCoeff(factors Coeff) MutIntMatrix {
 	for _, row := range m.rows {
 		row.ScaleCoeff(factors)
 	}
@@ -248,35 +239,55 @@ func (m *IntMatrix) ScaleCoeff(factors Coeff) *IntMatrix {
 }
 
 // Neg negates this matrix.
-func (m *IntMatrix) Neg() *IntMatrix {
+func (m *IntMatrix) Neg() MutIntMatrix {
 	for _, row := range m.rows {
 		row.Neg()
 	}
 	return m
 }
 
+func (m *IntMatrix) IsUnset() bool {
+	for _, r := range m.rows {
+		if !r.IsUnset() {
+			return false
+		}
+	}
+	return true
+}
+
 // Transposed returns the transposed version of this matrix.
-func (m *IntMatrix) Transposed() *IntMatrix {
-	return logging.LogShortExecution("IntMatrix.Transposed", m.SizeString(), func() interface{} {
-		At := make([]Coeff, m.Cols()*m.Rows())
-		for row := 0; row < m.Rows(); row++ {
-			for col := 0; col < m.Cols(); col++ {
-				index := col*m.Rows() + row
-				At[index] = m.GetCoeff(row, col)
-			}
-		}
-		mt := NewIntMatrix(m.Cols(), m.Rows(), m.BaseRing())
-		for row := 0; row < mt.Rows(); row++ {
-			for col := 0; col < mt.Cols(); col++ {
-				mt.SetCoeff(row, col, At[row*mt.Cols()+col])
-			}
-		}
+func (m *IntMatrix) Transposed() ImmutIntMatrix {
+	procName := fmt.Sprintf("%s.Transposed", m.SizeString())
+	e := logging.LogExecShortStart(procName, "transposing")
+	defer e.LogExecEnd()
+	mt := NewIntMatrix(m.Cols(), m.Rows(), m.baseRing)
+	if m.IsUnset() {
 		return mt
-	}).(*IntMatrix)
+	}
+	for lvl := 0; lvl < len(m.baseRing.Modulus); lvl++ {
+		// pull in the level
+		A := make([][]uint64, m.Rows())
+		for i, row := range m.rows {
+			A[i] = row.GetAllLevel(lvl)
+		}
+		// transpose the level
+		At := make([][]uint64, m.Cols())
+		for i := 0; i < m.Cols(); i++ {
+			At[i] = make([]uint64, m.Rows())
+			for j := 0; j < m.Rows(); j++ {
+				At[i][j] = A[j][i]
+			}
+		}
+		// move out
+		for i, r := range At {
+			mt.RowView(i).SetAllLevel(lvl, r)
+		}
+	}
+	return mt
 }
 
 // Hadamard performs coefficient-wise multiplication.
-func (m *IntMatrix) Hadamard(b *IntMatrix) *IntMatrix {
+func (m *IntMatrix) Hadamard(b ImmutIntMatrix) ImmutIntMatrix {
 	for i, r := range m.rows {
 		r.Hadamard(b.RowView(i))
 	}
@@ -296,7 +307,7 @@ func (m *IntMatrix) Max() uint64 {
 }
 
 // Eq returns true iff two matrices are equal in their elements.
-func (m *IntMatrix) Eq(b *IntMatrix) bool {
+func (m *IntMatrix) Eq(b ImmutIntMatrix) bool {
 	if m.Rows() != b.Rows() || m.Cols() != b.Cols() {
 		return false
 	}
@@ -314,7 +325,7 @@ func (m *IntMatrix) MulVec(v *IntVec) *IntVec {
 	if m.Cols() != v.Size() {
 		panic("IntMatrix.MulVec sizes incorrect")
 	}
-	return logging.LogShortExecution("IntMatrix.MulVec", fmt.Sprintf("%s * [%d]", m.SizeString(), v.Size()), func() interface{} {
+	return logging.LogShortExecution(fmt.Sprintf("%s.MulVec", m.SizeString()), "multiplying", func() interface{} {
 		out := NewIntVec(m.Rows(), m.baseRing)
 		for i, row := range m.rows {
 			dotResult := row.Dot(v)
@@ -339,4 +350,10 @@ func (m *IntMatrix) MulMat(b *IntMatrix) *IntMatrix {
 		}
 	}
 	return out
+}
+
+func (m *IntMatrix) Cleanup() {
+	for _, r := range m.rows {
+		r.Cleanup()
+	}
 }

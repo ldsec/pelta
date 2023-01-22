@@ -9,6 +9,10 @@ import (
 // Coeff represents a coefficient of a polynomial over all levels.
 type Coeff []uint64
 
+func NewZeroCoeff(length int) Coeff {
+	return make([]uint64, length)
+}
+
 func NewCoeffFromUint64(v uint64, mods []uint64) Coeff {
 	c := make([]uint64, len(mods))
 	for lvl, mod := range mods {
@@ -43,6 +47,13 @@ func (c Coeff) AsBigInt() *big.Int {
 func (c Coeff) Neg(mods []uint64) Coeff {
 	for i := range c {
 		c[i] = mods[i] - c[i]
+	}
+	return c
+}
+
+func (c Coeff) Add(c2 Coeff, mods []uint64) Coeff {
+	for i := range c {
+		c[i] = (c[i] + c2[i]) % mods[i]
 	}
 	return c
 }

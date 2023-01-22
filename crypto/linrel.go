@@ -6,42 +6,67 @@ import (
 	"github.com/ldsec/codeBase/commitment/fastmath"
 )
 
+// ImmutLinearRelation represents an immutable linear relation, i.e., As = u
+type ImmutLinearRelation struct {
+	A fastmath.ImmutIntMatrix
+	S *fastmath.IntVec
+	U *fastmath.IntVec
+}
+
+// Rebased rebases A, s, u on the new given ring.
+func (r *ImmutLinearRelation) Rebased(newRing fastmath.RingParams) ImmutLinearRelation {
+	return ImmutLinearRelation{
+		A: r.A.RebaseRowsLossless(newRing),
+		S: r.S.RebaseLossless(newRing),
+		U: r.U.RebaseLossless(newRing),
+	}
+}
+
+func (r *ImmutLinearRelation) Cleanup() {
+	r.A.Cleanup()
+	r.S.Cleanup()
+	r.U.Cleanup()
+}
+
+func (r *ImmutLinearRelation) Copy() ImmutLinearRelation {
+	return ImmutLinearRelation{
+		A: r.A.Copy(),
+		S: r.S.Copy(),
+		U: r.U.Copy(),
+	}
+}
+
 // LinearRelation represents a linear relation, i.e., As = u for some s.
 type LinearRelation struct {
-	A  *fastmath.IntMatrix
-	At *fastmath.IntMatrix
-	S  *fastmath.IntVec
-	U  *fastmath.IntVec
+	A fastmath.MutIntMatrix
+	S *fastmath.IntVec
+	U *fastmath.IntVec
 }
 
 // NewLinearRelation creates a new linear relation instance s.t. As = u.
-func NewLinearRelation(A *fastmath.IntMatrix, s *fastmath.IntVec) LinearRelation {
+func NewLinearRelation(A fastmath.MutIntMatrix, s *fastmath.IntVec) LinearRelation {
 	u := A.MulVec(s)
-	return LinearRelation{A, A.Transposed(), s, u}
+	return LinearRelation{A, s, u}
 }
 
 // NewLinearRelationWithLHS constructs a new linear relation with explicit u.
-func NewLinearRelationWithLHS(A *fastmath.IntMatrix, s, u *fastmath.IntVec) LinearRelation {
-	At := A.CachedTranspose
-	if At == nil {
-		At = A.Transposed()
-	}
-	return LinearRelation{A, At, s, u}
+func NewLinearRelationWithLHS(A fastmath.MutIntMatrix, s, u *fastmath.IntVec) LinearRelation {
+	return LinearRelation{A, s, u}
 }
 
 // Rebased rebases A, s, u on the new given ring.
 func (r *LinearRelation) Rebased(newRing fastmath.RingParams) LinearRelation {
+	Ap := r.A.RebaseRowsLossless(newRing).(fastmath.MutIntMatrix)
 	return LinearRelation{
-		A:  r.A.Copy().RebaseRowsLossless(newRing),
-		At: r.At.Copy().RebaseRowsLossless(newRing),
-		S:  r.S.Copy().RebaseLossless(newRing),
-		U:  r.U.Copy().RebaseLossless(newRing),
+		A: Ap,
+		S: r.S.RebaseLossless(newRing),
+		U: r.U.RebaseLossless(newRing),
 	}
 }
 
 // AppendDependent appends a relation dependent on s, i.e., B(s, y) = (u, z), by performing necessary zero-padding on A.
 // The resulting relation is (A || 0, B) (s, y) = (u, z)
-func (r *LinearRelation) AppendDependent(B *fastmath.IntMatrix, y, z *fastmath.IntVec) *LinearRelation {
+func (r *LinearRelation) AppendDependent(B fastmath.MutIntMatrix, y, z *fastmath.IntVec) *LinearRelation {
 	n := r.A.Cols()
 	m := r.A.Rows()
 	np := B.Cols()
@@ -49,10 +74,8 @@ func (r *LinearRelation) AppendDependent(B *fastmath.IntMatrix, y, z *fastmath.I
 		panic("cannot append dependent relation with cols(A) > cols(B)")
 	} else if np > n {
 		r.A.ExtendCols(fastmath.NewIntMatrix(m, np-n, r.S.BaseRing()))
-		r.At.ExtendRows(fastmath.NewIntMatrix(np-n, m, r.S.BaseRing()))
 	}
 	r.A.ExtendRows(B)
-	r.At.ExtendCols(B.Transposed())
 	if np > n {
 		r.S.Append(y)
 	}
@@ -69,10 +92,9 @@ func (r *LinearRelation) AppendIndependent(rp LinearRelation) *LinearRelation {
 	np := rp.A.Cols()
 	AHorizontalExt := fastmath.NewIntMatrix(m, np, r.S.BaseRing())
 	r.A.ExtendCols(AHorizontalExt)
-	r.At.ExtendRows(AHorizontalExt.Transposed())
-	AVerticalExt := fastmath.NewIntMatrix(mp, n, r.S.BaseRing()).ExtendCols(rp.A)
+	AVerticalExt := fastmath.NewIntMatrix(mp, n, r.S.BaseRing())
+	AVerticalExt.ExtendCols(rp.A)
 	r.A.ExtendRows(AVerticalExt)
-	r.At.ExtendCols(AVerticalExt.Transposed())
 	r.S.Append(rp.S)
 	r.U.Append(rp.U)
 	return r
@@ -88,34 +110,34 @@ func (r *LinearRelation) Extend(rp LinearRelation) *LinearRelation {
 
 // ExtendPartial extends a linear relation As = u with (B, y) s.t. As + By = u.
 // The resulting relation is (A || B) (s, y) = z
-func (r *LinearRelation) ExtendPartial(B *fastmath.IntMatrix, y *fastmath.IntVec) *LinearRelation {
+func (r *LinearRelation) ExtendPartial(B fastmath.ImmutIntMatrix, y *fastmath.IntVec) *LinearRelation {
 	m := r.A.Rows()
 	mp := B.Rows()
 	if mp != m {
 		panic("cannot extend (B, y) because B has incompatible number of rows")
 	}
 	r.A.ExtendCols(B)
-	r.At.ExtendRows(B.Transposed())
 	r.S.Append(y)
 	return r
 }
 
 // AppendDependentOnS appends a secondary linear relation of form Bs + y = z to this relation As = u.
 // Note: B must be a square matrix with rows(B) = cols(B) = cols(A)
-func (r *LinearRelation) AppendDependentOnS(B *fastmath.IntMatrix, y, z *fastmath.IntVec) *LinearRelation {
+func (r *LinearRelation) AppendDependentOnS(B fastmath.MutIntMatrix, y, z *fastmath.IntVec) *LinearRelation {
 	n := r.A.Cols()
 	mp := B.Rows()
 	np := B.Cols()
 	if np != n {
 		panic("cannot append Bs + y = z where B has different column size")
 	}
-	BExtended := B.Copy().ExtendCols(fastmath.NewIdIntMatrix(mp, r.S.BaseRing()))
+	BExtended := B.Copy().(fastmath.MutIntMatrix)
+	BExtended.ExtendCols(fastmath.NewIdIntMatrix(mp, r.S.BaseRing()))
 	return r.AppendDependent(BExtended, y, z)
 }
 
 func (r *LinearRelation) Copy() LinearRelation {
 	return LinearRelation{
-		A: r.A.Copy(),
+		A: r.A.Copy().(fastmath.MutIntMatrix),
 		S: r.S.Copy(),
 		U: r.U.Copy(),
 	}

@@ -14,7 +14,7 @@ func createRandomRelation(m, n int, relRing fastmath.RingParams) crypto.LinearRe
 	uni, ter, _ := crypto.GetSamplers(relRing, 128)
 	A := fastmath.NewRandomIntMatrixFast(m, n, uni, relRing.BaseRing)
 	s := fastmath.NewRandomIntVecFast(n, ter, relRing.BaseRing)
-	return crypto.NewLinearRelation(A, s)
+	return crypto.NewLinearRelation(fastmath.NewCachedIntMatrix(A), s)
 }
 
 func executeAndTestCorrectness(tst *testing.T, s *fastmath.IntVec, params fastens20.PublicParams) {
@@ -71,7 +71,7 @@ func TestConsistency(tst *testing.T) {
 	}
 	// End of the protocol.
 	// Check that the parameters are not changed.
-	if !ACopy.Eq(params.A) || !BCopy.Eq(params.B) || !B0Copy.Eq(params.B0) {
+	if !ACopy.Eq(params.A.AsIntMatrix()) || !BCopy.Eq(params.B) || !B0Copy.Eq(params.B0) {
 		tst.Errorf("parameters altered")
 	}
 	// Check that the states are consistent.
@@ -205,7 +205,7 @@ func TestTernarySlice(t *testing.T) {
 	for i := ternarySlice.Start; i < ternarySlice.End; i++ {
 		s.SetForce(i, 4)
 	}
-	rel := crypto.NewLinearRelation(A, s)
+	rel := crypto.NewLinearRelation(fastmath.NewCachedIntMatrix(A), s)
 	config := fastens20.DefaultProtocolConfig(bfvRing, rel).
 		WithTernarySlice(ternarySlice)
 	params := fastens20.GeneratePublicParameters(config)
@@ -287,7 +287,7 @@ func TestPerformanceBig(tst *testing.T) {
 	s := fastmath.PersistentIntVec(vec_name, func() *fastmath.IntVec {
 		return fastmath.NewRandomIntVecFast(n, ter, bfvRing.BaseRing)
 	}, bfvRing.BaseRing)
-	rel := crypto.NewLinearRelation(A, s)
+	rel := crypto.NewLinearRelation(fastmath.NewCachedIntMatrix(A), s)
 
 	commitmentRing := fastmath.BFVFullShortCommtRing(7)
 	rebasedRel := rel.Rebased(commitmentRing)
