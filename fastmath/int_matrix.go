@@ -12,6 +12,7 @@ type IntMatrix struct {
 	numRows  int
 	numCols  int
 	rows     []*IntVec
+	isId     bool
 	baseRing *ring.Ring
 }
 
@@ -21,7 +22,7 @@ func NewIntMatrix(numRows, numCols int, baseRing *ring.Ring) *IntMatrix {
 	for i := 0; i < len(rows); i++ {
 		rows[i] = NewIntVec(numCols, baseRing)
 	}
-	return &IntMatrix{numRows, numCols, rows, baseRing}
+	return &IntMatrix{numRows, numCols, rows, false, baseRing}
 }
 
 // NewIdIntMatrix returns an n by n identity matrix.
@@ -30,11 +31,12 @@ func NewIdIntMatrix(n int, baseRing *ring.Ring) *IntMatrix {
 	for i, r := range m.rows {
 		r.SetForce(i, 1)
 	}
+	m.isId = true
 	return m
 }
 
 func NewIntMatrixFromRows(rows []*IntVec, baseRing *ring.Ring) *IntMatrix {
-	return &IntMatrix{len(rows), rows[0].Size(), rows, baseRing}
+	return &IntMatrix{len(rows), rows[0].Size(), rows, false, baseRing}
 }
 
 func NewIntMatrixFromSlice(elems [][]uint64, baseRing *ring.Ring) *IntMatrix {
@@ -192,7 +194,7 @@ func (m *IntMatrix) Copy() ImmutIntMatrix {
 	for i, row := range m.rows {
 		rows[i] = row.Copy()
 	}
-	return &IntMatrix{m.numRows, m.numCols, rows, m.baseRing}
+	return &IntMatrix{m.numRows, m.numCols, rows, m.isId, m.baseRing}
 }
 
 // String returns a string representation of the matrix.
@@ -225,6 +227,7 @@ func (m *IntMatrix) RebaseRowsLossless(newRing RingParams) ImmutIntMatrix {
 
 // Scale scales the matrix by the given amount.
 func (m *IntMatrix) Scale(factor uint64) MutIntMatrix {
+	m.isId = false
 	for _, row := range m.rows {
 		row.Scale(factor)
 	}
@@ -232,6 +235,7 @@ func (m *IntMatrix) Scale(factor uint64) MutIntMatrix {
 }
 
 func (m *IntMatrix) ScaleCoeff(factors Coeff) MutIntMatrix {
+	m.isId = false
 	for _, row := range m.rows {
 		row.ScaleCoeff(factors)
 	}
@@ -240,6 +244,7 @@ func (m *IntMatrix) ScaleCoeff(factors Coeff) MutIntMatrix {
 
 // Neg negates this matrix.
 func (m *IntMatrix) Neg() MutIntMatrix {
+	m.isId = false
 	for _, row := range m.rows {
 		row.Neg()
 	}
@@ -260,6 +265,9 @@ func (m *IntMatrix) Transposed() ImmutIntMatrix {
 	procName := fmt.Sprintf("%s.Transposed", m.SizeString())
 	e := logging.LogExecShortStart(procName, "transposing")
 	defer e.LogExecEnd()
+	if m.isId {
+		return m.Copy()
+	}
 	mt := NewIntMatrix(m.Cols(), m.Rows(), m.baseRing)
 	if m.IsUnset() {
 		return mt
@@ -288,6 +296,7 @@ func (m *IntMatrix) Transposed() ImmutIntMatrix {
 
 // Hadamard performs coefficient-wise multiplication.
 func (m *IntMatrix) Hadamard(b ImmutIntMatrix) ImmutIntMatrix {
+	m.isId = false
 	for i, r := range m.rows {
 		r.Hadamard(b.RowView(i))
 	}
@@ -324,6 +333,12 @@ func (m *IntMatrix) Eq(b ImmutIntMatrix) bool {
 func (m *IntMatrix) MulVec(v *IntVec) *IntVec {
 	if m.Cols() != v.Size() {
 		panic("IntMatrix.MulVec sizes incorrect")
+	}
+	if m.isId {
+		return v.Copy()
+	}
+	if m.IsUnset() {
+		return NewIntVec(m.Rows(), m.baseRing)
 	}
 	return logging.LogShortExecution(fmt.Sprintf("%s.MulVec", m.SizeString()), "multiplying", func() interface{} {
 		out := NewIntVec(m.Rows(), m.baseRing)

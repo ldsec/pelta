@@ -1,8 +1,6 @@
 package fastens20
 
 import (
-	"math/big"
-
 	"github.com/ldsec/codeBase/commitment/fastmath"
 	"github.com/ldsec/codeBase/commitment/logging"
 )
@@ -153,10 +151,15 @@ func (p Prover) CommitToRelation(alpha *fastmath.PolyNTTVec, gamma *fastmath.Int
 		add := p.params.B.Row(p.params.config.NumSplits()).Dot(state.Y.Row(i))
 		outerSum := LmuSumOuter(p.params.config.K, p.params.config.NumSplits(), p.params.config.InvK,
 			func(mu int, v int, j int) *fastmath.PolyNTT {
-				index := big.NewInt(0).
-					Mod(big.NewInt(int64(i-v)),
-						big.NewInt(int64(p.params.config.K))).
-					Int64()
+				index := (i - v)
+				if index < 0 {
+					index += p.params.config.K
+				}
+				index = index % p.params.config.K
+				// index := big.NewInt(0).
+				// 	Mod(big.NewInt(int64(i-v)),
+				// 		big.NewInt(int64(p.params.config.K))).
+				// 	Int64()
 				dotResult := p.params.B.Row(j).Dot(state.Y.Row(int(index)))
 				return dotResult.Scale(uint64(p.params.config.D)).Mul(psi.Get(mu, j))
 			}, p.params)

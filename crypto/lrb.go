@@ -202,7 +202,7 @@ func (lrb *LinearRelationBuilder) BuildFast(baseRing *ring.Ring) ImmutLinearRela
 		start += len(eqn.GetIndependentTerms())
 		u.Append(eqn.lhs)
 	}
-	return ImmutLinearRelation{pm.Copy(), s.Copy(), u.Copy()}
+	return ImmutLinearRelation{pm, s, u}
 }
 
 // Build constructs the linear relation of the form As = u from the appended equations.

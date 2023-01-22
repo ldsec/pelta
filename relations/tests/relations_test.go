@@ -50,7 +50,7 @@ func TestKeyGen(t *testing.T) {
 
 	t.Logf("creating protocol configuration...\n")
 	protocolConfig := fastens20.DefaultProtocolConfig(commitmentRing, rebasedRel).
-		// WithABP(128, config.Ring.Q, fastmath.NewSlice(config.Ring.D*6, config.Ring.D*7)).
+		WithABP(128, config.Ring.Q, fastmath.NewSlice(config.Ring.D*6, config.Ring.D*7)).
 		WithTernarySlice(fastmath.NewSlice(0, config.Ring.D)).
 		WithReplication(4)
 

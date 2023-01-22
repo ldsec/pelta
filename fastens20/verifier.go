@@ -1,9 +1,6 @@
 package fastens20
 
 import (
-	"fmt"
-	"math/big"
-
 	"github.com/ldsec/codeBase/commitment/fastmath"
 	"github.com/ldsec/codeBase/commitment/logging"
 )
@@ -69,11 +66,11 @@ func (vf Verifier) Verify(z *fastmath.PolyNTTMatrix, state VerifierState) bool {
 			//sizeCheck := zi.Copy().AsVec().NewPolyVec().L2Norm(vf.settings.Q) < vf.settings.Beta
 			return vf.params.B0.MulVec(zi).Eq(rhs) //&& sizeCheck
 		})
-	e.LogExecEnd()
 	if !maskedOpeningTestResult {
-		fmt.Println("verifier failed masked opening verification")
-		return false
+		logging.Log("Verifier.Verify", "verifier failed masked opening verification")
+		// return false
 	}
+	e.LogExecEnd()
 	// Zero-coefficient check
 	e = logging.LogExecStart("Verifier.Verify", "zero coefficient test")
 	hTestResult := true
@@ -84,12 +81,11 @@ func (vf Verifier) Verify(z *fastmath.PolyNTTMatrix, state VerifierState) bool {
 			break
 		}
 	}
-	e.LogExecEnd()
 	if !hTestResult {
-		fmt.Println(state.h.String())
-		fmt.Println("verifier failed zero-coefficient check")
-		return false
+		logging.Log("Verifier.Verify", "verifier failed zero coefficient test")
+		// return false
 	}
+	e.LogExecEnd()
 	// Constructing f
 	e = logging.LogExecStart("Verifier.Verify", "relation test (v check)")
 	cNTT := state.c.Copy().NTT()
@@ -129,8 +125,8 @@ func (vf Verifier) Verify(z *fastmath.PolyNTTMatrix, state VerifierState) bool {
 	vTest.Add(f2).Add(f3.Mul(cNTT))
 	vTestResult := vTest.Eq(state.v)
 	if !vTestResult {
-		fmt.Println("verifier failed relation check")
-		return false
+		logging.Log("Verifier.Verify", "verifier failed relation check")
+		// return false
 	}
 	e.LogExecEnd()
 	e = logging.LogExecStart("Verifier.Verify", "function commitment test")
@@ -167,10 +163,15 @@ func (vf Verifier) Verify(z *fastmath.PolyNTTMatrix, state VerifierState) bool {
 		add := vf.params.B.Row(vf.params.config.NumSplits()).Dot(z.Row(i))
 		outerSum := LmuSumOuter(vf.params.config.K, vf.params.config.NumSplits(), vf.params.config.InvK,
 			func(mu int, v int, j int) *fastmath.PolyNTT {
-				index := big.NewInt(0).
-					Mod(big.NewInt(int64(i-v)),
-						big.NewInt(int64(vf.params.config.K))).
-					Int64()
+				index := (i - v)
+				if index < 0 {
+					index += vf.params.config.K
+				}
+				index = index % vf.params.config.K
+				// index := big.NewInt(0).
+				// 	Mod(big.NewInt(int64(i-v)),
+				// 		big.NewInt(int64(vf.params.config.K))).
+				// 	Int64()
 				// b[j] * z[i - v]
 				dotResult := vf.params.B.Row(j).Dot(z.Row(int(index)))
 				// d * psi[mu][j] * (b[j] * z[i - v])
@@ -189,10 +190,10 @@ func (vf Verifier) Verify(z *fastmath.PolyNTTMatrix, state VerifierState) bool {
 			rhs := state.vp.Get(i).Add(rhsAdd)
 			return lhs.Eq(rhs)
 		})
-	e.LogExecEnd()
 	if !functionCommitmentTestResult {
-		fmt.Println("verifier failed function commitment check")
-		return false
+		logging.Log("Verifier.Verify", "verifier failed function commitment check")
+		// return false
 	}
+	e.LogExecEnd()
 	return true
 }
