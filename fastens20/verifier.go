@@ -68,7 +68,7 @@ func (vf Verifier) Verify(z *fastmath.PolyNTTMatrix, state VerifierState) bool {
 		})
 	if !maskedOpeningTestResult {
 		logging.Log("Verifier.Verify", "verifier failed masked opening verification")
-		// return false
+		return false
 	}
 	e.LogExecEnd()
 	// Zero-coefficient check
@@ -83,7 +83,7 @@ func (vf Verifier) Verify(z *fastmath.PolyNTTMatrix, state VerifierState) bool {
 	}
 	if !hTestResult {
 		logging.Log("Verifier.Verify", "verifier failed zero coefficient test")
-		// return false
+		return false
 	}
 	e.LogExecEnd()
 	// Constructing f
@@ -126,7 +126,7 @@ func (vf Verifier) Verify(z *fastmath.PolyNTTMatrix, state VerifierState) bool {
 	vTestResult := vTest.Eq(state.v)
 	if !vTestResult {
 		logging.Log("Verifier.Verify", "verifier failed relation check")
-		// return false
+		return false
 	}
 	e.LogExecEnd()
 	e = logging.LogExecStart("Verifier.Verify", "function commitment test")
@@ -168,11 +168,6 @@ func (vf Verifier) Verify(z *fastmath.PolyNTTMatrix, state VerifierState) bool {
 					index += vf.params.config.K
 				}
 				index = index % vf.params.config.K
-				// index := big.NewInt(0).
-				// 	Mod(big.NewInt(int64(i-v)),
-				// 		big.NewInt(int64(vf.params.config.K))).
-				// 	Int64()
-				// b[j] * z[i - v]
 				dotResult := vf.params.B.Row(j).Dot(z.Row(int(index)))
 				// d * psi[mu][j] * (b[j] * z[i - v])
 				return dotResult.Scale(uint64(vf.params.config.D)).
@@ -192,7 +187,7 @@ func (vf Verifier) Verify(z *fastmath.PolyNTTMatrix, state VerifierState) bool {
 		})
 	if !functionCommitmentTestResult {
 		logging.Log("Verifier.Verify", "verifier failed function commitment check")
-		// return false
+		return false
 	}
 	e.LogExecEnd()
 	return true

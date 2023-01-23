@@ -2,6 +2,7 @@ package fastmath
 
 import (
 	"fmt"
+	"math/big"
 	"strings"
 
 	"github.com/tuneinsight/lattigo/v4/ring"
@@ -259,8 +260,8 @@ func (p *Poly) Neg() *Poly {
 	return p
 }
 
-// Max returns the maximum coefficient at the given level.
-func (p *Poly) Max(level int) uint64 {
+// MaxLevel returns the maximum coefficient at the given level.
+func (p *Poly) MaxLevel(level int) uint64 {
 	if p.IsUnset() {
 		return 0
 	}
@@ -273,56 +274,42 @@ func (p *Poly) Max(level int) uint64 {
 	return max
 }
 
-func sumVals(vals []uint64, mod uint64) uint64 {
-	acc := vals[0]
-	for _, v := range vals[1:] {
-		acc = (acc + v) % mod
+// MaxLevel returns the maximum coefficient.
+func (p *Poly) Max(q *big.Int) *big.Int {
+	if p.IsUnset() {
+		return big.NewInt(0)
 	}
-	return acc
+	max := p.GetCoeff(0).AsBigInt(q)
+	for i := 1; i < p.N(); i++ {
+		c := p.GetCoeff(i).AsBigInt(q)
+		if c.Cmp(max) > 0 {
+			max = c
+		}
+	}
+	return max
 }
 
 // SumCoeffs returns the sum of the coefficients of this polynomial.
 func (p *Poly) SumCoeffs() Coeff {
-	sumRNS := NewZeroCoeff(len(p.baseRing.Modulus))
+	sum := NewZeroCoeff(len(p.baseRing.Modulus))
 	if p.IsUnset() {
-		return sumRNS
+		return sum
 	}
-	var sum uint64
-	for i := 0; i < len(p.ref.Coeffs); i++ {
-		qi := p.baseRing.Modulus[i]
-		qiHalf := qi >> 1
-		coeffs := p.ref.Coeffs[i]
-		sum = 0
-		for j := 0; j < p.baseRing.N; j++ {
-			v := coeffs[j]
-			if v >= qiHalf {
-				sum = ring.CRed(sum+qi-v, qi)
-			} else {
-				sum = ring.CRed(sum+v, qi)
-			}
+	for lvl := 0; lvl < len(p.ref.Coeffs); lvl++ {
+		qi := p.baseRing.Modulus[lvl]
+		// qiHalf := qi >> 1
+		lvlSum := uint64(0)
+		for _, v := range p.ref.Coeffs[lvl] {
+			lvlSum = (lvlSum + v) % qi
+			// if v >= qiHalf {
+			// 	lvlSum = ring.CRed(lvlSum+qi-v, qi)
+			// } else {
+			// 	lvlSum = ring.CRed(lvlSum+v, qi)
+			// }
 		}
-		sumRNS[i] = sum
+		sum[lvl] = lvlSum
 	}
-	return sumRNS
-
-	// wg := sync.WaitGroup{}
-	// wg.Add(len(sum))
-	// for lvl, mod := range p.baseRing.Modulus {
-	// 	func(lvl int, mod uint64) {
-	// 		sum[lvl] = sumVals(p.ref.Coeffs[lvl], mod)
-	// 		// wg.Done()
-	// 	}(lvl, mod)
-	// }
-	// wg.Wait()
-	// return sum
-	// logN := int(math.Log2(float64(p.baseRing.N)))
-	// tmp := p.Copy()
-	// tmp2 := NewPoly(p.baseRing)
-	// for i := 0; i < logN; i++ {
-	// 	p.baseRing.Shift(tmp.ref, 1<<i, tmp2.ref)
-	// 	p.baseRing.Add(tmp.ref, tmp2.ref, tmp.ref)
-	// }
-	// return tmp.GetCoeff(0)
+	return sum
 }
 
 // NTT converts this polynomial to its NTT domain.
@@ -338,7 +325,7 @@ func (p *Poly) PowCoeffs(exp uint) *Poly {
 	}
 	p.SetDirty()
 	mul := p.Copy()
-	for i := 1; i < int(exp); i++ {
+	for i := uint(1); i < exp; i++ {
 		p.MulCoeffs(mul)
 	}
 	return p
@@ -440,7 +427,7 @@ func (p *PolyNTT) Neg() *PolyNTT {
 
 // Max returns the maximum coefficient at the given level.
 func (p *PolyNTT) Max(level int) uint64 {
-	return p.actual.Max(level)
+	return p.actual.MaxLevel(level)
 }
 
 // InvNTT converts this polynomial back into its poly space.

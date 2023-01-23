@@ -108,7 +108,7 @@ func (eqn *LinearEquation) GetIndependentTerms() []term {
 }
 
 // Linearize linearizes an independent equation.
-func (eqn *LinearEquation) Linearize() LinearRelation {
+func (eqn *LinearEquation) Linearize() *LinearRelation {
 	if len(eqn.rhs) == 0 {
 		panic("cannot convert an empty equation into a relation")
 	}
@@ -178,7 +178,7 @@ func getZeroPad(i, j int, eqns []*LinearEquation, baseRing *ring.Ring) *fastmath
 	return nil
 }
 
-func (lrb *LinearRelationBuilder) BuildFast(baseRing *ring.Ring) ImmutLinearRelation {
+func (lrb *LinearRelationBuilder) BuildFast(baseRing *ring.Ring) *ImmutLinearRelation {
 	procName := "LinearRelationBuilder.BuildFast"
 	if len(lrb.eqns) == 0 {
 		panic("cannot build a linear relation without any equations")
@@ -191,22 +191,21 @@ func (lrb *LinearRelationBuilder) BuildFast(baseRing *ring.Ring) ImmutLinearRela
 	u := fastmath.NewIntVec(0, baseRing)
 	start := 0
 	for i, eqn := range lrb.eqns {
-		for j, t := range eqn.rhs {
-			if t.dependent {
-				pm.Emplace(i, t.depVecIndex, t.A)
-			} else {
-				pm.Emplace(i, start+j, t.A)
-				s.Append(t.b)
-			}
+		for _, t := range eqn.GetDependentTerms() {
+			pm.Emplace(i, t.depVecIndex, t.A)
+		}
+		for j, t := range eqn.GetIndependentTerms() {
+			pm.Emplace(i, start+j, t.A)
+			s.Append(t.b)
 		}
 		start += len(eqn.GetIndependentTerms())
 		u.Append(eqn.lhs)
 	}
-	return ImmutLinearRelation{pm, s, u}
+	return &ImmutLinearRelation{pm, s, u}
 }
 
 // Build constructs the linear relation of the form As = u from the appended equations.
-func (lrb *LinearRelationBuilder) Build(baseRing *ring.Ring) LinearRelation {
+func (lrb *LinearRelationBuilder) Build(baseRing *ring.Ring) *LinearRelation {
 	procName := "LinearRelationBuilder.Build"
 	if len(lrb.eqns) == 0 {
 		panic("cannot build a linear relation without any equations")

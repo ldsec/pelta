@@ -30,7 +30,7 @@ func TestKeyGen(t *testing.T) {
 
 	t.Logf("creating input\n")
 	s := fastmath.NewRandomPoly(config.TernarySampler, config.Ring.BaseRing)
-	r := fastmath.NewRandomPoly(config.UniformSampler, config.Ring.BaseRing)
+	r := fastmath.NewRandomPoly(config.TernarySampler, config.Ring.BaseRing)
 	e := fastmath.NewRandomPoly(config.GaussianSampler, config.Ring.BaseRing)
 	comQ, comP := crypto.GetAjtaiCommitments(params.A1, params.A2, s.Coeffs(), r.Coeffs(), params.P)
 	k := crypto.GetAjtaiKappa(comP, comQ, params.P, config.Ring.BaseRing)
@@ -46,12 +46,12 @@ func TestKeyGen(t *testing.T) {
 	rebasedRel := rel.Rebased(commitmentRing)
 	// commitmentRing := config.Ring
 	// rebasedRel := rel
-	rebasedRel.Cleanup()
+	// rebasedRel.Cleanup()
 
 	t.Logf("creating protocol configuration...\n")
 	protocolConfig := fastens20.DefaultProtocolConfig(commitmentRing, rebasedRel).
 		WithABP(128, config.Ring.Q, fastmath.NewSlice(config.Ring.D*6, config.Ring.D*7)).
-		WithTernarySlice(fastmath.NewSlice(0, config.Ring.D)).
+		WithTernarySlice(fastmath.NewSlice(0, 2*config.Ring.D)).
 		WithReplication(4)
 
 	t.Logf("creating protocol parameters...\n")

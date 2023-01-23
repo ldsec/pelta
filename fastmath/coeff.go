@@ -35,11 +35,12 @@ func (c Coeff) IsZero() bool {
 }
 
 // AsBigInt returns the big int representation of this coefficient.
-func (c Coeff) AsBigInt() *big.Int {
+func (c Coeff) AsBigInt(q *big.Int) *big.Int {
 	acc := big.NewInt(0)
 	for _, cl := range c {
 		acc = acc.Mul(acc, big.NewInt(int64(cl)))
 	}
+	acc.Mod(acc, q)
 	return acc
 }
 

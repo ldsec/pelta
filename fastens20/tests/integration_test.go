@@ -10,11 +10,11 @@ import (
 	"github.com/ldsec/codeBase/commitment/fastmath"
 )
 
-func createRandomRelation(m, n int, relRing fastmath.RingParams) crypto.LinearRelation {
-	uni, ter, _ := crypto.GetSamplers(relRing, 128)
+func createRandomRelation(m, n int, relRing fastmath.RingParams) *crypto.ImmutLinearRelation {
+	uni, ter, _ := fastmath.GetSamplers(relRing, 128)
 	A := fastmath.NewRandomIntMatrixFast(m, n, uni, relRing.BaseRing)
 	s := fastmath.NewRandomIntVecFast(n, ter, relRing.BaseRing)
-	return crypto.NewLinearRelation(fastmath.NewCachedIntMatrix(A), s)
+	return crypto.NewLinearRelation(fastmath.NewCachedIntMatrix(A), s).AsImmutable()
 }
 
 func executeAndTestCorrectness(tst *testing.T, s *fastmath.IntVec, params fastens20.PublicParams) {
@@ -200,13 +200,13 @@ func TestTernarySlice(t *testing.T) {
 	m := 16
 	n := bfvRing.D * 4
 	A := fastmath.NewRandomIntMatrix(m, n, bfvRing.Q, bfvRing.BaseRing)
-	s := fastmath.NewRandomIntVec(n, big.NewInt(5), bfvRing.BaseRing)
+	s := fastmath.NewRandomIntVec(n, big.NewInt(100), bfvRing.BaseRing)
 	ternarySlice := fastmath.NewSlice(n/2, n)
 	for i := ternarySlice.Start; i < ternarySlice.End; i++ {
-		s.SetForce(i, 4)
+		s.SetForce(i, 0)
 	}
 	rel := crypto.NewLinearRelation(fastmath.NewCachedIntMatrix(A), s)
-	config := fastens20.DefaultProtocolConfig(bfvRing, rel).
+	config := fastens20.DefaultProtocolConfig(bfvRing, rel.AsImmutable()).
 		WithTernarySlice(ternarySlice)
 	params := fastens20.GeneratePublicParameters(config)
 	executeAndTestCorrectness(t, s, params)
@@ -278,7 +278,7 @@ func TestPerformanceBig(tst *testing.T) {
 	vec_name := fmt.Sprintf("performance_test_s_%d.test", n)
 
 	// get the samplers
-	uni, ter, _ := crypto.GetSamplers(bfvRing, 128)
+	uni, ter, _ := fastmath.GetSamplers(bfvRing, 128)
 
 	// create the inputs
 	A := fastmath.PersistentIntMatrix(matrix_name, func() *fastmath.IntMatrix {
@@ -291,7 +291,7 @@ func TestPerformanceBig(tst *testing.T) {
 
 	commitmentRing := fastmath.BFVFullShortCommtRing(7)
 	rebasedRel := rel.Rebased(commitmentRing)
-	protocolConfig := fastens20.DefaultProtocolConfig(commitmentRing, rebasedRel).
+	protocolConfig := fastens20.DefaultProtocolConfig(commitmentRing, rebasedRel.AsImmutable()).
 		WithReplication(4)
 	params := fastens20.GeneratePublicParameters(protocolConfig)
 	if !fastens20.Execute(rebasedRel.S, params) {

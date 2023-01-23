@@ -7,7 +7,7 @@ import (
 	"github.com/ldsec/codeBase/commitment/fastmath"
 )
 
-func TestABPSimple(t *testing.T) {
+func TestABPSimpleShortRing(t *testing.T) {
 	bfvRing := fastmath.BFVFullShortCommtRing(7)
 	m := bfvRing.D
 	n := bfvRing.D

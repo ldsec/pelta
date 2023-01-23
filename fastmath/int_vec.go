@@ -196,9 +196,7 @@ func (v *IntVec) RebaseLossless(newRing RingParams) *IntVec {
 	splitsPerPoly := v.baseRing.N / newRing.D
 	newPolys := make([]*Poly, 0, splitsPerPoly*len(v.polys))
 	for _, p := range v.polys {
-		for i := 0; i < splitsPerPoly; i++ {
-			newPolys = append(newPolys, p.SplitCoeffs(newRing.BaseRing)...)
-		}
+		newPolys = append(newPolys, p.SplitCoeffs(newRing.BaseRing)...)
 	}
 	vp := NewIntVecFromPolys(newPolys, v.Size(), newRing.BaseRing)
 	vp.unrebasedRef = v
@@ -303,11 +301,11 @@ func (v *IntVec) Diag() *IntMatrix {
 }
 
 // Max returns the largest element of the vector.
-func (v *IntVec) Max() uint64 {
-	max := v.polys[0].Max(0)
+func (v *IntVec) Max(q *big.Int) *big.Int {
+	max := v.polys[0].Max(q)
 	for _, p := range v.polys[1:] {
-		pMax := p.Max(0)
-		if pMax > max {
+		pMax := p.Max(q)
+		if pMax.Cmp(max) > 0 {
 			max = pMax
 		}
 	}
@@ -319,8 +317,12 @@ func (v *IntVec) Add(r *IntVec) *IntVec {
 	if v.size != r.size {
 		panic("IntVec.Add sizes do not match")
 	}
-	for i, p := range v.polys {
-		p.Add(r.polys[i])
+	numPolys := len(v.polys)
+	if len(r.polys) < numPolys {
+		numPolys = len(r.polys)
+	}
+	for i := 0; i < numPolys; i++ {
+		v.polys[i].Add(r.polys[i])
 	}
 	return v
 }
@@ -355,7 +357,11 @@ func (v *IntVec) Hadamard(r *IntVec) *IntVec {
 	if v.size != r.size {
 		panic("IntVec.Dot sizes do not match")
 	}
-	for i := 0; i < len(v.polys); i++ {
+	numPolys := len(v.polys)
+	if len(r.polys) < numPolys {
+		numPolys = len(r.polys)
+	}
+	for i := 0; i < numPolys; i++ {
 		a := v.polys[i]
 		b := r.polys[i]
 		a.MulCoeffs(b)
@@ -370,11 +376,11 @@ func (v *IntVec) Eq(r *IntVec) bool {
 	}
 	// The underlying polynomial # might change even when the sizes are equal.
 	// Take the minimum.
-	minPolySize := len(v.polys)
-	if len(r.polys) < minPolySize {
-		minPolySize = len(r.polys)
+	numPolys := len(v.polys)
+	if len(r.polys) < numPolys {
+		numPolys = len(r.polys)
 	}
-	for i := 0; i < minPolySize; i++ {
+	for i := 0; i < numPolys; i++ {
 		if !v.polys[i].Eq(r.polys[i]) {
 			return false
 		}

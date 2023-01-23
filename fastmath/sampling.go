@@ -6,7 +6,22 @@ import (
 
 	"github.com/ldsec/codeBase/commitment/logging"
 	"github.com/tuneinsight/lattigo/v4/ring"
+	"github.com/tuneinsight/lattigo/v4/utils"
 )
+
+// GetSamplers constructs and returns the uniform sampler, ternary sampler, and gaussian sampler
+func GetSamplers(samplerRing RingParams, delta1 uint64) (PolySampler, PolySampler, PolySampler) {
+	prng, err := utils.NewPRNG()
+	if err != nil {
+		panic("could not initialize the prng: %s")
+	}
+	uniformSampler := ring.NewUniformSampler(prng, samplerRing.BaseRing)
+	originalTernarySampler := ring.NewTernarySampler(prng, samplerRing.BaseRing, 1.0/3.0, false)
+	ternarySampler := NewAugmentedTernarySampler(originalTernarySampler, samplerRing.BaseRing)
+	originalGaussianSampler := ring.NewGaussianSampler(prng, samplerRing.BaseRing, samplerRing.Sigma, int(delta1))
+	gaussianSampler := NewAugmentedGaussianSampler(originalGaussianSampler, big.NewInt(int64(delta1)), samplerRing.BaseRing)
+	return uniformSampler, ternarySampler, gaussianSampler
+}
 
 // PolySampler represents a random polynomial sampler.
 type PolySampler interface {

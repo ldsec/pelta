@@ -14,8 +14,8 @@ type ImmutLinearRelation struct {
 }
 
 // Rebased rebases A, s, u on the new given ring.
-func (r *ImmutLinearRelation) Rebased(newRing fastmath.RingParams) ImmutLinearRelation {
-	return ImmutLinearRelation{
+func (r *ImmutLinearRelation) Rebased(newRing fastmath.RingParams) *ImmutLinearRelation {
+	return &ImmutLinearRelation{
 		A: r.A.RebaseRowsLossless(newRing),
 		S: r.S.RebaseLossless(newRing),
 		U: r.U.RebaseLossless(newRing),
@@ -28,8 +28,8 @@ func (r *ImmutLinearRelation) Cleanup() {
 	r.U.Cleanup()
 }
 
-func (r *ImmutLinearRelation) Copy() ImmutLinearRelation {
-	return ImmutLinearRelation{
+func (r *ImmutLinearRelation) Copy() *ImmutLinearRelation {
+	return &ImmutLinearRelation{
 		A: r.A.Copy(),
 		S: r.S.Copy(),
 		U: r.U.Copy(),
@@ -44,20 +44,20 @@ type LinearRelation struct {
 }
 
 // NewLinearRelation creates a new linear relation instance s.t. As = u.
-func NewLinearRelation(A fastmath.MutIntMatrix, s *fastmath.IntVec) LinearRelation {
+func NewLinearRelation(A fastmath.MutIntMatrix, s *fastmath.IntVec) *LinearRelation {
 	u := A.MulVec(s)
-	return LinearRelation{A, s, u}
+	return &LinearRelation{A, s, u}
 }
 
 // NewLinearRelationWithLHS constructs a new linear relation with explicit u.
-func NewLinearRelationWithLHS(A fastmath.MutIntMatrix, s, u *fastmath.IntVec) LinearRelation {
-	return LinearRelation{A, s, u}
+func NewLinearRelationWithLHS(A fastmath.MutIntMatrix, s, u *fastmath.IntVec) *LinearRelation {
+	return &LinearRelation{A, s, u}
 }
 
 // Rebased rebases A, s, u on the new given ring.
-func (r *LinearRelation) Rebased(newRing fastmath.RingParams) LinearRelation {
+func (r *LinearRelation) Rebased(newRing fastmath.RingParams) *LinearRelation {
 	Ap := r.A.RebaseRowsLossless(newRing).(fastmath.MutIntMatrix)
-	return LinearRelation{
+	return &LinearRelation{
 		A: Ap,
 		S: r.S.RebaseLossless(newRing),
 		U: r.U.RebaseLossless(newRing),
@@ -85,7 +85,7 @@ func (r *LinearRelation) AppendDependent(B fastmath.MutIntMatrix, y, z *fastmath
 
 // AppendIndependent appends an independent linear relation of form By = z to this relation As = u.
 // The resulting relation is (A || 0, 0 || B) (s, y) = (u, z).
-func (r *LinearRelation) AppendIndependent(rp LinearRelation) *LinearRelation {
+func (r *LinearRelation) AppendIndependent(rp *LinearRelation) *LinearRelation {
 	m := r.A.Rows()
 	n := r.A.Cols()
 	mp := rp.A.Rows()
@@ -102,7 +102,7 @@ func (r *LinearRelation) AppendIndependent(rp LinearRelation) *LinearRelation {
 
 // Extend extends a linear relation As = u with By = z s.t. As + By = z + u.
 // The resulting relation is (A || B) (s, y) = z + u
-func (r *LinearRelation) Extend(rp LinearRelation) *LinearRelation {
+func (r *LinearRelation) Extend(rp *LinearRelation) *LinearRelation {
 	r.ExtendPartial(rp.A, rp.S)
 	r.U.Add(rp.U)
 	return r
@@ -154,4 +154,8 @@ func (r *LinearRelation) SizesString() string {
 // IsValid returns true iff As = u holds.
 func (r *LinearRelation) IsValid() bool {
 	return r.A.MulVec(r.S).Eq(r.U)
+}
+
+func (r *LinearRelation) AsImmutable() *ImmutLinearRelation {
+	return &ImmutLinearRelation{r.A, r.S, r.U}
 }

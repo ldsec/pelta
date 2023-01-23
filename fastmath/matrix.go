@@ -1,5 +1,7 @@
 package fastmath
 
+import "math/big"
+
 type ImmutIntMatrix interface {
 	Rows() int
 	Cols() int
@@ -14,7 +16,7 @@ type ImmutIntMatrix interface {
 	SubsectionCopy(int, int, int, int) *IntMatrix
 	GetLevel(int, int, int) uint64
 	GetCoeff(int, int) Coeff
-	Max() uint64
+	Max(*big.Int) *big.Int
 	Copy() ImmutIntMatrix
 	AsIntMatrix() *IntMatrix
 	RebaseRowsLossless(RingParams) ImmutIntMatrix

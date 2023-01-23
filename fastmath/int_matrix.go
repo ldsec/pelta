@@ -2,6 +2,7 @@ package fastmath
 
 import (
 	"fmt"
+	"math/big"
 
 	"github.com/ldsec/codeBase/commitment/logging"
 	"github.com/tuneinsight/lattigo/v4/ring"
@@ -9,11 +10,12 @@ import (
 
 // IntMatrix represents a matrix of integers.
 type IntMatrix struct {
-	numRows  int
-	numCols  int
-	rows     []*IntVec
-	isId     bool
-	baseRing *ring.Ring
+	numRows      int
+	numCols      int
+	rows         []*IntVec
+	unrebasedRef *IntMatrix
+	rebaseRing   *RingParams
+	baseRing     *ring.Ring
 }
 
 // NewIntMatrix returns an empty int matrix of given size.
@@ -22,7 +24,7 @@ func NewIntMatrix(numRows, numCols int, baseRing *ring.Ring) *IntMatrix {
 	for i := 0; i < len(rows); i++ {
 		rows[i] = NewIntVec(numCols, baseRing)
 	}
-	return &IntMatrix{numRows, numCols, rows, false, baseRing}
+	return &IntMatrix{numRows, numCols, rows, nil, nil, baseRing}
 }
 
 // NewIdIntMatrix returns an n by n identity matrix.
@@ -31,12 +33,11 @@ func NewIdIntMatrix(n int, baseRing *ring.Ring) *IntMatrix {
 	for i, r := range m.rows {
 		r.SetForce(i, 1)
 	}
-	m.isId = true
 	return m
 }
 
 func NewIntMatrixFromRows(rows []*IntVec, baseRing *ring.Ring) *IntMatrix {
-	return &IntMatrix{len(rows), rows[0].Size(), rows, false, baseRing}
+	return &IntMatrix{len(rows), rows[0].Size(), rows, nil, nil, baseRing}
 }
 
 func NewIntMatrixFromSlice(elems [][]uint64, baseRing *ring.Ring) *IntMatrix {
@@ -194,7 +195,7 @@ func (m *IntMatrix) Copy() ImmutIntMatrix {
 	for i, row := range m.rows {
 		rows[i] = row.Copy()
 	}
-	return &IntMatrix{m.numRows, m.numCols, rows, m.isId, m.baseRing}
+	return &IntMatrix{m.numRows, m.numCols, rows, m.unrebasedRef, m.rebaseRing, m.baseRing}
 }
 
 // String returns a string representation of the matrix.
@@ -216,18 +217,19 @@ func (m *IntMatrix) SizeString() string {
 func (m *IntMatrix) RebaseRowsLossless(newRing RingParams) ImmutIntMatrix {
 	rebasedRows := make([]*IntVec, len(m.rows))
 	logging.LogShortExecution(fmt.Sprintf("%s.RebaseRowsLossless", m.SizeString()), "rebasing", func() interface{} {
-		m.baseRing = newRing.BaseRing
 		for i, row := range m.rows {
 			rebasedRows[i] = row.RebaseLossless(newRing)
 		}
 		return nil
 	})
-	return NewIntMatrixFromRows(rebasedRows, newRing.BaseRing)
+	mp := NewIntMatrixFromRows(rebasedRows, newRing.BaseRing)
+	mp.rebaseRing = &newRing
+	mp.unrebasedRef = m
+	return mp
 }
 
 // Scale scales the matrix by the given amount.
 func (m *IntMatrix) Scale(factor uint64) MutIntMatrix {
-	m.isId = false
 	for _, row := range m.rows {
 		row.Scale(factor)
 	}
@@ -235,7 +237,6 @@ func (m *IntMatrix) Scale(factor uint64) MutIntMatrix {
 }
 
 func (m *IntMatrix) ScaleCoeff(factors Coeff) MutIntMatrix {
-	m.isId = false
 	for _, row := range m.rows {
 		row.ScaleCoeff(factors)
 	}
@@ -244,7 +245,6 @@ func (m *IntMatrix) ScaleCoeff(factors Coeff) MutIntMatrix {
 
 // Neg negates this matrix.
 func (m *IntMatrix) Neg() MutIntMatrix {
-	m.isId = false
 	for _, row := range m.rows {
 		row.Neg()
 	}
@@ -263,15 +263,15 @@ func (m *IntMatrix) IsUnset() bool {
 // Transposed returns the transposed version of this matrix.
 func (m *IntMatrix) Transposed() ImmutIntMatrix {
 	procName := fmt.Sprintf("%s.Transposed", m.SizeString())
-	e := logging.LogExecShortStart(procName, "transposing")
-	defer e.LogExecEnd()
-	if m.isId {
-		return m.Copy()
-	}
 	mt := NewIntMatrix(m.Cols(), m.Rows(), m.baseRing)
 	if m.IsUnset() {
 		return mt
 	}
+	if m.unrebasedRef != nil && m.rebaseRing != nil {
+		return m.unrebasedRef.Transposed().RebaseRowsLossless(*m.rebaseRing)
+	}
+	e := logging.LogExecShortStart(procName, "transposing")
+	defer e.LogExecEnd()
 	for lvl := 0; lvl < len(m.baseRing.Modulus); lvl++ {
 		// pull in the level
 		A := make([][]uint64, m.Rows())
@@ -296,7 +296,6 @@ func (m *IntMatrix) Transposed() ImmutIntMatrix {
 
 // Hadamard performs coefficient-wise multiplication.
 func (m *IntMatrix) Hadamard(b ImmutIntMatrix) ImmutIntMatrix {
-	m.isId = false
 	for i, r := range m.rows {
 		r.Hadamard(b.RowView(i))
 	}
@@ -304,11 +303,11 @@ func (m *IntMatrix) Hadamard(b ImmutIntMatrix) ImmutIntMatrix {
 }
 
 // Max returns the largest element of the matrix.
-func (m *IntMatrix) Max() uint64 {
-	max := m.rows[0].Max()
+func (m *IntMatrix) Max(q *big.Int) *big.Int {
+	max := m.rows[0].Max(q)
 	for _, r := range m.rows {
-		c := r.Max()
-		if c > max {
+		c := r.Max(q)
+		if c.Cmp(max) > 0 {
 			max = c
 		}
 	}
@@ -333,9 +332,6 @@ func (m *IntMatrix) Eq(b ImmutIntMatrix) bool {
 func (m *IntMatrix) MulVec(v *IntVec) *IntVec {
 	if m.Cols() != v.Size() {
 		panic("IntMatrix.MulVec sizes incorrect")
-	}
-	if m.isId {
-		return v.Copy()
 	}
 	if m.IsUnset() {
 		return NewIntVec(m.Rows(), m.baseRing)

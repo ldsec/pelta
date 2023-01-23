@@ -31,7 +31,6 @@ func TestIntVecRebaseLossless(t *testing.T) {
 		v.SetForce(i, uint64(i+1))
 	}
 	// Before rebase.
-	// t.Logf(v.String())
 	if len(v.UnderlyingPolys()) != 1 {
 		t.Errorf("actual=%d, expected=%d", len(v.UnderlyingPolys()), 1)
 	}
@@ -46,7 +45,6 @@ func TestIntVecRebaseLossless(t *testing.T) {
 	if v.Size() != 256 {
 		t.Errorf("actual=%d, expected=%d", v.Size(), 256)
 	}
-	// t.Logf(v.String())
 	for i := 0; i < v.Size(); i++ {
 		if v.GetLevel(i, 0) != uint64(i+1) {
 			t.Errorf("actual=%d, expected=%d", v.GetCoeff(i), i+1)
@@ -200,7 +198,7 @@ func TestIntMatrixRebaseRowsLossless(t *testing.T) {
 			t.Errorf("actual=%d, expected=%d", v.Size(), 256)
 		}
 	}
-	m.RebaseRowsLossless(fastmath.BFVZeroLevelShortCommtRing(4))
+	m = m.RebaseRowsLossless(fastmath.BFVZeroLevelShortCommtRing(4)).(*fastmath.IntMatrix)
 	// After rebase.
 	for _, v := range m.RowsView() {
 		if len(v.UnderlyingPolys()) != 16 {

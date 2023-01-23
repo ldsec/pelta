@@ -2,6 +2,8 @@ package fastmath
 
 import (
 	"fmt"
+	"math/big"
+	"strings"
 
 	"github.com/ldsec/codeBase/commitment/logging"
 	"github.com/tuneinsight/lattigo/v4/ring"
@@ -71,7 +73,19 @@ func (m *PartitionedIntMatrix) Cols() int {
 	return cols
 }
 func (m *PartitionedIntMatrix) String() string {
-	return "PartitionedIntMatrix"
+	rowStrings := []string{}
+	for i, pr := range m.parts {
+		colStrings := []string{}
+		for j, p := range pr {
+			if p == nil {
+				colStrings = append(colStrings, fmt.Sprintf("ZeroMatrix[%d,%d]", m.PartitionHeight(i), m.PartitionWidth(j)))
+			} else {
+				colStrings = append(colStrings, p.SizeString())
+			}
+		}
+		rowStrings = append(rowStrings, strings.Join(colStrings, " "))
+	}
+	return fmt.Sprintf("%s {\n\t%s\n}", m.SizeString(), strings.Join(rowStrings, "\n\t"))
 }
 
 func (m *PartitionedIntMatrix) SizeString() string {
@@ -79,14 +93,17 @@ func (m *PartitionedIntMatrix) SizeString() string {
 }
 
 func (m *PartitionedIntMatrix) RowsView() []*IntVec {
+	panic("not implemented")
 	return nil
 }
 
 func (m *PartitionedIntMatrix) RowView(i int) *IntVec {
+	panic("not implemented")
 	return nil
 }
 
 func (m *PartitionedIntMatrix) Hadamard(ImmutIntMatrix) ImmutIntMatrix {
+	panic("not implemented")
 	return nil
 }
 
@@ -120,30 +137,35 @@ func (m *PartitionedIntMatrix) Transposed() ImmutIntMatrix {
 }
 
 func (m *PartitionedIntMatrix) Eq(ImmutIntMatrix) bool {
+	panic("not implemented")
 	return false
 }
 
 func (m *PartitionedIntMatrix) SubsectionCopy(int, int, int, int) *IntMatrix {
+
+	panic("not implemented")
 	return nil
 }
 
 func (m *PartitionedIntMatrix) GetLevel(row, col, level int) uint64 {
+	panic("not implemented")
 	return 0
 }
 
 func (m *PartitionedIntMatrix) GetCoeff(row, col int) Coeff {
+	panic("not implemented")
 	return nil
 }
 
-func (m *PartitionedIntMatrix) Max() uint64 {
-	max := uint64(0)
+func (m *PartitionedIntMatrix) Max(q *big.Int) *big.Int {
+	max := big.NewInt(0)
 	for _, pr := range m.parts {
 		for _, p := range pr {
 			if p == nil {
 				continue
 			} else {
-				c := p.Max()
-				if c > max {
+				c := p.Max(q)
+				if c.Cmp(max) > 0 {
 					max = c
 				}
 			}
@@ -170,24 +192,34 @@ func (m *PartitionedIntMatrix) MulVec(v *IntVec) *IntVec {
 	if m.Cols() != v.Size() {
 		panic("invalid sizes for mulvec")
 	}
+	if m.baseRing != v.baseRing {
+		panic("different rings for mulvec")
+	}
 	e := logging.LogExecStart(fmt.Sprintf("%s.MulVec", m.SizeString()), "multiplying")
 	defer e.LogExecEnd()
-	out := NewIntVec(0, m.baseRing)
-	for i := 0; i < len(m.parts); i++ {
+	out := make([]*IntVec, len(m.parts))
+	for i, pr := range m.parts {
+		h := m.PartitionHeight(i)
+		out[i] = NewIntVec(h, m.baseRing)
 		resolved := 0
-		for j, p := range m.parts[i] {
+		for j, p := range pr {
+			w := m.PartitionWidth(j)
 			// Empty partition, skip.
 			if p == nil {
-				resolved += m.PartitionWidth(j)
+				resolved += w
 				continue
 			}
 			// Apply the partition.
-			vp := v.Slice(NewSlice(resolved, resolved+p.Cols()))
-			out.Append(p.MulVec(vp))
-			resolved += p.Cols()
+			vp := v.Slice(NewSlice(resolved, resolved+w))
+			out[i].Add(p.MulVec(vp))
+			resolved += w
 		}
 	}
-	return out
+	outAggr := out[0]
+	for _, o := range out[1:] {
+		outAggr.Append(o)
+	}
+	return outAggr
 }
 
 func (m *PartitionedIntMatrix) AsIntMatrix() *IntMatrix {
@@ -200,11 +232,11 @@ func (m *PartitionedIntMatrix) AsIntMatrix() *IntMatrix {
 		if pr[0] == nil {
 			ap = NewIntMatrix(m.PartitionHeight(i), m.PartitionWidth(0), m.baseRing)
 		} else {
-			ap = pr[0].AsIntMatrix()
+			ap = pr[0].AsIntMatrix().Copy().(*IntMatrix)
 		}
 		for j, p := range pr[1:] {
 			if p == nil {
-				ap.ExtendCols(NewIntMatrix(m.PartitionHeight(i), m.PartitionWidth(j), m.baseRing))
+				ap.ExtendCols(NewIntMatrix(m.PartitionHeight(i), m.PartitionWidth(j+1), m.baseRing))
 			} else {
 				ap.ExtendCols(p)
 			}
@@ -215,8 +247,8 @@ func (m *PartitionedIntMatrix) AsIntMatrix() *IntMatrix {
 			a.ExtendRows(ap)
 		}
 	}
-	m.intMatrixCache = a
-	return a.Copy().(*IntMatrix)
+	m.intMatrixCache = a.Copy().(*IntMatrix)
+	return a
 }
 
 func (m *PartitionedIntMatrix) RebaseRowsLossless(newRing RingParams) ImmutIntMatrix {
@@ -232,7 +264,11 @@ func (m *PartitionedIntMatrix) RebaseRowsLossless(newRing RingParams) ImmutIntMa
 			}
 		}
 	}
-	return m
+	// Rebase the cached transpose as well.
+	if m.transposeCache != nil {
+		mp.transposeCache = m.RebaseRowsLossless(newRing).(*PartitionedIntMatrix)
+	}
+	return mp
 }
 
 func (m *PartitionedIntMatrix) Cleanup() {

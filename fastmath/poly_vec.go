@@ -79,9 +79,9 @@ func (v *PolyVec) Scale(factor uint64) *PolyVec {
 
 // Max returns the largest coefficient among all the polynomials in this vector.
 func (v *PolyVec) Max() uint64 {
-	max := v.elems[0].Max(0)
+	max := v.elems[0].MaxLevel(0)
 	for _, p := range v.elems[1:] {
-		c := p.Max(0)
+		c := p.MaxLevel(0)
 		if c > max {
 			max = c
 		}

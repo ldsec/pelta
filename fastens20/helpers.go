@@ -1,8 +1,6 @@
 package fastens20
 
 import (
-	"sync"
-
 	"github.com/ldsec/codeBase/commitment/fastmath"
 	"github.com/ldsec/codeBase/commitment/logging"
 )
@@ -48,23 +46,19 @@ func LmuSum(k int, invk uint64, f func(int, int) *fastmath.PolyNTT, params Publi
 func LmuSumOuter(k, numSplits int, invk uint64, f func(int, int, int) *fastmath.PolyNTT, params PublicParams) *fastmath.PolyNTT {
 	return logging.LogShortExecution("LmuSumOuter", "calculating", func() interface{} {
 		out := fastmath.NewPolyVec(k, params.config.BaseRing).NTT()
-		var wg sync.WaitGroup
-		wg.Add(k)
 		for mu := 0; mu < k; mu++ {
-			go func(k, mu int) {
-				tmp2 := fastmath.NewPoly(params.config.BaseRing).NTT()
+			func(k, mu int) {
+				tmp2 := fastmath.NewPoly(params.config.BaseRing)
 				for v := 0; v < k; v++ {
 					gen := params.config.ValueCache.Get("exp", int64(v), func() uint64 { return params.Sig.Exponent(int64(v)) })
 					for j := 0; j < numSplits; j++ {
-						sigf := f(mu, v, j).InvNTT().PermuteWithGen(gen).NTT()
+						sigf := f(mu, v, j).InvNTT().PermuteWithGen(gen)
 						tmp2.Add(sigf)
 					}
 				}
-				out.Set(mu, Lmu(mu, invk, tmp2, params))
-				wg.Done()
+				out.Set(mu, Lmu(mu, invk, tmp2.NTT(), params))
 			}(k, mu)
 		}
-		wg.Wait()
 		return out.Sum()
 	}).(*fastmath.PolyNTT)
 	// 	tmp := fastmath.NewPolyVec(k, params.config.BaseRing).NTT()

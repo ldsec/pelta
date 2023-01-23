@@ -2,6 +2,7 @@ package fastmath
 
 import (
 	"fmt"
+	"math/big"
 	"strings"
 
 	"github.com/ldsec/codeBase/commitment/logging"
@@ -145,7 +146,7 @@ func (m *CachedIntMatrix) Neg() MutIntMatrix {
 
 // Transposed returns the transposed version of this matrix.
 func (m *CachedIntMatrix) Transposed() ImmutIntMatrix {
-	procName := fmt.Sprintf("%s.Transposed (cached)", m.SizeString())
+	procName := fmt.Sprintf("%s.Transposed", m.SizeString())
 	e := logging.LogExecShortStart(procName, "transposing")
 	defer e.LogExecEnd()
 	return m.At
@@ -159,8 +160,8 @@ func (m *CachedIntMatrix) Hadamard(b ImmutIntMatrix) ImmutIntMatrix {
 }
 
 // Max returns the largest element of the matrix.
-func (m *CachedIntMatrix) Max() uint64 {
-	return m.A.Max()
+func (m *CachedIntMatrix) Max(q *big.Int) *big.Int {
+	return m.A.Max(q)
 }
 
 // Eq returns true iff two matrices are equal in their elements.

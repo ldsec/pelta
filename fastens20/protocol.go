@@ -39,7 +39,7 @@ type ProtocolConfig struct {
 
 // DefaultProtocolConfig returns the default configuration for an ENS20 execution.
 // `ringParams` denotes the ring over which `relation` is defined.
-func DefaultProtocolConfig(ringParams fastmath.RingParams, rel crypto.ImmutLinearRelation) ProtocolConfig {
+func DefaultProtocolConfig(ringParams fastmath.RingParams, rel *crypto.ImmutLinearRelation) ProtocolConfig {
 	// Create the samplers.
 	prng, err := utils.NewPRNG()
 	if err != nil {
@@ -54,7 +54,7 @@ func DefaultProtocolConfig(ringParams fastmath.RingParams, rel crypto.ImmutLinea
 	invK := big.NewInt(0).ModInverse(big.NewInt(int64(1)), ringParams.Q).Uint64()
 	return ProtocolConfig{
 		RingParams:      ringParams,
-		TargetRel:       &rel,
+		TargetRel:       rel,
 		D:               ringParams.D,
 		Q:               ringParams.Q,
 		N:               numCols,

@@ -7,7 +7,7 @@ import (
 	"github.com/ldsec/codeBase/commitment/fastmath"
 )
 
-func verifyRelation(t *testing.T, rel crypto.LinearRelation) {
+func verifyRelation(t *testing.T, rel *crypto.LinearRelation) {
 	if !rel.IsValid() {
 		t.Errorf("linear relation is ill-formed")
 		// t.Logf(rel.U.String())

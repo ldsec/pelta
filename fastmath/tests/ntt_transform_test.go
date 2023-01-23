@@ -6,7 +6,7 @@ import (
 	"github.com/ldsec/codeBase/commitment/fastmath"
 )
 
-func TestNTTTransform(t *testing.T) {
+func TestNTTTransformApply(t *testing.T) {
 	baseRing := getBaseRing()
 	T := fastmath.LoadNTTTransform("ntt.test", baseRing)
 	// Create a test polynomial.
@@ -23,6 +23,8 @@ func TestNTTTransform(t *testing.T) {
 	// Compare.
 	if !polyNTT1Coeffs.Eq(polyNTT2Coeffs) {
 		t.Errorf("NTT transformation unsuccessful")
+		t.Errorf(polyNTT1Coeffs.String())
+		t.Errorf(polyNTT2Coeffs.String())
 	}
 }
 
