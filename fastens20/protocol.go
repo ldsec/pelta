@@ -128,7 +128,7 @@ type PublicParams struct {
 	Sig    fastmath.Automorphism
 }
 
-func generate(config ProtocolConfig, rel *crypto.ImmutLinearRelation) PublicParams {
+func GeneratePublicParameters(config ProtocolConfig) PublicParams {
 	bSize := config.NumSplits() + 3
 	B0 := fastmath.NewRandomPolyMatrix(config.Kappa,
 		config.Lambda+config.Kappa+bSize,
@@ -138,15 +138,11 @@ func generate(config ProtocolConfig, rel *crypto.ImmutLinearRelation) PublicPara
 	sig := fastmath.NewAutomorphism(uint64(config.D), uint64(config.K))
 	return PublicParams{
 		config: config,
-		A:      rel.A,
-		At:     rel.A.Transposed(),
-		U:      rel.U,
+		A:      config.TargetRel.A,
+		At:     config.TargetRel.A.Transposed(),
+		U:      config.TargetRel.U,
 		B0:     B0.NTT(),
 		B:      b.NTT(),
 		Sig:    sig,
 	}
-}
-
-func GeneratePublicParameters(config ProtocolConfig) PublicParams {
-	return generate(config, config.TargetRel)
 }

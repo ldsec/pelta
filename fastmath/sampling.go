@@ -19,7 +19,7 @@ func GetSamplers(samplerRing RingParams, delta1 uint64) (PolySampler, PolySample
 	originalTernarySampler := ring.NewTernarySampler(prng, samplerRing.BaseRing, 1.0/3.0, false)
 	ternarySampler := NewAugmentedTernarySampler(originalTernarySampler, samplerRing.BaseRing)
 	originalGaussianSampler := ring.NewGaussianSampler(prng, samplerRing.BaseRing, samplerRing.Sigma, int(delta1))
-	gaussianSampler := NewAugmentedGaussianSampler(originalGaussianSampler, big.NewInt(int64(delta1)), samplerRing.BaseRing)
+	gaussianSampler := NewAugmentedGaussianSampler(originalGaussianSampler, delta1, samplerRing.BaseRing)
 	return uniformSampler, ternarySampler, gaussianSampler
 }
 
@@ -47,16 +47,16 @@ func NewAugmentedTernarySampler(ternarySampler PolySampler, baseRing *ring.Ring)
 
 type AugmentedGaussianSampler struct {
 	gaussianSampler PolySampler
-	beta            *big.Int
+	beta            uint64
 	baseRing        *ring.Ring
 }
 
 func (s *AugmentedGaussianSampler) Read(pol *ring.Poly) {
 	s.gaussianSampler.Read(pol)
-	s.baseRing.AddScalar(pol, s.beta.Uint64(), pol)
+	s.baseRing.AddScalar(pol, s.beta, pol)
 }
 
-func NewAugmentedGaussianSampler(gaussianSampler PolySampler, beta *big.Int, baseRing *ring.Ring) PolySampler {
+func NewAugmentedGaussianSampler(gaussianSampler PolySampler, beta uint64, baseRing *ring.Ring) PolySampler {
 	return &AugmentedGaussianSampler{gaussianSampler, beta, baseRing}
 }
 

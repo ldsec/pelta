@@ -16,13 +16,12 @@ type KeyGenPublicParams struct {
 }
 
 func GenerateKeyGenRelation(s, r, e *fastmath.Poly, k *fastmath.IntVec, params KeyGenPublicParams, config RelationsConfig) *crypto.ImmutLinearRelation {
-	rlweParams := crypto.NewRLWEParameters(config.Ring.Q, config.Ring.D, config.Beta, config.Ring.BaseRing)
 	_, comP := crypto.GetAjtaiCommitments(params.A1, params.A2, s.Coeffs(), r.Coeffs(), params.P)
 	ajtaiEqn := crypto.NewPaddedAjtaiEquation(comP, params.A1, params.A2, s.Coeffs(), r.Coeffs(), k, params.P, config.Ring.BaseRing)
 	ajtaiEqn.AddDependency(0, 0)
 	lrb := crypto.NewLinearRelationBuilder()
-	p0 := crypto.GetRLWEP0(params.P1, s, e)
-	lrb.AppendEqn(crypto.NewIndependentRLWE(p0, params.P1, s, e, params.T, rlweParams))
+	p0 := crypto.RLWESample(params.P1, s, e)
+	lrb.AppendEqn(crypto.NewIndependentRLWE(p0, params.P1, s, e, params.T, config.RLWEParams))
 	lrb.AppendEqn(ajtaiEqn)
 	return lrb.BuildFast(config.Ring.BaseRing)
 }

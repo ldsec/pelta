@@ -1,21 +1,19 @@
 package fastmath
 
 import (
-	"math/big"
-
 	"github.com/tuneinsight/lattigo/v4/ring"
 )
 
 // TernaryDecomposition computes an integer vector's ternary (0, 1, 2) decomposition.
 // Returns the ternary decomposition matrix and the basis vector.
-func TernaryDecomposition(v *IntVec, beta *big.Int, logBeta int, baseRing *ring.Ring) (*IntMatrix, *IntVec) {
+func TernaryDecomposition(v *IntVec, logDelta int, baseRing *ring.Ring) (*IntMatrix, *IntVec) {
 	base := uint64(3)
-	basis := GenerateBasisCoeffs(base, logBeta, baseRing.Modulus)
-	decomposed := NewIntMatrix(v.Size(), logBeta, baseRing)
+	basis := GenerateBasisCoeffs(base, logDelta, baseRing.Modulus)
+	decomposed := NewIntMatrix(v.Size(), logDelta, baseRing)
 	decomposed.PopulateRows(func(i int) *IntVec {
 		// Decompose the ith coefficient of the error
 		num := v.GetCoeff(i)
-		basisRepr := IntoBasisReprCoeffs(num, base, logBeta)
+		basisRepr := IntoBasisReprCoeffs(num, base, logDelta)
 		basisReprVec := NewIntVecFromCoeffSlice(basisRepr, baseRing)
 		return basisReprVec
 	})

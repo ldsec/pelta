@@ -23,15 +23,15 @@ func getRandomKeyGenPublicParams(config relations.RelationsConfig) relations.Key
 }
 
 func main() {
-	config := relations.NewRelationsConfig(crypto.GetDefaultCryptoConfig())
+	config := relations.NewRelationsConfig(crypto.GetPeltaCryptoConfig())
 	params := getRandomKeyGenPublicParams(config)
 
 	e0 := logging.LogExecStart("Main", "input creation")
 	s := fastmath.NewRandomPoly(config.TernarySampler, config.Ring.BaseRing)
-	r := fastmath.NewRandomPoly(config.UniformSampler, config.Ring.BaseRing)
+	r := fastmath.NewRandomPoly(config.TernarySampler, config.Ring.BaseRing)
 	e := fastmath.NewRandomPoly(config.GaussianSampler, config.Ring.BaseRing)
-	comQ, comP := crypto.GetAjtaiCommitments(params.A1, params.A2, s.Coeffs(), r.Coeffs(), params.P)
-	k := crypto.GetAjtaiKappa(comP, comQ, params.P, config.Ring.BaseRing)
+	comQ, comP := crypto.GetAjtaiCommitments(params.A1, params.A2, s.Coeffs(), r.Coeffs(), config.AjtaiParams)
+	k := crypto.GetAjtaiKappa(comP, comQ, config.AjtaiParams)
 	e0.LogExecEnd()
 
 	e0 = logging.LogExecStart("Main", "relation creation")
@@ -48,7 +48,7 @@ func main() {
 	e0 = logging.LogExecStart("Main", "protocol config creation")
 	protocolConfig := fastens20.DefaultProtocolConfig(commitmentRing, rebasedRel).
 		WithABP(128, config.Ring.Q, fastmath.NewSlice(config.Ring.D*6, config.Ring.D*7)).
-		WithTernarySlice(fastmath.NewSlice(0, config.Ring.D)).
+		WithTernarySlice(fastmath.NewSlice(0, 2*config.Ring.D)).
 		WithReplication(4)
 	e0.LogExecEnd()
 
@@ -58,7 +58,7 @@ func main() {
 
 	e0 = logging.LogExecStart("Main", "protocol execution")
 	if !fastens20.Execute(rebasedRel.S, protocolParams) {
-		panic("execution failed")
+		logging.PanicOnProduction("Main", "execution failed")
 	}
 	e0.LogExecEnd()
 }

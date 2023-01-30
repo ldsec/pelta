@@ -178,6 +178,7 @@ func getZeroPad(i, j int, eqns []*LinearEquation, baseRing *ring.Ring) *fastmath
 	return nil
 }
 
+// BuildFast constructs the linear relation of the form As = u from the appended equations.
 func (lrb *LinearRelationBuilder) BuildFast(baseRing *ring.Ring) *ImmutLinearRelation {
 	procName := "LinearRelationBuilder.BuildFast"
 	if len(lrb.eqns) == 0 {
@@ -191,21 +192,25 @@ func (lrb *LinearRelationBuilder) BuildFast(baseRing *ring.Ring) *ImmutLinearRel
 	u := fastmath.NewIntVec(0, baseRing)
 	start := 0
 	for i, eqn := range lrb.eqns {
+		// Emplace the dependent terms.
 		for _, t := range eqn.GetDependentTerms() {
 			pm.Emplace(i, t.depVecIndex, t.A)
 		}
+		// Emplace the independent terms.
 		for j, t := range eqn.GetIndependentTerms() {
 			pm.Emplace(i, start+j, t.A)
+			// Extend the solution s.
 			s.Append(t.b)
 		}
 		start += len(eqn.GetIndependentTerms())
+		// Extend the output.
 		u.Append(eqn.lhs)
 	}
 	return &ImmutLinearRelation{pm, s, u}
 }
 
 // Build constructs the linear relation of the form As = u from the appended equations.
-func (lrb *LinearRelationBuilder) Build(baseRing *ring.Ring) *LinearRelation {
+func (lrb *LinearRelationBuilder) Build(baseRing *ring.Ring) *ImmutLinearRelation {
 	procName := "LinearRelationBuilder.Build"
 	if len(lrb.eqns) == 0 {
 		panic("cannot build a linear relation without any equations")
@@ -265,7 +270,7 @@ func (lrb *LinearRelationBuilder) Build(baseRing *ring.Ring) *LinearRelation {
 		}
 	}
 	logging.Log(procName, linRel.SizesString())
-	return linRel
+	return linRel.AsImmutable()
 }
 
 // String returns a string representation this LRB, i.e., a listing of all the appended

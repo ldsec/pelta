@@ -22,10 +22,16 @@ func (r *ImmutLinearRelation) Rebased(newRing fastmath.RingParams) *ImmutLinearR
 	}
 }
 
+// Cleanup runs the cleanup procedure for the underlying objects: A, s, and u.
 func (r *ImmutLinearRelation) Cleanup() {
 	r.A.Cleanup()
 	r.S.Cleanup()
 	r.U.Cleanup()
+}
+
+// IsValid returns true iff As = u holds.
+func (r *ImmutLinearRelation) IsValid() bool {
+	return r.A.MulVec(r.S).Eq(r.U)
 }
 
 func (r *ImmutLinearRelation) Copy() *ImmutLinearRelation {
@@ -135,6 +141,7 @@ func (r *LinearRelation) AppendDependentOnS(B fastmath.MutIntMatrix, y, z *fastm
 	return r.AppendDependent(BExtended, y, z)
 }
 
+// Copy returns a copy of this linear relation by performing a deep copy of A, s, and u.
 func (r *LinearRelation) Copy() LinearRelation {
 	return LinearRelation{
 		A: r.A.Copy().(fastmath.MutIntMatrix),
@@ -143,10 +150,12 @@ func (r *LinearRelation) Copy() LinearRelation {
 	}
 }
 
+// String returns a string representation of this object.
 func (r *LinearRelation) String() string {
 	return fmt.Sprintf("A: %s\ns: %s\nu: %s", r.A.String(), r.S.String(), r.U.String())
 }
 
+// SizesString returns a string containing the sizes of A, s, and u.
 func (r *LinearRelation) SizesString() string {
 	return fmt.Sprintf("A[%d,%d]s[%d] = u[%d]", r.A.Rows(), r.A.Cols(), r.S.Size(), r.U.Size())
 }
@@ -156,6 +165,7 @@ func (r *LinearRelation) IsValid() bool {
 	return r.A.MulVec(r.S).Eq(r.U)
 }
 
+// AsImmutable converts this linear relation to an immutable linear relation.
 func (r *LinearRelation) AsImmutable() *ImmutLinearRelation {
 	return &ImmutLinearRelation{r.A, r.S, r.U}
 }

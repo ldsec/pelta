@@ -19,7 +19,8 @@ func TestLinEqnLinearize(t *testing.T) {
 	rel := crypto.NewLinearEquation(A.MulVec(s).Add(B.MulVec(y)), n).
 		AppendTerm(A, s).
 		AppendTerm(B, y).
-		Linearize()
+		Linearize().
+		AsImmutable()
 	verifyRelation(t, rel)
 }
 

@@ -2,7 +2,6 @@ package tests
 
 import (
 	"math"
-	"math/big"
 	"testing"
 
 	"github.com/ldsec/codeBase/commitment/fastmath"
@@ -37,7 +36,7 @@ func TestIntoBasis(t *testing.T) {
 func TestTernaryDecomposition(t *testing.T) {
 	baseRing := getBaseRing()
 	vec := fastmath.NewIntVecFromSlice([]uint64{23, 174, 92, 3, 0}, baseRing)
-	decomp, _ := fastmath.TernaryDecomposition(vec, big.NewInt(200), 5, baseRing)
+	decomp, _ := fastmath.TernaryDecomposition(vec, 5, baseRing)
 	expectedDecomp := fastmath.NewIntMatrixFromSlice([][]uint64{
 		{2, 1, 2, 0, 0},
 		{0, 1, 1, 0, 2},

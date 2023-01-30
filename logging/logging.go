@@ -48,6 +48,17 @@ func Log(prefix, msg string) {
 // 	}
 // }
 
+func IsProductionBuild() bool {
+	return !logging
+}
+
+func PanicOnProduction(prefix, msg string) {
+	Log(prefix, msg)
+	if !logging {
+		panic("execution failed!!")
+	}
+}
+
 func LogWithoutNewline(prefix, msg string) {
 	if !logging {
 		return

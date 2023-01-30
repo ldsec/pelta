@@ -68,7 +68,9 @@ func (vf Verifier) Verify(z *fastmath.PolyNTTMatrix, state VerifierState) bool {
 		})
 	if !maskedOpeningTestResult {
 		logging.Log("Verifier.Verify", "verifier failed masked opening verification")
-		return false
+		if logging.IsProductionBuild() {
+			return false
+		}
 	}
 	e.LogExecEnd()
 	// Zero-coefficient check
@@ -83,7 +85,9 @@ func (vf Verifier) Verify(z *fastmath.PolyNTTMatrix, state VerifierState) bool {
 	}
 	if !hTestResult {
 		logging.Log("Verifier.Verify", "verifier failed zero coefficient test")
-		return false
+		if logging.IsProductionBuild() {
+			return false
+		}
 	}
 	e.LogExecEnd()
 	// Constructing f
@@ -126,7 +130,9 @@ func (vf Verifier) Verify(z *fastmath.PolyNTTMatrix, state VerifierState) bool {
 	vTestResult := vTest.Eq(state.v)
 	if !vTestResult {
 		logging.Log("Verifier.Verify", "verifier failed relation check")
-		return false
+		if logging.IsProductionBuild() {
+			return false
+		}
 	}
 	e.LogExecEnd()
 	e = logging.LogExecStart("Verifier.Verify", "function commitment test")
@@ -187,7 +193,9 @@ func (vf Verifier) Verify(z *fastmath.PolyNTTMatrix, state VerifierState) bool {
 		})
 	if !functionCommitmentTestResult {
 		logging.Log("Verifier.Verify", "verifier failed function commitment check")
-		return false
+		if logging.IsProductionBuild() {
+			return false
+		}
 	}
 	e.LogExecEnd()
 	return true

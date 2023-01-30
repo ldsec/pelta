@@ -18,13 +18,13 @@ func getRandomKeyGenPublicParams(config relations.RelationsConfig) relations.Key
 		return fastmath.NewIntMatrix(config.Ring.D, config.Ring.D, config.Ring.BaseRing)
 	}, config.Ring.BaseRing)
 	T := fastmath.LoadNTTTransform("NTTTransform.test", config.Ring.BaseRing)
-	p := config.P
+	p := config.AjtaiParams.P
 	params := relations.KeyGenPublicParams{P1: p1, A1: A1, A2: A2, T: T, P: p}
 	return params
 }
 
 func TestKeyGen(t *testing.T) {
-	config := relations.NewRelationsConfig(crypto.GetDefaultCryptoConfig())
+	config := relations.NewRelationsConfig(crypto.GetPeltaCryptoConfig())
 	t.Logf("creating public parameters\n")
 	params := getRandomKeyGenPublicParams(config)
 
@@ -32,14 +32,15 @@ func TestKeyGen(t *testing.T) {
 	s := fastmath.NewRandomPoly(config.TernarySampler, config.Ring.BaseRing)
 	r := fastmath.NewRandomPoly(config.TernarySampler, config.Ring.BaseRing)
 	e := fastmath.NewRandomPoly(config.GaussianSampler, config.Ring.BaseRing)
-	comQ, comP := crypto.GetAjtaiCommitments(params.A1, params.A2, s.Coeffs(), r.Coeffs(), params.P)
-	k := crypto.GetAjtaiKappa(comP, comQ, params.P, config.Ring.BaseRing)
+	comQ, comP := crypto.GetAjtaiCommitments(params.A1, params.A2, s.Coeffs(), r.Coeffs(), config.AjtaiParams)
+	k := crypto.GetAjtaiKappa(comP, comQ, config.AjtaiParams)
 
 	t.Logf("generating the relation\n")
 	rel := relations.GenerateKeyGenRelation(s, r, e, k, params, config)
-	// if !rel.IsValid() {
-	// 	t.Errorf("relation invalid\n")
-	// }
+	if !rel.IsValid() {
+		t.Errorf("relation invalid\n")
+		return
+	}
 
 	t.Logf("rebasing...\n")
 	commitmentRing := fastmath.BFVFullShortCommtRing(7)

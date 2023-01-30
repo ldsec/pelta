@@ -1,7 +1,6 @@
 package crypto
 
 import (
-	"math"
 	"math/big"
 
 	"github.com/ldsec/codeBase/commitment/fastmath"
@@ -9,14 +8,16 @@ import (
 
 type CryptoConfig struct {
 	fastmath.RingParams
-	P               *big.Int // Ajtai prime mod (~20 bit prime)
-	Delta1          uint64   // Width of the uniform distribution
-	Beta            uint64
-	Lambda          int // M-LWE dimension
-	Kappa           int // M-SIS dimension
+	Delta1          uint64 // Width of the uniform distribution
+	Beta            uint64 // Mask bound
+	Lambda          int    // M-LWE dimension
+	Kappa           int    // M-SIS dimension
 	UniformSampler  fastmath.PolySampler
 	TernarySampler  fastmath.PolySampler
 	GaussianSampler fastmath.PolySampler
+
+	AjtaiMod       *big.Int // Ajtai prime mod (~20 bit prime)
+	RLWEErrorWidth int
 }
 
 func GetDefaultCryptoConfig() CryptoConfig {
@@ -27,7 +28,7 @@ func GetDefaultCryptoConfig() CryptoConfig {
 	uniformSampler, ternarySampler, gaussianSampler := fastmath.GetSamplers(defaultRing, delta1)
 	return CryptoConfig{
 		RingParams:      defaultRing,
-		P:               big.NewInt(5857),
+		AjtaiMod:        big.NewInt(5857),
 		Delta1:          delta1,
 		Beta:            beta,
 		Lambda:          1,
@@ -35,10 +36,11 @@ func GetDefaultCryptoConfig() CryptoConfig {
 		UniformSampler:  uniformSampler,
 		TernarySampler:  ternarySampler,
 		GaussianSampler: gaussianSampler,
+		RLWEErrorWidth:  128,
 	}
 }
 
-func GetRealCryptoConfig() CryptoConfig {
+func GetPeltaCryptoConfig() CryptoConfig {
 	// Initialize the ring parameters.
 	defaultRing := fastmath.BFVFullRing()
 	delta1 := uint64(1 << 24)
@@ -47,13 +49,14 @@ func GetRealCryptoConfig() CryptoConfig {
 	uniformSampler, ternarySampler, gaussianSampler := fastmath.GetSamplers(defaultRing, delta1)
 	return CryptoConfig{
 		RingParams:      defaultRing,
-		P:               p,
+		AjtaiMod:        p,
 		Delta1:          delta1,
-		Beta:            beta - 128,
+		Beta:            beta,
 		Lambda:          10,
 		Kappa:           9,
 		UniformSampler:  uniformSampler,
 		TernarySampler:  ternarySampler,
 		GaussianSampler: gaussianSampler,
+		RLWEErrorWidth:  128,
 	}
 }

@@ -30,6 +30,7 @@ func (m *PartitionedIntMatrix) Emplace(i, j int, b ImmutIntMatrix) {
 	if len(m.parts) > 0 && j < len(m.parts[0]) && m.colSizes[j] != b.Cols() {
 		panic("PartitionedIntMatrix.Emplace col sizes do not match")
 	}
+	// Extend the slots vertically.
 	for i >= len(m.parts) {
 		upperLength := 0
 		if len(m.parts) > 0 {
@@ -38,14 +39,18 @@ func (m *PartitionedIntMatrix) Emplace(i, j int, b ImmutIntMatrix) {
 		m.parts = append(m.parts, make([]ImmutIntMatrix, upperLength))
 		m.rowSizes = append(m.rowSizes, 0)
 	}
+	// Extend the slots horizontally.
 	for j >= len(m.parts[0]) {
 		for i := 0; i < len(m.parts); i++ {
 			m.parts[i] = append(m.parts[i], nil)
 		}
 		m.colSizes = append(m.colSizes, 0)
 	}
+	// Set the row & column sizes.
 	m.rowSizes[i] = b.Rows()
 	m.colSizes[j] = b.Cols()
+	// Place the matrix in the appropriate slot.
+	// logging.Log("PartitionedIntMatrix.Emplace", fmt.Sprintf("emplacing %s => %d,%d", b.SizeString(), i, j))
 	m.parts[i][j] = b
 }
 
@@ -132,6 +137,7 @@ func (m *PartitionedIntMatrix) Transposed() ImmutIntMatrix {
 	copy(newRowSizes, m.colSizes)
 	copy(newColSizes, m.rowSizes)
 	mT := &PartitionedIntMatrix{newRowSizes, newColSizes, newParts, m, nil, m.baseRing}
+	// Cache the transposed version.
 	m.transposeCache = mT
 	return mT
 }
@@ -157,6 +163,7 @@ func (m *PartitionedIntMatrix) GetCoeff(row, col int) Coeff {
 	return nil
 }
 
+// Max returns the maximum coefficient in big int representation.
 func (m *PartitionedIntMatrix) Max(q *big.Int) *big.Int {
 	max := big.NewInt(0)
 	for _, pr := range m.parts {
@@ -215,6 +222,7 @@ func (m *PartitionedIntMatrix) MulVec(v *IntVec) *IntVec {
 			resolved += w
 		}
 	}
+	// Vectorize the output.
 	outAggr := out[0]
 	for _, o := range out[1:] {
 		outAggr.Append(o)
@@ -265,9 +273,9 @@ func (m *PartitionedIntMatrix) RebaseRowsLossless(newRing RingParams) ImmutIntMa
 		}
 	}
 	// Rebase the cached transpose as well.
-	if m.transposeCache != nil {
-		mp.transposeCache = m.RebaseRowsLossless(newRing).(*PartitionedIntMatrix)
-	}
+	// if m.transposeCache != nil {
+	// 	mp.transposeCache = m.transposeCache.RebaseRowsLossless(newRing).(*PartitionedIntMatrix)
+	// }
 	return mp
 }
 
