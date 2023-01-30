@@ -5,22 +5,15 @@ import (
 
 	"github.com/ldsec/codeBase/commitment/crypto"
 	"github.com/ldsec/codeBase/commitment/fastmath"
-	"github.com/tuneinsight/lattigo/v4/ring"
-	"github.com/tuneinsight/lattigo/v4/utils"
 )
 
-// ProtocolConfig contains the settings for the ENS20 protocol.
+// ProtocolConfig contains the settings for the augmented ENS20 protocol.
 type ProtocolConfig struct {
-	RingParams   fastmath.RingParams
-	TargetRel    *crypto.ImmutLinearRelation
-	BaseRing     *ring.Ring
-	D            int      // poly. degree
-	Q            *big.Int // ring modulus
-	M            int      // # rows
-	N            int      // # cols
-	K            int      // replication degree
-	InvK         uint64   // k^{-1} mod q
-	Delta1       int
+	fastmath.RingParams
+	M            int
+	N            int
+	Delta1       uint64
+	K            int            // replication degree
 	Lambda       int            // security parameter
 	Kappa        int            // security parameter
 	TernarySlice fastmath.Slice // slice of s that should be ternary
@@ -34,45 +27,30 @@ type ProtocolConfig struct {
 	TernarySampler  fastmath.PolySampler
 	GaussianSampler fastmath.PolySampler
 	// Cache
+	InvK       uint64 // k^{-1} mod q
 	ValueCache *Cache
 }
 
-// DefaultProtocolConfig returns the default configuration for an ENS20 execution.
-// `ringParams` denotes the ring over which `relation` is defined.
-func DefaultProtocolConfig(ringParams fastmath.RingParams, rel *crypto.ImmutLinearRelation) ProtocolConfig {
-	// Create the samplers.
-	prng, err := utils.NewPRNG()
-	if err != nil {
-		panic("could not initialize the prng")
-	}
-	// Construct the augmented ternary sampler.
-	originalTernarySampler := ring.NewTernarySampler(prng, ringParams.BaseRing, 1.0/3.0, false)
-	ternarySampler := fastmath.NewAugmentedTernarySampler(originalTernarySampler, ringParams.BaseRing)
-	delta1 := 16
-	numRows := rel.A.Rows()
-	numCols := rel.A.Cols()
+func NewProtocolConfig(ringParams fastmath.RingParams, delta1 uint64, m, n int) ProtocolConfig {
+	uni, ter, gau := fastmath.GetSamplers(ringParams, delta1)
 	invK := big.NewInt(0).ModInverse(big.NewInt(int64(1)), ringParams.Q).Uint64()
 	return ProtocolConfig{
 		RingParams:      ringParams,
-		TargetRel:       rel,
-		D:               ringParams.D,
-		Q:               ringParams.Q,
-		N:               numCols,
-		M:               numRows,
-		K:               1,
-		InvK:            invK,
+		M:               m,
+		N:               n,
 		Delta1:          delta1,
+		K:               1,
 		Lambda:          1,
 		Kappa:           1,
-		TernarySlice:    fastmath.NewSlice(0, numCols),
-		BaseRing:        ringParams.BaseRing,
-		UniformSampler:  ring.NewUniformSampler(prng, ringParams.BaseRing),
-		TernarySampler:  ternarySampler,
-		GaussianSampler: ring.NewGaussianSampler(prng, ringParams.BaseRing, ringParams.Sigma, delta1),
+		TernarySlice:    fastmath.NewSlice(0, n),
+		ABPEnabled:      false,
 		Tau:             128,
 		Bound:           big.NewInt(0),
-		ABPEnabled:      false,
 		BoundSlice:      fastmath.NewSlice(0, 0),
+		UniformSampler:  uni,
+		TernarySampler:  ter,
+		GaussianSampler: gau,
+		InvK:            invK,
 		ValueCache:      NewEmptyCache(),
 	}
 }
@@ -114,7 +92,8 @@ func (c ProtocolConfig) NumTernarySplits() int {
 
 // Beta returns the norm Gaussian limit.
 func (c ProtocolConfig) Beta() int {
-	return c.Delta1
+	// TODO: fix
+	return int(c.Delta1)
 }
 
 // PublicParams contains the public parameters of the protocol.
@@ -128,7 +107,7 @@ type PublicParams struct {
 	Sig    fastmath.Automorphism
 }
 
-func GeneratePublicParameters(config ProtocolConfig) PublicParams {
+func GeneratePublicParameters(config ProtocolConfig, targetRel *crypto.ImmutLinearRelation) PublicParams {
 	bSize := config.NumSplits() + 3
 	B0 := fastmath.NewRandomPolyMatrix(config.Kappa,
 		config.Lambda+config.Kappa+bSize,
@@ -138,9 +117,9 @@ func GeneratePublicParameters(config ProtocolConfig) PublicParams {
 	sig := fastmath.NewAutomorphism(uint64(config.D), uint64(config.K))
 	return PublicParams{
 		config: config,
-		A:      config.TargetRel.A,
-		At:     config.TargetRel.A.Transposed(),
-		U:      config.TargetRel.U,
+		A:      targetRel.A,
+		At:     targetRel.A.Transposed(),
+		U:      targetRel.U,
 		B0:     B0.NTT(),
 		B:      b.NTT(),
 		Sig:    sig,

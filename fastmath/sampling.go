@@ -10,7 +10,7 @@ import (
 )
 
 // GetSamplers constructs and returns the uniform sampler, ternary sampler, and gaussian sampler
-func GetSamplers(samplerRing RingParams, delta1 uint64) (PolySampler, PolySampler, PolySampler) {
+func GetSamplers(samplerRing RingParams, gaussianWidth uint64) (PolySampler, PolySampler, PolySampler) {
 	prng, err := utils.NewPRNG()
 	if err != nil {
 		panic("could not initialize the prng: %s")
@@ -18,8 +18,8 @@ func GetSamplers(samplerRing RingParams, delta1 uint64) (PolySampler, PolySample
 	uniformSampler := ring.NewUniformSampler(prng, samplerRing.BaseRing)
 	originalTernarySampler := ring.NewTernarySampler(prng, samplerRing.BaseRing, 1.0/3.0, false)
 	ternarySampler := NewAugmentedTernarySampler(originalTernarySampler, samplerRing.BaseRing)
-	originalGaussianSampler := ring.NewGaussianSampler(prng, samplerRing.BaseRing, samplerRing.Sigma, int(delta1))
-	gaussianSampler := NewAugmentedGaussianSampler(originalGaussianSampler, delta1, samplerRing.BaseRing)
+	originalGaussianSampler := ring.NewGaussianSampler(prng, samplerRing.BaseRing, samplerRing.Sigma, int(gaussianWidth))
+	gaussianSampler := NewAugmentedGaussianSampler(originalGaussianSampler, gaussianWidth, samplerRing.BaseRing)
 	return uniformSampler, ternarySampler, gaussianSampler
 }
 
@@ -47,17 +47,17 @@ func NewAugmentedTernarySampler(ternarySampler PolySampler, baseRing *ring.Ring)
 
 type AugmentedGaussianSampler struct {
 	gaussianSampler PolySampler
-	beta            uint64
+	width           uint64
 	baseRing        *ring.Ring
 }
 
 func (s *AugmentedGaussianSampler) Read(pol *ring.Poly) {
 	s.gaussianSampler.Read(pol)
-	s.baseRing.AddScalar(pol, s.beta, pol)
+	s.baseRing.AddScalar(pol, s.width, pol)
 }
 
-func NewAugmentedGaussianSampler(gaussianSampler PolySampler, beta uint64, baseRing *ring.Ring) PolySampler {
-	return &AugmentedGaussianSampler{gaussianSampler, beta, baseRing}
+func NewAugmentedGaussianSampler(gaussianSampler PolySampler, width uint64, baseRing *ring.Ring) PolySampler {
+	return &AugmentedGaussianSampler{gaussianSampler, width, baseRing}
 }
 
 // NewRandomPoly returns a random polynomial sampled from the given `sampler`.

@@ -13,9 +13,9 @@ func TestABPSimpleShortRing(t *testing.T) {
 	n := bfvRing.D
 	tau := bfvRing.D
 	rel := createRandomRelation(m, n, bfvRing)
-	config := fastens20.DefaultProtocolConfig(bfvRing, rel).
+	config := GetTestProtocolConfig(rel, bfvRing).
 		WithABP(tau, bfvRing.BaseRing.ModulusAtLevel[0], fastmath.NewSlice(0, n))
-	params := fastens20.GeneratePublicParameters(config)
+	params := fastens20.GeneratePublicParameters(config, rel)
 	if !fastens20.Execute(rel.S, params) {
 		t.Errorf("execution failed!")
 	}
@@ -27,9 +27,9 @@ func TestABPSimpleFullRing(t *testing.T) {
 	n := bfvRing.D
 	tau := bfvRing.D
 	rel := createRandomRelation(m, n, bfvRing)
-	config := fastens20.DefaultProtocolConfig(bfvRing, rel).
+	config := GetTestProtocolConfig(rel, bfvRing).
 		WithABP(tau, bfvRing.BaseRing.ModulusAtLevel[0], fastmath.NewSlice(0, n))
-	params := fastens20.GeneratePublicParameters(config)
+	params := fastens20.GeneratePublicParameters(config, rel)
 	if !fastens20.Execute(rel.S, params) {
 		t.Errorf("execution failed!")
 	}
@@ -44,9 +44,9 @@ func TestABPSimpleFullRingRebased(t *testing.T) {
 	// Rebase
 	commitmentRing := fastmath.BFVFullShortCommtRing(7)
 	rebasedRel := rel.Rebased(commitmentRing)
-	config := fastens20.DefaultProtocolConfig(commitmentRing, rebasedRel).
-		WithABP(tau, commitmentRing.BaseRing.ModulusAtLevel[0], fastmath.NewSlice(0, n))
-	params := fastens20.GeneratePublicParameters(config)
+	config := GetTestProtocolConfig(rebasedRel, commitmentRing).
+		WithABP(tau, bfvRing.BaseRing.ModulusAtLevel[0], fastmath.NewSlice(0, n))
+	params := fastens20.GeneratePublicParameters(config, rebasedRel)
 	if !fastens20.Execute(rebasedRel.S, params) {
 		t.Errorf("execution failed!")
 	}
@@ -58,9 +58,9 @@ func TestABPSlice(t *testing.T) {
 	n := bfvRing.D
 	tau := bfvRing.D
 	rel := createRandomRelation(m, n, bfvRing)
-	config := fastens20.DefaultProtocolConfig(bfvRing, rel).
+	config := GetTestProtocolConfig(rel, bfvRing).
 		WithABP(tau, bfvRing.BaseRing.ModulusAtLevel[0], fastmath.NewSlice(0, n/2))
-	params := fastens20.GeneratePublicParameters(config)
+	params := fastens20.GeneratePublicParameters(config, rel)
 	if !fastens20.Execute(rel.S, params) {
 		t.Errorf("execution failed!")
 	}
