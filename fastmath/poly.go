@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math/big"
 	"strings"
+	"sync"
 
 	"github.com/tuneinsight/lattigo/v4/ring"
 )
@@ -295,20 +296,27 @@ func (p *Poly) SumCoeffs() Coeff {
 	if p.IsUnset() {
 		return sum
 	}
-	for lvl := 0; lvl < len(p.ref.Coeffs); lvl++ {
-		qi := p.baseRing.Modulus[lvl]
-		// qiHalf := qi >> 1
-		lvlSum := uint64(0)
-		for _, v := range p.ref.Coeffs[lvl] {
-			lvlSum = (lvlSum + v) % qi
-			// if v >= qiHalf {
-			// 	lvlSum = ring.CRed(lvlSum+qi-v, qi)
-			// } else {
-			// 	lvlSum = ring.CRed(lvlSum+v, qi)
-			// }
-		}
-		sum[lvl] = lvlSum
+	numLvl := len(p.ref.Coeffs)
+	var wg sync.WaitGroup
+	wg.Add(numLvl)
+	for lvl := 0; lvl < numLvl; lvl++ {
+		go func(lvl int) {
+			defer wg.Done()
+			qi := p.baseRing.Modulus[lvl]
+			// qiHalf := qi >> 1
+			lvlSum := uint64(0)
+			for _, v := range p.ref.Coeffs[lvl] {
+				lvlSum = (lvlSum + v) % qi
+				// if v >= qiHalf {
+				// 	lvlSum = ring.CRed(lvlSum+qi-v, qi)
+				// } else {
+				// 	lvlSum = ring.CRed(lvlSum+v, qi)
+				// }
+			}
+			sum[lvl] = lvlSum
+		}(lvl)
 	}
+	wg.Wait()
 	return sum
 }
 

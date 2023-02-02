@@ -69,7 +69,6 @@ type ABPProverState struct {
 }
 
 func NewABPProver(params PublicParams, slice fastmath.Slice, tau int) ABPProver {
-	extendPublicParameters(&params, tau)
 	p := NewProver(params)
 	return ABPProver{
 		Prover: p,
@@ -132,7 +131,6 @@ type ABPVerifierState struct {
 }
 
 func NewABPVerifier(params PublicParams, slice fastmath.Slice, tau int, bound *big.Int) ABPVerifier {
-	extendPublicParameters(&params, tau)
 	v := NewVerifier(params)
 	return ABPVerifier{
 		Verifier: v,

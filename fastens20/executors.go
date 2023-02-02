@@ -23,6 +23,7 @@ func executeWithoutBoundProof(s *fastmath.IntVec, params PublicParams) bool {
 }
 
 func executeWithBoundProof(s *fastmath.IntVec, params PublicParams) bool {
+	extendPublicParameters(&params, params.config.Tau)
 	prover := NewABPProver(params, params.config.BoundSlice, params.config.Tau)
 	verifier := NewABPVerifier(params, params.config.BoundSlice, params.config.Tau, params.config.Bound)
 	// fmt.Println("abp exchange initiated")

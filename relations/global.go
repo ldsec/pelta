@@ -15,13 +15,13 @@ type RelationsConfig struct {
 	TernarySampler  fastmath.PolySampler
 	GaussianSampler fastmath.PolySampler
 	Ring            fastmath.RingParams
-	RLWEParams      crypto.RLWEParameters
-	AjtaiParams     crypto.AjtaiParameters
+	RLWEParams      crypto.RLWEConfig
+	AjtaiParams     crypto.AjtaiConfig
 }
 
 func NewRelationsConfig(cryptoConfig crypto.CryptoConfig) RelationsConfig {
-	rlweParams := crypto.NewRLWEParameters(cryptoConfig.RLWEErrorWidth, cryptoConfig.RingParams)
-	ajtaiParams := crypto.NewAjtaiParameters(cryptoConfig.AjtaiMod, cryptoConfig.RingParams)
+	rlweParams := crypto.NewRLWEConfig(cryptoConfig.RLWEErrorWidth, cryptoConfig.RingParams)
+	ajtaiParams := crypto.NewAjtaiConfig(cryptoConfig.AjtaiMod, cryptoConfig.RingParams)
 	return RelationsConfig{
 		Delta1:          cryptoConfig.Delta1,
 		Beta:            cryptoConfig.Beta,

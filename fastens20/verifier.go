@@ -146,7 +146,7 @@ func (vf Verifier) Verify(z *fastmath.PolyNTTMatrix, state VerifierState) bool {
 	e2.LogExecEnd()
 	// Reconstruct the commitment to f
 	e2 = logging.LogExecStart("Verifier.Verify", "calculating tao, the function commitment")
-	tao := LmuSum(vf.params.config.K, vf.params.config.InvK,
+	tao := LmuSum(vf.params.config.K, vf.params.config.Cache.InvK,
 		func(mu int, v int) *fastmath.PolyNTT {
 			// (u * gamma_mu)
 			mul := vf.params.U.Dot(state.Gamma.RowView(mu))
@@ -167,7 +167,7 @@ func (vf Verifier) Verify(z *fastmath.PolyNTTMatrix, state VerifierState) bool {
 	functionCommitmentTest.Populate(func(i int) *fastmath.PolyNTT {
 		// (b[n/d + 1] * z[i])
 		add := vf.params.B.Row(vf.params.config.NumSplits()).Dot(z.Row(i))
-		outerSum := LmuSumOuter(vf.params.config.K, vf.params.config.NumSplits(), vf.params.config.InvK,
+		outerSum := LmuSumOuter(vf.params.config.K, vf.params.config.NumSplits(), vf.params.config.Cache.InvK,
 			func(mu int, v int, j int) *fastmath.PolyNTT {
 				index := (i - v)
 				if index < 0 {

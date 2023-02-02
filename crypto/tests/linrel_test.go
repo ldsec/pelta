@@ -16,11 +16,11 @@ func verifyRelation(t *testing.T, rel *crypto.ImmutLinearRelation) {
 }
 
 func TestLinRelConstruction(t *testing.T) {
-	config := crypto.GetDefaultCryptoConfig()
+	bfvRing := fastmath.BFVFullRing()
 	n := 200
 	m := 300
-	A := fastmath.NewRandomIntMatrix(m, n, config.Q, config.BaseRing)
-	s := fastmath.NewRandomIntVec(n, config.Q, config.BaseRing)
+	A := fastmath.NewRandomIntMatrix(m, n, bfvRing.Q, bfvRing.BaseRing)
+	s := fastmath.NewRandomIntVec(n, bfvRing.Q, bfvRing.BaseRing)
 	rel := crypto.NewLinearRelation(fastmath.NewCachedIntMatrix(A), s).AsImmutable()
 	verifyRelation(t, rel)
 }
@@ -41,19 +41,19 @@ func TestLinRelRebase(t *testing.T) {
 }
 
 func TestLinRelAppendIndependent(t *testing.T) {
-	config := crypto.GetDefaultCryptoConfig()
+	bfvRing := fastmath.BFVFullRing()
 	n := 8
 	m := 16
 	// First relation: As = u
-	A := fastmath.NewRandomIntMatrix(m, n, config.Q, config.BaseRing)
-	s := fastmath.NewRandomIntVec(n, config.Q, config.BaseRing)
+	A := fastmath.NewRandomIntMatrix(m, n, bfvRing.Q, bfvRing.BaseRing)
+	s := fastmath.NewRandomIntVec(n, bfvRing.Q, bfvRing.BaseRing)
 	rel := crypto.NewLinearRelation(fastmath.NewCachedIntMatrix(A), s)
 	verifyRelation(t, rel.AsImmutable())
 	// Second relation: By = z
 	np := 9
 	mp := 13
-	B := fastmath.NewRandomIntMatrix(mp, np, config.Q, config.BaseRing)
-	y := fastmath.NewRandomIntVec(np, config.Q, config.BaseRing)
+	B := fastmath.NewRandomIntMatrix(mp, np, bfvRing.Q, bfvRing.BaseRing)
+	y := fastmath.NewRandomIntVec(np, bfvRing.Q, bfvRing.BaseRing)
 	rel2 := crypto.NewLinearRelation(fastmath.NewCachedIntMatrix(B), y)
 	verifyRelation(t, rel2.AsImmutable())
 	// Verify the appended version.
@@ -62,19 +62,19 @@ func TestLinRelAppendIndependent(t *testing.T) {
 }
 
 func TestLinRelExtend(t *testing.T) {
-	config := crypto.GetDefaultCryptoConfig()
+	bfvRing := fastmath.BFVFullRing()
 	n := 8
 	m := 16
 	// First relation: As = u
-	A := fastmath.NewRandomIntMatrix(m, n, config.Q, config.BaseRing)
-	s := fastmath.NewRandomIntVec(n, config.Q, config.BaseRing)
+	A := fastmath.NewRandomIntMatrix(m, n, bfvRing.Q, bfvRing.BaseRing)
+	s := fastmath.NewRandomIntVec(n, bfvRing.Q, bfvRing.BaseRing)
 	rel := crypto.NewLinearRelation(fastmath.NewCachedIntMatrix(A), s)
 	verifyRelation(t, rel.AsImmutable())
 	// Second relation: By = z
 	np := 9
 	mp := m
-	B := fastmath.NewRandomIntMatrix(mp, np, config.Q, config.BaseRing)
-	y := fastmath.NewRandomIntVec(np, config.Q, config.BaseRing)
+	B := fastmath.NewRandomIntMatrix(mp, np, bfvRing.Q, bfvRing.BaseRing)
+	y := fastmath.NewRandomIntVec(np, bfvRing.Q, bfvRing.BaseRing)
 	rel2 := crypto.NewLinearRelation(fastmath.NewCachedIntMatrix(B), y)
 	verifyRelation(t, rel2.AsImmutable())
 	// Verify the extended version.
@@ -84,17 +84,17 @@ func TestLinRelExtend(t *testing.T) {
 }
 
 func TestLinRelAppendDependentOnS(t *testing.T) {
-	config := crypto.GetDefaultCryptoConfig()
+	bfvRing := fastmath.BFVFullRing()
 	n := 8
 	m := 16
 	// First relation: As = u
-	A := fastmath.NewRandomIntMatrix(m, n, config.Q, config.BaseRing)
-	s := fastmath.NewRandomIntVec(n, config.Q, config.BaseRing)
+	A := fastmath.NewRandomIntMatrix(m, n, bfvRing.Q, bfvRing.BaseRing)
+	s := fastmath.NewRandomIntVec(n, bfvRing.Q, bfvRing.BaseRing)
 	rel := crypto.NewLinearRelation(fastmath.NewCachedIntMatrix(A), s)
 	verifyRelation(t, rel.AsImmutable())
 	// Second relation: Bs + y = z
-	B := fastmath.NewRandomIntMatrix(n, n, config.Q, config.BaseRing)
-	y := fastmath.NewRandomIntVec(n, config.Q, config.BaseRing)
+	B := fastmath.NewRandomIntMatrix(n, n, bfvRing.Q, bfvRing.BaseRing)
+	y := fastmath.NewRandomIntVec(n, bfvRing.Q, bfvRing.BaseRing)
 	z := B.MulVec(s).Add(y)
 	// Verify the appended version.
 	rel.AppendDependentOnS(B, y, z)
