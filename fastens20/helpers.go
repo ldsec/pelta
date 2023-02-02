@@ -50,7 +50,7 @@ func LmuSumOuter(k, numSplits int, invk uint64, f func(int, int, int) *fastmath.
 			func(k, mu int) {
 				tmp2 := fastmath.NewPoly(params.config.BaseRing)
 				for v := 0; v < k; v++ {
-					gen := params.config.ValueCache.Get("exp", int64(v), func() uint64 { return params.Sig.Exponent(int64(v)) })
+					gen := params.config.Cache.SigmaExpCache[int64(v)]
 					for j := 0; j < numSplits; j++ {
 						sigf := f(mu, v, j).InvNTT().PermuteWithGen(gen)
 						tmp2.Add(sigf)
@@ -84,7 +84,7 @@ func CommitmentSum(k, numSplits int, alpha *fastmath.PolyNTTVec, f func(int, int
 		presum := fastmath.NewPolyMatrix(k, numSplits, params.config.BaseRing).NTT()
 		presum.Populate(func(i, j int) *fastmath.PolyNTT {
 			fOut := f(i, j)
-			gen := params.config.ValueCache.Get("exp", int64(-i), func() uint64 { return params.Sig.Exponent(int64(-i)) })
+			gen := params.config.Cache.SigmaExpCache[int64(-i)]
 			return fOut.InvNTT().PermuteWithGen(gen).NTT()
 		})
 		presum.Update(func(i, j int, old *fastmath.PolyNTT) *fastmath.PolyNTT {

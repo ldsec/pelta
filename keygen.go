@@ -67,6 +67,7 @@ func RunKeyGenRelation() {
 
 	e0 = logging.LogExecStart("Main", "rebasing")
 	rebasedRel := rel.Rebased(rebaseRing)
+	rebasedRel.Cleanup()
 	// commitmentRing := config.Ring
 	// rebasedRel := rel
 	e0.LogExecEnd()
@@ -74,8 +75,7 @@ func RunKeyGenRelation() {
 	e0 = logging.LogExecStart("Main", "protocol config creation")
 	protocolConfig := GetDefaultProtocolConfig(rebasedRel.A.Rows(), rebasedRel.A.Cols()).
 		WithABP(128, rlweConfig.Q, fastmath.NewSlice(rlweConfig.D*6, rlweConfig.D*7)).
-		WithTernarySlice(fastmath.NewSlice(0, 2*rlweConfig.D)).
-		WithReplication(4)
+		WithTernarySlice(fastmath.NewSlice(0, 2*rlweConfig.D))
 	e0.LogExecEnd()
 
 	e0 = logging.LogExecStart("Main", "public parameters creation")
@@ -84,6 +84,7 @@ func RunKeyGenRelation() {
 
 	e0 = logging.LogExecStart("Main", "protocol execution")
 	if !fastens20.Execute(rebasedRel.S, protocolParams) {
+		e0.LogExecEnd()
 		logging.PanicOnProduction("Main", "execution failed")
 	}
 	e0.LogExecEnd()

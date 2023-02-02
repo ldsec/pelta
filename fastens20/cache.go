@@ -1,21 +1,25 @@
 package fastens20
 
+import (
+	"github.com/ldsec/codeBase/commitment/fastmath"
+	"github.com/ldsec/codeBase/commitment/logging"
+)
+
 type Cache struct {
-	values map[string]map[int64]uint64
+	SigmaExpCache map[int64]uint64
 }
 
 func NewEmptyCache() *Cache {
-	return &Cache{values: map[string]map[int64]uint64{}}
+	return &Cache{
+		SigmaExpCache: map[int64]uint64{},
+	}
 }
 
-func (c *Cache) Get(name string, key int64, gen func() uint64) uint64 {
-	_, ok := c.values[name]
-	if !ok {
-		c.values[name] = map[int64]uint64{}
+func (c *Cache) Build(k int, sig fastmath.Automorphism) {
+	e := logging.LogExecStart("Cache", "building")
+	defer e.LogExecEnd()
+	for i := 0; i < k; i++ {
+		c.SigmaExpCache[int64(i)] = sig.Exponent(int64(i))
+		c.SigmaExpCache[int64(-i)] = sig.Exponent(int64(-i))
 	}
-	_, ok = c.values[name][key]
-	if !ok {
-		c.values[name][key] = gen()
-	}
-	return c.values[name][key]
 }

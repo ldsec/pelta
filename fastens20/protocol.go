@@ -27,8 +27,8 @@ type ProtocolConfig struct {
 	TernarySampler  fastmath.PolySampler
 	GaussianSampler fastmath.PolySampler
 	// Cache
-	InvK       uint64 // k^{-1} mod q
-	ValueCache *Cache
+	InvK  uint64 // k^{-1} mod q
+	Cache *Cache
 }
 
 func NewProtocolConfig(ringParams fastmath.RingParams, delta1 uint64, numRows, numCols int) ProtocolConfig {
@@ -51,7 +51,7 @@ func NewProtocolConfig(ringParams fastmath.RingParams, delta1 uint64, numRows, n
 		TernarySampler:  ter,
 		GaussianSampler: gau,
 		InvK:            invK,
-		ValueCache:      NewEmptyCache(),
+		Cache:           NewEmptyCache(),
 	}
 }
 
@@ -115,6 +115,8 @@ func GeneratePublicParameters(config ProtocolConfig, targetRel *crypto.ImmutLine
 		config.BaseRing)
 	b := fastmath.NewRandomPolyMatrix(bSize, B0.Cols(), config.UniformSampler, config.BaseRing)
 	sig := fastmath.NewAutomorphism(uint64(config.D), uint64(config.K))
+	// Build the cache.
+	config.Cache.Build(config.K, sig)
 	return PublicParams{
 		config: config,
 		A:      targetRel.A,

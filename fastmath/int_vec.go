@@ -87,6 +87,17 @@ func (v *IntVec) UnderlyingPolys() []*Poly {
 	return v.polys
 }
 
+func (v *IntVec) UnderlyingPolysAsIntVecs() []*IntVec {
+	vecs := make([]*IntVec, len(v.polys))
+	for i, p := range v.polys {
+		vecs[i] = NewIntVecFromPolys([]*Poly{p}, p.N(), p.baseRing)
+	}
+	if v.Size()%v.baseRing.N != 0 {
+		vecs[len(vecs)-1].size = v.Size() % v.baseRing.N
+	}
+	return vecs
+}
+
 func (v *IntVec) UnderlyingPolysAsPolyVec() *PolyVec {
 	pV := NewPolyVec(len(v.polys), v.BaseRing())
 	for i, p := range v.polys {
@@ -325,6 +336,14 @@ func (v *IntVec) Add(r *IntVec) *IntVec {
 		v.polys[i].Add(r.polys[i])
 	}
 	return v
+}
+
+func (v *IntVec) Sum() Coeff {
+	sum := NewPoly(v.baseRing)
+	for _, p := range v.polys {
+		sum.Add(p)
+	}
+	return sum.SumCoeffs()
 }
 
 // Dot returns the dot product of the given two vectors.

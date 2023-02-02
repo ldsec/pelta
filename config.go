@@ -17,11 +17,13 @@ func GetDefaultAjtaiConfig() crypto.AjtaiConfig {
 }
 
 func GetDefaultRLWEConfig() crypto.RLWEConfig {
-	rlweErrorWidth := 128
+	rlweErrorWidth := 16
 	return crypto.NewRLWEConfig(rlweErrorWidth, mainRing)
 }
 
 func GetDefaultProtocolConfig(m, n int) fastens20.ProtocolConfig {
 	delta1 := uint64(1 << 24)
-	return fastens20.NewProtocolConfig(rebaseRing, delta1, m, n)
+	return fastens20.NewProtocolConfig(rebaseRing, delta1, m, n).
+		WithReplication(4).
+		WithSecurityParameters(9, 10)
 }
