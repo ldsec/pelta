@@ -27,13 +27,11 @@ type ProtocolConfig struct {
 	TernarySampler  fastmath.PolySampler
 	GaussianSampler fastmath.PolySampler
 	// Cache
-	InvK  uint64 // k^{-1} mod q
 	Cache *Cache
 }
 
 func NewProtocolConfig(ringParams fastmath.RingParams, delta1 uint64, numRows, numCols int) ProtocolConfig {
 	uni, ter, gau := fastmath.GetSamplers(ringParams, delta1)
-	invK := big.NewInt(0).ModInverse(big.NewInt(int64(1)), ringParams.Q).Uint64()
 	return ProtocolConfig{
 		RingParams:      ringParams,
 		M:               numRows,
@@ -50,7 +48,6 @@ func NewProtocolConfig(ringParams fastmath.RingParams, delta1 uint64, numRows, n
 		UniformSampler:  uni,
 		TernarySampler:  ter,
 		GaussianSampler: gau,
-		InvK:            invK,
 		Cache:           NewEmptyCache(),
 	}
 }
@@ -62,7 +59,6 @@ func (c ProtocolConfig) WithTernarySlice(ternarySlice fastmath.Slice) ProtocolCo
 
 func (c ProtocolConfig) WithReplication(k int) ProtocolConfig {
 	c.K = k
-	c.InvK = big.NewInt(0).ModInverse(big.NewInt(int64(k)), c.Q).Uint64()
 	return c
 }
 
@@ -116,7 +112,7 @@ func GeneratePublicParameters(config ProtocolConfig, targetRel *crypto.ImmutLine
 	b := fastmath.NewRandomPolyMatrix(bSize, B0.Cols(), config.UniformSampler, config.BaseRing)
 	sig := fastmath.NewAutomorphism(uint64(config.D), uint64(config.K))
 	// Build the cache.
-	config.Cache.Build(config.K, sig)
+	config.Cache.Build(config.K, sig, config.Q)
 	return PublicParams{
 		config: config,
 		A:      targetRel.A,

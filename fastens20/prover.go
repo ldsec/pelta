@@ -129,7 +129,7 @@ func (p Prover) CommitToRelation(alpha *fastmath.PolyNTTVec, gamma *fastmath.Int
 	e.LogExecEnd()
 
 	e = logging.LogExecStart("Prover.CommitToRelation", "h calculation")
-	gMask := LmuSum(p.params.config.K, p.params.config.InvK,
+	gMask := LmuSum(p.params.config.K, p.params.config.Cache.InvK,
 		func(mu int, v int) *fastmath.PolyNTT {
 			presum := fastmath.NewPolyVec(p.params.config.NumSplits(), p.params.config.BaseRing).NTT()
 			presum.Populate(func(j int) *fastmath.PolyNTT {
@@ -149,20 +149,28 @@ func (p Prover) CommitToRelation(alpha *fastmath.PolyNTTVec, gamma *fastmath.Int
 	vp.Populate(func(i int) *fastmath.PolyNTT {
 		// b[n/d + 1] * y[i]
 		add := p.params.B.Row(p.params.config.NumSplits()).Dot(state.Y.Row(i))
-		outerSum := LmuSumOuter(p.params.config.K, p.params.config.NumSplits(), p.params.config.InvK,
+		outerSum := LmuSumOuter(p.params.config.K, p.params.config.NumSplits(), p.params.config.Cache.InvK,
 			func(mu int, v int, j int) *fastmath.PolyNTT {
 				index := (i - v)
 				if index < 0 {
 					index += p.params.config.K
 				}
 				index = index % p.params.config.K
-				// index := big.NewInt(0).
-				// 	Mod(big.NewInt(int64(i-v)),
-				// 		big.NewInt(int64(p.params.config.K))).
-				// 	Int64()
 				dotResult := p.params.B.Row(j).Dot(state.Y.Row(int(index)))
 				return dotResult.Scale(uint64(p.params.config.D)).Mul(psi.Get(mu, j))
 			}, p.params)
+		// outerSum := LmuSumOuterDot(p.params.config.K, p.params.config.NumSplits(), p.params.config.Cache.InvK,
+		// 	func(mu, v, j int) *fastmath.PolyNTTVec {
+		// 		index := i - v
+		// 		if index < 0 {
+		// 			index += p.params.config.K
+		// 		}
+		// 		index = index % p.params.config.K
+		// 		return state.Y.Row(int(index)).Copy()
+		// 	},
+		// 	func(mu, v, j int) *fastmath.PolyNTTVec {
+		// 		return p.params.B.Row(j).Copy().MulAll(psi.Get(mu, j)).Scale(uint64(p.params.config.D))
+		// 	}, p.params)
 		return outerSum.Add(add)
 	})
 	e.LogExecEnd()

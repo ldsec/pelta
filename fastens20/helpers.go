@@ -61,21 +61,32 @@ func LmuSumOuter(k, numSplits int, invk uint64, f func(int, int, int) *fastmath.
 		}
 		return out.Sum()
 	}).(*fastmath.PolyNTT)
-	// 	tmp := fastmath.NewPolyVec(k, params.config.BaseRing).NTT()
-	// 	tmp.Populate(func(mu int) *fastmath.PolyNTT {
-	// 		tmp2 := fastmath.NewPolyMatrix(k, numSplits, params.config.BaseRing).NTT()
-	// 		tmp2.Populate(func(v, j int) *fastmath.PolyNTT {
-	// 			return f(mu, v, j)
-	// 		})
-	// 		tmp2.Update(func(v, j int, old *fastmath.PolyNTT) *fastmath.PolyNTT {
-	// 			gen := params.config.ValueCache.Get("exp", int64(v), func() uint64 { return params.Sig.Exponent(int64(v)) })
-	// 			return old.InvNTT().PermuteWithGen(gen).NTT()
-	// 		})
-	// 		innerSum := tmp2.Sum()
-	// 		return Lmu(mu, invk, innerSum, params)
-	// 	})
-	// 	return tmp.Sum()
-	// }).(*fastmath.PolyNTT)
+}
+
+// LmuSumOuter computes the value of the function \sum_{mu=0}^{k-1} (1/k) * X^mu * \sum_{v=0}^{k-1} \sum_{j=0}^{numSplits-1} sig^v (f(mu, v, j))
+func LmuSumOuterDot(k, numSplits int, invk uint64, f1 func(int, int, int) *fastmath.PolyNTTVec, f2 func(int, int, int) *fastmath.PolyNTTVec, params PublicParams) *fastmath.PolyNTT {
+	return logging.LogShortExecution("LmuSumOuterDot", "calculating", func() interface{} {
+		out := fastmath.NewPolyVec(k, params.config.BaseRing).NTT()
+		for mu := 0; mu < k; mu++ {
+			for v := 0; v < k; v++ {
+				gen := params.config.Cache.SigmaExpCache[int64(v)]
+				tmp2 := fastmath.NewPoly(params.config.BaseRing).NTT()
+				for j := 0; j < numSplits; j++ {
+					v1 := f1(mu, v, j)
+					v1.Update(func(_ int, old *fastmath.PolyNTT) *fastmath.PolyNTT {
+						return old.InvNTT().PermuteWithGen(gen).NTT()
+					})
+					v2 := f2(mu, v, j)
+					v2.Update(func(_ int, old *fastmath.PolyNTT) *fastmath.PolyNTT {
+						return old.InvNTT().PermuteWithGen(gen).NTT()
+					})
+					tmp2.Add(v1.Dot(v2))
+				}
+				out.Set(mu, Lmu(mu, invk, tmp2, params))
+			}
+		}
+		return out.Sum()
+	}).(*fastmath.PolyNTT)
 }
 
 // CommitmentSum computes \sum_{i=0}^{k-1} \sum_{j=0}^{numSplits} alpha_{i*numSplits+j} sig^{-i} (f(i, j))

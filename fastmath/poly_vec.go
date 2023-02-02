@@ -1,6 +1,10 @@
 package fastmath
 
-import "github.com/tuneinsight/lattigo/v4/ring"
+import (
+	"fmt"
+
+	"github.com/tuneinsight/lattigo/v4/ring"
+)
 
 type PolyVec struct {
 	elems    []*Poly
@@ -212,15 +216,25 @@ func (v *PolyNTTVec) MulAll(r *PolyNTT) *PolyNTTVec {
 	return v
 }
 func (v *PolyNTTVec) Dot(r *PolyNTTVec) *PolyNTT {
+	// if v.Size() != r.Size() {
+	// 	panic(fmt.Sprintf("PolyNTTVec.Dot sizes do not match %d != %d", v.Size(), r.Size()))
+	// }
+	numPolys := r.Size()
+	if r.Size() > v.Size() {
+		numPolys = v.Size()
+	}
 	out := NewPoly(v.baseRing)
-	for i, p := range v.elems {
-		a := p.actual
+	for i := 0; i < numPolys; i++ {
+		a := v.Get(i).actual
 		b := r.Get(i).actual
 		a.MulCoeffsAndAdd(b, out)
 	}
 	return ForceNTT(out)
 }
 func (v *PolyNTTVec) Eq(r *PolyNTTVec) bool {
+	if v.Size() != r.Size() {
+		panic(fmt.Sprintf("PolyNTTVec.Dot sizes do not match %d != %d", v.Size(), r.Size()))
+	}
 	for i, p := range v.elems {
 		if !p.Eq(r.Get(i)) {
 			return false
