@@ -16,19 +16,19 @@ type KeyGenPublicParams struct {
 	T  *fastmath.IntMatrix // NTT transform
 }
 
-func GenerateKeyGenRelation(s, r, e *fastmath.Poly, k *fastmath.IntVec, params KeyGenPublicParams) *crypto.ImmutLinearRelation {
+func GenerateKeyGenRelation(s, r *fastmath.Poly, k *fastmath.IntVec, params KeyGenPublicParams) *crypto.ImmutLinearRelation {
 	_, comP := crypto.GetAjtaiCommitments(params.A1, params.A2, s.Coeffs(), r.Coeffs(), params.AjtaiConfig)
 	ajtaiEqn := crypto.NewPaddedAjtaiEquation(comP, params.A1, params.A2, s.Coeffs(), r.Coeffs(), k, params.AjtaiConfig)
 	ajtaiEqn.AddDependency(0, 0)
 	lrb := crypto.NewLinearRelationBuilder()
-	p0 := crypto.RLWESample(params.P1, s, e)
-	lrb.AppendEqn(crypto.NewIndependentRLWE(p0, params.P1, s, e, params.T, params.RLWEConfig))
+	p0, e := crypto.RLWESample(params.P1, s, params.RLWEConfig)
+	lrb.AppendEqn(crypto.NewIndependentRLWE(p0, params.P1, s, e.InvNTT(), params.T, params.RLWEConfig))
 	lrb.AppendEqn(ajtaiEqn)
 	return lrb.BuildFast(params.RLWEConfig.BaseRing)
 }
 
 func getRandomKeyGenPublicParams(rlweConfig crypto.RLWEConfig, ajtaiConfig crypto.AjtaiConfig) KeyGenPublicParams {
-	uni, _, _ := fastmath.GetSamplers(rlweConfig.RingParams, 0)
+	uni, _, _ := fastmath.GetSamplers(rlweConfig.RingParams, 1)
 	p1 := fastmath.NewRandomPoly(uni, rlweConfig.BaseRing)
 	T := fastmath.LoadNTTTransform("NTTTransform.test", rlweConfig.BaseRing)
 	A1 := fastmath.PersistentIntMatrix("KeyGenA1.test", func() *fastmath.IntMatrix {
@@ -37,7 +37,14 @@ func getRandomKeyGenPublicParams(rlweConfig crypto.RLWEConfig, ajtaiConfig crypt
 	A2 := fastmath.PersistentIntMatrix("KeyGenA1.test", func() *fastmath.IntMatrix {
 		return fastmath.NewRandomIntMatrix(ajtaiConfig.D, ajtaiConfig.D, ajtaiConfig.P, ajtaiConfig.BaseRing)
 	}, ajtaiConfig.BaseRing)
-	params := KeyGenPublicParams{P1: p1, A1: A1, A2: A2, T: T}
+	params := KeyGenPublicParams{
+		AjtaiConfig: ajtaiConfig,
+		RLWEConfig:  rlweConfig,
+		P1:          p1,
+		A1:          A1,
+		A2:          A2,
+		T:           T,
+	}
 	return params
 }
 
@@ -50,13 +57,12 @@ func RunKeyGenRelation() {
 	e0 := logging.LogExecStart("Main", "input creation")
 	s := fastmath.NewRandomPoly(ter, rlweConfig.BaseRing)
 	r := fastmath.NewRandomPoly(ter, rlweConfig.BaseRing)
-	e := fastmath.NewRandomPoly(rlweConfig.ErrorSampler, rlweConfig.BaseRing)
 	comQ, comP := crypto.GetAjtaiCommitments(params.A1, params.A2, s.Coeffs(), r.Coeffs(), ajtaiConfig)
 	k := crypto.GetAjtaiKappa(comP, comQ, ajtaiConfig)
 	e0.LogExecEnd()
 
 	e0 = logging.LogExecStart("Main", "relation creation")
-	rel := GenerateKeyGenRelation(s, r, e, k, params)
+	rel := GenerateKeyGenRelation(s, r, k, params)
 	e0.LogExecEnd()
 
 	e0 = logging.LogExecStart("Main", "rebasing")

@@ -31,18 +31,18 @@ type ProtocolConfig struct {
 	ValueCache *Cache
 }
 
-func NewProtocolConfig(ringParams fastmath.RingParams, delta1 uint64, m, n int) ProtocolConfig {
+func NewProtocolConfig(ringParams fastmath.RingParams, delta1 uint64, numRows, numCols int) ProtocolConfig {
 	uni, ter, gau := fastmath.GetSamplers(ringParams, delta1)
 	invK := big.NewInt(0).ModInverse(big.NewInt(int64(1)), ringParams.Q).Uint64()
 	return ProtocolConfig{
 		RingParams:      ringParams,
-		M:               m,
-		N:               n,
+		M:               numRows,
+		N:               numCols,
 		Delta1:          delta1,
 		K:               1,
 		Lambda:          1,
 		Kappa:           1,
-		TernarySlice:    fastmath.NewSlice(0, n),
+		TernarySlice:    fastmath.NewSlice(0, numCols),
 		ABPEnabled:      false,
 		Tau:             128,
 		Bound:           big.NewInt(0),

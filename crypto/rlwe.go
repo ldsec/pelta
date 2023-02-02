@@ -16,28 +16,29 @@ type RLWEConfig struct {
 	ErrorSampler fastmath.PolySampler
 }
 
-func NewRLWEConfig(delta int, ringParams fastmath.RingParams) RLWEConfig {
-	logBeta := int(math.Log2(float64(delta)))
+func NewRLWEConfig(errorWidth int, ringParams fastmath.RingParams) RLWEConfig {
+	logBeta := int(math.Log2(float64(errorWidth)))
 	logD := int(math.Log2(float64(ringParams.D)))
 	// Create the error sampler
 	prng, err := utils.NewPRNG()
 	if err != nil {
 		panic("could not initialize the prng for rlwe error sampler: %s")
 	}
-	originalGaussianSampler := ring.NewGaussianSampler(prng, ringParams.BaseRing, ringParams.Sigma, delta)
-	gaussianSampler := fastmath.NewAugmentedGaussianSampler(originalGaussianSampler, uint64(delta), ringParams.BaseRing)
+	originalGaussianSampler := ring.NewGaussianSampler(prng, ringParams.BaseRing, ringParams.Sigma, errorWidth)
+	gaussianSampler := fastmath.NewAugmentedGaussianSampler(originalGaussianSampler, uint64(errorWidth), ringParams.BaseRing)
 	return RLWEConfig{
 		RingParams:   ringParams,
-		Delta:        delta,
+		Delta:        errorWidth,
 		LogD:         logD,
 		LogDelta:     logBeta,
 		ErrorSampler: gaussianSampler,
 	}
 }
 
-// RLWESample returns -p1 * s + err in NTT domain.
-func RLWESample(p1, s, err *fastmath.Poly) *fastmath.PolyNTT {
-	return p1.Copy().Neg().NTT().Mul(s.Copy().NTT()).Add(err.Copy().NTT())
+// RLWESample returns p0 and e where p0 = -p1 * s + e
+func RLWESample(p1, s *fastmath.Poly, config RLWEConfig) (*fastmath.PolyNTT, *fastmath.PolyNTT) {
+	e := fastmath.NewRandomPoly(config.ErrorSampler, config.BaseRing).NTT()
+	return p1.Copy().Neg().NTT().Mul(s.Copy().NTT()).Add(e), e
 }
 
 // RLWEErrorDecomposition returns the ternary decomposition of the error {e_i}, b.
