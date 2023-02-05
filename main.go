@@ -1,5 +1,7 @@
 package main
 
 func main() {
-	RunKeyGenRelation()
+	// RunKeyGenRelation()
+	// RunCollectiveDecRelation()
+	RunKeySwitchRelation()
 }

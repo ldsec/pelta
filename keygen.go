@@ -27,7 +27,7 @@ func GenerateKeyGenRelation(s, r *fastmath.Poly, k *fastmath.IntVec, params KeyG
 	return lrb.BuildFast(params.RLWEConfig.BaseRing)
 }
 
-func getRandomKeyGenPublicParams(rlweConfig crypto.RLWEConfig, ajtaiConfig crypto.AjtaiConfig) KeyGenPublicParams {
+func getRandomKeyGenParams(rlweConfig crypto.RLWEConfig, ajtaiConfig crypto.AjtaiConfig) KeyGenPublicParams {
 	uni, _, _ := fastmath.GetSamplers(rlweConfig.RingParams, 1)
 	p1 := fastmath.NewRandomPoly(uni, rlweConfig.BaseRing)
 	T := fastmath.LoadNTTTransform("NTTTransform.test", rlweConfig.BaseRing)
@@ -51,7 +51,7 @@ func getRandomKeyGenPublicParams(rlweConfig crypto.RLWEConfig, ajtaiConfig crypt
 func RunKeyGenRelation() {
 	rlweConfig := GetDefaultRLWEConfig()
 	ajtaiConfig := GetDefaultAjtaiConfig()
-	params := getRandomKeyGenPublicParams(rlweConfig, ajtaiConfig)
+	params := getRandomKeyGenParams(rlweConfig, ajtaiConfig)
 
 	_, ter, _ := fastmath.GetSamplers(rlweConfig.RingParams, 1)
 	e0 := logging.LogExecStart("Main", "input creation")
@@ -67,7 +67,7 @@ func RunKeyGenRelation() {
 
 	e0 = logging.LogExecStart("Main", "rebasing")
 	rebasedRel := rel.Rebased(rebaseRing)
-	rebasedRel.Cleanup()
+	// rebasedRel.Cleanup()
 	// commitmentRing := config.Ring
 	// rebasedRel := rel
 	e0.LogExecEnd()

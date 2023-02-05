@@ -27,6 +27,7 @@ type LinearEquation struct {
 }
 
 // NewLinearEquation constructs an empty equation from the given lhs.
+// TODO: remove the `cols` parameter
 func NewLinearEquation(lhs *fastmath.IntVec, cols int) *LinearEquation {
 	return &LinearEquation{lhs, []term{}, lhs.Size(), false}
 }
