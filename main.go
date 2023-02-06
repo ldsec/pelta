@@ -3,5 +3,6 @@ package main
 func main() {
 	// RunKeyGenRelation()
 	// RunCollectiveDecRelation()
-	RunKeySwitchRelation()
+	// RunKeySwitchRelation()
+	RunCollectiveBootstrappingRelation()
 }
