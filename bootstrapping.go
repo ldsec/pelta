@@ -22,33 +22,51 @@ type CollectiveBootstrappingPublicParams struct {
 	T     *fastmath.IntMatrix // NTT transform
 }
 
-func GenerateCollectiveBootstrappingRelation(s, sp, spp, r, er0, er1, er2 *fastmath.Poly, k2, k3 *fastmath.IntVec, params CollectiveBootstrappingPublicParams) *crypto.ImmutLinearRelation {
-	M := params.A4.Copy().Hadamard(params.T).MulVec(spp.Copy().Coeffs()).Add(er2.Copy().NTT().Coeffs()).Add(k2.Copy().Scale(params.QPt).Neg())
-	e0 := params.A3.Copy().Hadamard(params.T).MulVec(sp.Copy().Coeffs()).Add(er0.Copy().NTT().Coeffs()).Add(k3.Copy().Scale(params.QSmdg).Neg())
-	h0 := params.C1.Copy().NTT().Mul(s.Copy().NTT()).Add(er0.Copy().NTT()).Add(M.Copy().Scale(params.Delta).Neg().UnderlyingPolysAsPolyNTTVec().Get(0)).Coeffs()
-	h1 := params.T.Copy().AsIntMatrix().DiagMulMat(params.A.Coeffs()).Neg().MulVec(s.Coeffs()).Add(M.Copy().Scale(params.Delta)).Add(er1.Copy().NTT().Coeffs())
-	comP, comQ := crypto.GetAjtaiCommitments(params.A1, params.A2, s.Coeffs(), r.Coeffs(), params.AjtaiConfig)
-	k1 := crypto.GetAjtaiKappa(comP, comQ, params.AjtaiConfig)
-
+func GenerateCollectiveBootstrappingRelation(s, sp, spp, r, er0, er1, er2 *fastmath.Poly, k1, k2, k3 *fastmath.IntVec, params CollectiveBootstrappingPublicParams) *crypto.ImmutLinearRelation {
 	id := fastmath.NewIdIntMatrix(params.RLWEConfig.D, params.RLWEConfig.BaseRing)
-	eqn1 := crypto.NewLinearEquation(h0, 0).
+	emptyLHS := fastmath.NewIntVec(params.RLWEConfig.D, params.RLWEConfig.BaseRing)
+	DM := crypto.NewLinearEquation(emptyLHS, 0).
+		AppendTerm(params.T.Copy().Hadamard(params.A4).AsIntMatrix().Scale(params.Delta), spp.Coeffs()).
+		AppendRLWEErrorDecompositionSum(er2, params.T.Copy().AsIntMatrix().Scale(params.Delta).AsIntMatrix(), params.RLWEConfig).
+		AppendTerm(id.Copy().AsIntMatrix().Scale(-params.QPt*params.Delta), k3)
+	DM.UpdateLHS()
+	negDM := crypto.NewLinearEquation(emptyLHS, 0).
+		AppendTerm(params.T.Copy().Hadamard(params.A4).AsIntMatrix().Scale(params.Delta).Neg(), spp.Coeffs()).
+		AppendRLWEErrorDecompositionSum(er2, params.T.Copy().AsIntMatrix().Scale(params.Delta).Neg().AsIntMatrix(), params.RLWEConfig).
+		AppendTerm(id.Copy().AsIntMatrix().Scale(params.QPt*params.Delta), k3)
+	negDM.UpdateLHS()
+	e0 := crypto.NewLinearEquation(emptyLHS, 0).
+		AppendTerm(params.T.Copy().Hadamard(params.A3), sp.Coeffs()).
+		AppendRLWEErrorDecompositionSum(er0, params.T, params.RLWEConfig).
+		AppendTerm(id.Copy().AsIntMatrix().Scale(-params.QSmdg), k2)
+	e0.UpdateLHS()
+
+	h0 := crypto.NewLinearEquation(emptyLHS, 0).
 		AppendTerm(params.T.Copy().AsIntMatrix().DiagMulMat(params.C1.Coeffs()), s.Coeffs()).
-		AppendRLWEErrorDecompositionSum(e0.UnderlyingPolysAsPolyVec().Get(0), params.T, params.RLWEConfig).
-		AppendTerm(id.Copy().AsIntMatrix().Scale(-params.Delta).Hadamard(params.A4).Hadamard(params.T), spp.Coeffs()).
-		AppendRLWEErrorDecompositionSum(er2, id.Copy().AsIntMatrix().Scale(-params.Delta).AsIntMatrix(), params.RLWEConfig).
-		AppendTerm(id.Copy().AsIntMatrix().Scale(-params.Delta*params.QPt).Hadamard(params.T), k3)
-	eqn2 := crypto.NewLinearEquation(h1, 0).
-		AppendTerm(params.T.Copy().AsIntMatrix().DiagMulMat(params.A.Coeffs()).Neg(), s.Coeffs()).AddDependency(0, 0).
-		AppendRLWEErrorDecompositionSum(er1, params.T, params.RLWEConfig).
-		AppendTerm(id.Copy().AsIntMatrix().Scale(params.Delta).Hadamard(params.A4).Hadamard(params.T), spp.Coeffs()).
-		AppendRLWEErrorDecompositionSum(er2, id.Copy().AsIntMatrix().Scale(params.Delta).AsIntMatrix(), params.RLWEConfig).
-		AppendTerm(id.Copy().AsIntMatrix().Scale(params.Delta*params.QPt).Hadamard(params.T), k3)
-	eqn3 := crypto.NewLinearEquation(comP, 0).
+		AppendEquation(negDM).
+		AppendEquation(e0)
+	h0.UpdateLHS()
+	h1 := crypto.NewLinearEquation(emptyLHS, 0).
+		AppendTerm(params.T.Copy().AsIntMatrix().DiagMulMat(params.A.Coeffs()).Neg(), s.Coeffs()).
+		AppendEquation(DM).
+		AppendRLWEErrorDecompositionSum(er1, params.T, params.RLWEConfig)
+	h1.UpdateLHS()
+	// Add h1 dependencies
+	h0Terms := h0.GetTerms()
+	e0Terms := e0.GetTerms()
+	for i := range h0Terms[:len(h0Terms)-len(e0Terms)] {
+		h1.AddDependency(i, i)
+	}
+	t := crypto.NewLinearEquation(emptyLHS, 0).
 		AppendTerm(params.A1, s.Coeffs()).
 		AppendTerm(params.A2, r.Coeffs()).
-		AppendTerm(id.Copy().AsIntMatrix().Scale(params.AjtaiConfig.P.Uint64()), k1).
-		AddDependency(0, 0)
-	lrb := crypto.NewLinearRelationBuilder().AppendEqn(eqn1).AppendEqn(eqn2).AppendEqn(eqn3)
+		AppendTerm(id.Copy().AsIntMatrix().Scale(-params.AjtaiConfig.P.Uint64()), k1)
+	t.UpdateLHS()
+	t.AddDependency(0, 0)
+	lrb := crypto.NewLinearRelationBuilder().
+		AppendEqn(h0).
+		AppendEqn(h1).
+		AppendEqn(t)
 	return lrb.BuildFast(params.RLWEConfig.BaseRing)
 }
 
@@ -91,22 +109,26 @@ func RunCollectiveBootstrappingRelation() {
 	ajtaiConfig := GetDefaultAjtaiConfig()
 	params := getRandomCollectiveBootstrappingParams(rlweConfig, ajtaiConfig)
 
-	_, ter, _ := fastmath.GetSamplers(rlweConfig.RingParams, 1)
+	uni, ter, _ := fastmath.GetSamplers(rlweConfig.RingParams, 1)
 	e0 := logging.LogExecStart("Main", "input creation")
 	s := fastmath.NewRandomPoly(ter, rlweConfig.BaseRing)
 	sp := fastmath.NewRandomPoly(ter, rlweConfig.BaseRing)
 	spp := fastmath.NewRandomPoly(ter, rlweConfig.BaseRing)
-	er0 := fastmath.NewRandomPoly(ter, rlweConfig.BaseRing)
-	er1 := fastmath.NewRandomPoly(ter, rlweConfig.BaseRing)
-	er2 := fastmath.NewRandomPoly(ter, rlweConfig.BaseRing)
+	er0 := fastmath.NewRandomPoly(rlweConfig.ErrorSampler, rlweConfig.BaseRing)
+	er1 := fastmath.NewRandomPoly(rlweConfig.ErrorSampler, rlweConfig.BaseRing)
+	er2 := fastmath.NewRandomPoly(rlweConfig.ErrorSampler, rlweConfig.BaseRing)
 	r := fastmath.NewRandomPoly(ter, rlweConfig.BaseRing)
-	k2 := fastmath.NewRandomPoly(ter, rlweConfig.BaseRing).Coeffs()
-	k3 := fastmath.NewRandomPoly(ter, rlweConfig.BaseRing).Coeffs()
+	k1 := fastmath.NewRandomPoly(uni, rlweConfig.BaseRing).Coeffs()
+	k2 := fastmath.NewRandomPoly(uni, rlweConfig.BaseRing).Coeffs()
+	k3 := fastmath.NewRandomPoly(uni, rlweConfig.BaseRing).Coeffs()
 	e0.LogExecEnd()
 
 	e0 = logging.LogExecStart("Main", "relation creation")
-	rel := GenerateCollectiveBootstrappingRelation(s, sp, spp, r, er0, er1, er2, k2, k3, params)
+	rel := GenerateCollectiveBootstrappingRelation(s, sp, spp, r, er0, er1, er2, k1, k2, k3, params)
 	e0.LogExecEnd()
+	if !rel.IsValid() {
+		panic("invalid relation")
+	}
 
 	e0 = logging.LogExecStart("Main", "rebasing")
 	rebasedRel := rel.Rebased(rebaseRing)

@@ -32,6 +32,31 @@ func NewLinearEquation(lhs *fastmath.IntVec, cols int) *LinearEquation {
 	return &LinearEquation{lhs, []term{}, lhs.Size(), false}
 }
 
+// UpdateLHS computes the lhs of the equation and updates the `lhs` of this equation accordingly.
+func (eqn *LinearEquation) UpdateLHS() *fastmath.IntVec {
+	if eqn.dependent {
+		panic("cannot compute dependent equation")
+	}
+	out := fastmath.NewIntVec(eqn.lhs.Size(), eqn.lhs.BaseRing())
+	for _, t := range eqn.GetIndependentTerms() {
+		out.Add(t.A.MulVec(t.b))
+	}
+	if !eqn.lhs.Eq(out) {
+		logging.Log("LinearEquation.ComputeLHS", "computed value was different")
+	}
+	eqn.lhs = out
+	return out
+}
+
+func (eqn *LinearEquation) GetLHS() *fastmath.IntVec {
+	return eqn.lhs
+}
+
+func (eqn *LinearEquation) AppendEquation(other *LinearEquation) *LinearEquation {
+	eqn.rhs = append(eqn.rhs, other.rhs...)
+	return eqn
+}
+
 // AppendTerm adds a new term A*b to this equation.
 func (eqn *LinearEquation) AppendTerm(A fastmath.ImmutIntMatrix, b *fastmath.IntVec) *LinearEquation {
 	if A.Rows() != eqn.m || A.Cols() != b.Size() {

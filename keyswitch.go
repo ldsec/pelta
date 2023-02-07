@@ -20,31 +20,34 @@ type KeySwitchPublicParams struct {
 	T     *fastmath.IntMatrix // NTT transform
 }
 
-func GenerateKeySwitchRelation(s, sp, u, r, e0, e1 *fastmath.Poly, k2 *fastmath.IntVec, params KeySwitchPublicParams) *crypto.ImmutLinearRelation {
-	h0 := params.C1.Copy().NTT().Mul(s.Copy().NTT()).
-		Add(params.P0p.Copy().NTT().Mul(u.Copy().NTT())).
-		Add(e0.Copy().NTT())
-	h1 := params.P1p.Copy().NTT().Mul(u.Copy().NTT()).
-		Add(e1.Copy().NTT())
-	comP, comQ := crypto.GetAjtaiCommitments(params.A1, params.A2, s.Coeffs(), r.Coeffs(), params.AjtaiConfig)
-	k1 := crypto.GetAjtaiKappa(comP, comQ, params.AjtaiConfig)
-	eqn1 := crypto.NewLinearEquation(h0.Coeffs(), 0).
-		AppendTerm(params.T.Copy().(*fastmath.IntMatrix).DiagMulMat(params.C1.Coeffs()), s.Coeffs()).
-		AppendTerm(params.T.Copy().(*fastmath.IntMatrix).DiagMulMat(params.P0p.Coeffs()), u.Coeffs()).
-		AppendRLWEErrorDecompositionSum(e0, params.T, params.RLWEConfig)
-	eqn2 := crypto.NewLinearEquation(h1.Coeffs(), 0).
-		AppendTerm(params.T.Copy().(*fastmath.IntMatrix).DiagMulMat(params.P1p.Coeffs()), u.Coeffs()).
-		AppendRLWEErrorDecompositionSum(e1, params.T, params.RLWEConfig).
-		AddDependency(0, 1)
-	eqn3 := crypto.NewLinearEquation(comP, 0).
+func GenerateKeySwitchRelation(s, sp, u, r, er0, er1 *fastmath.Poly, k1, k2 *fastmath.IntVec, params KeySwitchPublicParams) *crypto.ImmutLinearRelation {
+	id := fastmath.NewIdIntMatrix(params.RLWEConfig.D, params.RLWEConfig.BaseRing)
+	emptyLHS := fastmath.NewIntVec(params.RLWEConfig.D, params.RLWEConfig.BaseRing)
+	e0 := crypto.NewLinearEquation(emptyLHS, 0).
+		AppendTerm(params.A3.Copy().Hadamard(params.T), sp.Coeffs()).
+		AppendRLWEErrorDecompositionSum(er0, params.T, params.RLWEConfig).
+		AppendTerm(id.Copy().AsIntMatrix().Scale(-params.QSmdg), k2)
+	e0.UpdateLHS()
+	h0 := crypto.NewLinearEquation(emptyLHS, 0).
+		AppendTerm(params.T.Copy().AsIntMatrix().DiagMulMat(params.C1.Coeffs()), s.Coeffs()).
+		AppendTerm(params.T.Copy().AsIntMatrix().DiagMulMat(params.P0p.Coeffs()), u.Coeffs())
+	h0.UpdateLHS()
+	h0.AppendEquation(e0)
+	h1 := crypto.NewLinearEquation(emptyLHS, 0).
+		AppendTerm(params.T.Copy().AsIntMatrix().DiagMulMat(params.P1p.Coeffs()), u.Coeffs()).
+		AppendRLWEErrorDecompositionSum(er1, params.T, params.RLWEConfig)
+	h1.UpdateLHS()
+	h1.AddDependency(0, 1)
+	t := crypto.NewLinearEquation(emptyLHS, 0).
 		AppendTerm(params.A1, s.Coeffs()).
 		AppendTerm(params.A2, r.Coeffs()).
-		AppendTerm(fastmath.NewIdIntMatrix(s.N(), params.RLWEConfig.BaseRing).Scale(params.AjtaiConfig.P.Uint64()), k1).
-		AddDependency(0, 0)
+		AppendTerm(id.Copy().AsIntMatrix().Scale(-params.AjtaiConfig.P.Uint64()), k1)
+	t.UpdateLHS()
+	t.AddDependency(0, 0)
 	lrb := crypto.NewLinearRelationBuilder().
-		AppendEqn(eqn1).
-		AppendEqn(eqn2).
-		AppendEqn(eqn3)
+		AppendEqn(h0).
+		AppendEqn(h1).
+		AppendEqn(t)
 	return lrb.BuildFast(params.RLWEConfig.BaseRing)
 }
 
@@ -83,20 +86,24 @@ func RunKeySwitchRelation() {
 	ajtaiConfig := GetDefaultAjtaiConfig()
 	params := getRandomKeySwitchParams(rlweConfig, ajtaiConfig)
 
-	_, ter, _ := fastmath.GetSamplers(rlweConfig.RingParams, 1)
+	uni, ter, _ := fastmath.GetSamplers(rlweConfig.RingParams, 1)
 	e0 := logging.LogExecStart("Main", "input creation")
 	s := fastmath.NewRandomPoly(ter, rlweConfig.BaseRing)
 	sp := fastmath.NewRandomPoly(ter, rlweConfig.BaseRing)
 	u := fastmath.NewRandomPoly(ter, rlweConfig.BaseRing)
-	er0 := fastmath.NewRandomPoly(ter, rlweConfig.BaseRing)
-	er1 := fastmath.NewRandomPoly(ter, rlweConfig.BaseRing)
+	er0 := fastmath.NewRandomPoly(rlweConfig.ErrorSampler, rlweConfig.BaseRing)
+	er1 := fastmath.NewRandomPoly(rlweConfig.ErrorSampler, rlweConfig.BaseRing)
 	r := fastmath.NewRandomPoly(ter, rlweConfig.BaseRing)
-	k2 := fastmath.NewRandomPoly(ter, rlweConfig.BaseRing).Coeffs()
+	k1 := fastmath.NewRandomPoly(uni, rlweConfig.BaseRing).Coeffs()
+	k2 := fastmath.NewRandomPoly(uni, rlweConfig.BaseRing).Coeffs()
 	e0.LogExecEnd()
 
 	e0 = logging.LogExecStart("Main", "relation creation")
-	rel := GenerateKeySwitchRelation(s, sp, u, r, er0, er1, k2, params)
+	rel := GenerateKeySwitchRelation(s, sp, u, r, er0, er1, k1, k2, params)
 	e0.LogExecEnd()
+	if !rel.IsValid() {
+		panic("invalid relation")
+	}
 
 	e0 = logging.LogExecStart("Main", "rebasing")
 	rebasedRel := rel.Rebased(rebaseRing)
