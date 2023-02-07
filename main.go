@@ -4,5 +4,6 @@ func main() {
 	// RunKeyGenRelation()
 	// RunCollectiveDecRelation()
 	// RunKeySwitchRelation()
-	RunCollectiveBootstrappingRelation()
+	// RunCollectiveBootstrappingRelation()
+	RunRelinKeyGenRelation()
 }
