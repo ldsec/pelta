@@ -1,8 +1,6 @@
 package main
 
 import (
-	"math/big"
-
 	"github.com/ldsec/codeBase/commitment/crypto"
 	"github.com/ldsec/codeBase/commitment/fastens20"
 	"github.com/ldsec/codeBase/commitment/fastmath"
@@ -86,7 +84,7 @@ func RunRelinKeyGenRelation() {
 	// (#Q+#P)/#P
 	logQ := ajtaiConfig.Q.BitLen()
 	logP := ajtaiConfig.P.BitLen()
-	size := (logQ + logP) / logP
+	size := int((float64(logQ)+float64(logP))/float64(logP) + 0.5)
 	params := getRandomRelinKeyGenParams(size, rlweConfig, ajtaiConfig)
 
 	uni, ter, _ := fastmath.GetSamplers(rlweConfig.RingParams, 1)
