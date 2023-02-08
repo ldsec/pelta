@@ -62,6 +62,7 @@ func (eqn *LinearEquation) GetLHS() *fastmath.IntVec {
 }
 
 func (eqn *LinearEquation) AppendEquation(other *LinearEquation) *LinearEquation {
+	eqn.lhs.Add(other.lhs)
 	eqn.rhs = append(eqn.rhs, other.rhs...)
 	return eqn
 }
