@@ -18,7 +18,7 @@ type CollectiveDecPublicParams struct {
 	T     *fastmath.IntMatrix // NTT transform
 }
 
-func GenerateCollectiveDecRelation(s, sp, u, r, er *fastmath.Poly, k1, k2 *fastmath.IntVec, params CollectiveDecPublicParams) *crypto.ImmutLinearRelation {
+func GenerateCollectiveDecRelation(s, sp, r, er *fastmath.Poly, k1, k2 *fastmath.IntVec, params CollectiveDecPublicParams) *crypto.ImmutLinearRelation {
 	id := fastmath.NewIdIntMatrix(params.RLWEConfig.D, params.RLWEConfig.BaseRing)
 	emptyLHS := fastmath.NewIntVec(params.RLWEConfig.D, params.RLWEConfig.BaseRing)
 	e := crypto.NewLinearEquation(emptyLHS, 0).
@@ -53,8 +53,8 @@ func getRandomCollectiveDecParams(rlweConfig crypto.RLWEConfig, ajtaiConfig cryp
 	A2 := fastmath.PersistentIntMatrix("KeyGenA1.test", func() *fastmath.IntMatrix {
 		return fastmath.NewRandomIntMatrix(ajtaiConfig.D, ajtaiConfig.D, ajtaiConfig.P, ajtaiConfig.BaseRing)
 	}, ajtaiConfig.BaseRing)
-	A3 := fastmath.PersistentIntMatrix("KeyGenA1.test", func() *fastmath.IntMatrix {
-		return fastmath.NewRandomIntMatrix(ajtaiConfig.D, ajtaiConfig.D, rlweConfig.Q, ajtaiConfig.BaseRing)
+	A3 := fastmath.PersistentIntMatrix("KeyGenA3.test", func() *fastmath.IntMatrix {
+		return fastmath.NewRandomIntMatrixFast(rlweConfig.D, rlweConfig.D, uni, rlweConfig.BaseRing)
 	}, ajtaiConfig.BaseRing)
 	params := CollectiveDecPublicParams{
 		AjtaiConfig: ajtaiConfig,
@@ -78,7 +78,6 @@ func RunCollectiveDecRelation() {
 	e0 := logging.LogExecStart("Main", "input creation")
 	s := fastmath.NewRandomPoly(ter, rlweConfig.BaseRing)
 	sp := fastmath.NewRandomPoly(ter, rlweConfig.BaseRing)
-	u := fastmath.NewRandomPoly(ter, rlweConfig.BaseRing)
 	er0 := fastmath.NewRandomPoly(rlweConfig.ErrorSampler, rlweConfig.BaseRing)
 	r := fastmath.NewRandomPoly(ter, rlweConfig.BaseRing)
 	k1 := fastmath.NewRandomPoly(uni, rlweConfig.BaseRing).Coeffs()
@@ -86,7 +85,7 @@ func RunCollectiveDecRelation() {
 	e0.LogExecEnd()
 
 	e0 = logging.LogExecStart("Main", "relation creation")
-	rel := GenerateCollectiveDecRelation(s, sp, u, r, er0, k1, k2, params)
+	rel := GenerateCollectiveDecRelation(s, sp, r, er0, k1, k2, params)
 	e0.LogExecEnd()
 	if !rel.IsValid() {
 		panic("invalid relation")
@@ -98,8 +97,8 @@ func RunCollectiveDecRelation() {
 
 	e0 = logging.LogExecStart("Main", "protocol config creation")
 	protocolConfig := GetDefaultProtocolConfig(rebasedRel.A.Rows(), rebasedRel.A.Cols()).
-		WithABP(128, rlweConfig.Q, fastmath.NewSlice(rlweConfig.D*6, rlweConfig.D*7)).
-		WithTernarySlice(fastmath.NewSlice(0, 2*rlweConfig.D))
+		WithABP(128, rlweConfig.Q, fastmath.NewSlice(rlweConfig.D*7, rlweConfig.D*8)).
+		WithTernarySlice(fastmath.NewSlice(0, 7*rlweConfig.D))
 	e0.LogExecEnd()
 
 	e0 = logging.LogExecStart("Main", "public parameters creation")
