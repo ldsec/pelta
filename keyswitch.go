@@ -63,9 +63,9 @@ func getRandomKeySwitchParams(rlweConfig crypto.RLWEConfig, ajtaiConfig crypto.A
 	A2 := fastmath.PersistentIntMatrix("KeyGenA1.test", func() *fastmath.IntMatrix {
 		return fastmath.NewRandomIntMatrix(ajtaiConfig.D, ajtaiConfig.D, ajtaiConfig.P, ajtaiConfig.BaseRing)
 	}, ajtaiConfig.BaseRing)
-	A3 := fastmath.PersistentIntMatrix("KeyGenA1.test", func() *fastmath.IntMatrix {
-		return fastmath.NewRandomIntMatrix(ajtaiConfig.D, ajtaiConfig.D, ajtaiConfig.P, ajtaiConfig.BaseRing)
-	}, ajtaiConfig.BaseRing)
+	A3 := fastmath.PersistentIntMatrix("KeyGenA3.test", func() *fastmath.IntMatrix {
+		return fastmath.NewRandomIntMatrixFast(rlweConfig.D, rlweConfig.D, uni, rlweConfig.BaseRing)
+	}, rlweConfig.BaseRing)
 	params := KeySwitchPublicParams{
 		AjtaiConfig: ajtaiConfig,
 		RLWEConfig:  rlweConfig,
@@ -75,7 +75,7 @@ func getRandomKeySwitchParams(rlweConfig crypto.RLWEConfig, ajtaiConfig crypto.A
 		A1:          A1,
 		A2:          A2,
 		A3:          A3,
-		QSmdg:       17,
+		QSmdg:       uint64(1<<20) - 3,
 		T:           T,
 	}
 	return params

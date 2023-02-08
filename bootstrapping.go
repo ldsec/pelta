@@ -1,6 +1,8 @@
 package main
 
 import (
+	"math/big"
+
 	"github.com/ldsec/codeBase/commitment/crypto"
 	"github.com/ldsec/codeBase/commitment/fastens20"
 	"github.com/ldsec/codeBase/commitment/fastmath"
@@ -81,12 +83,13 @@ func getRandomCollectiveBootstrappingParams(rlweConfig crypto.RLWEConfig, ajtaiC
 	A2 := fastmath.PersistentIntMatrix("KeyGenA1.test", func() *fastmath.IntMatrix {
 		return fastmath.NewRandomIntMatrix(ajtaiConfig.D, ajtaiConfig.D, ajtaiConfig.P, ajtaiConfig.BaseRing)
 	}, ajtaiConfig.BaseRing)
-	A3 := fastmath.PersistentIntMatrix("KeyGenA1.test", func() *fastmath.IntMatrix {
-		return fastmath.NewRandomIntMatrix(ajtaiConfig.D, ajtaiConfig.D, ajtaiConfig.P, ajtaiConfig.BaseRing)
-	}, ajtaiConfig.BaseRing)
-	A4 := fastmath.PersistentIntMatrix("KeyGenA1.test", func() *fastmath.IntMatrix {
-		return fastmath.NewRandomIntMatrix(ajtaiConfig.D, ajtaiConfig.D, ajtaiConfig.P, ajtaiConfig.BaseRing)
-	}, ajtaiConfig.BaseRing)
+	A3 := fastmath.PersistentIntMatrix("KeyGenA3.test", func() *fastmath.IntMatrix {
+		return fastmath.NewRandomIntMatrixFast(rlweConfig.D, rlweConfig.D, uni, rlweConfig.BaseRing)
+	}, rlweConfig.BaseRing)
+	A4 := fastmath.PersistentIntMatrix("KeyGenA3.test", func() *fastmath.IntMatrix {
+		return fastmath.NewRandomIntMatrixFast(rlweConfig.D, rlweConfig.D, uni, rlweConfig.BaseRing)
+	}, rlweConfig.BaseRing)
+	delta := big.NewInt(0).Div(rlweConfig.Q, big.NewInt(int64(rlweConfig.RingParams.T)))
 	params := CollectiveBootstrappingPublicParams{
 		AjtaiConfig: ajtaiConfig,
 		RLWEConfig:  rlweConfig,
@@ -96,9 +99,9 @@ func getRandomCollectiveBootstrappingParams(rlweConfig crypto.RLWEConfig, ajtaiC
 		A2:          A2,
 		A3:          A3,
 		A4:          A4,
-		Delta:       19,
-		QSmdg:       17,
-		QPt:         17,
+		Delta:       delta.Uint64(),
+		QSmdg:       uint64(1<<20) - 3,
+		QPt:         rlweConfig.RingParams.T,
 		T:           T,
 	}
 	return params
