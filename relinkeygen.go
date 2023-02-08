@@ -11,6 +11,7 @@ type RelinKeyGenPublicParams struct {
 	crypto.AjtaiConfig
 	crypto.RLWEConfig
 	A  *fastmath.PolyVec
+	B  *fastmath.PolyVec
 	W  *fastmath.PolyVec
 	A1 *fastmath.IntMatrix
 	A2 *fastmath.IntMatrix
@@ -23,14 +24,15 @@ func GenerateRelinKeyGenRelation(s, u, r, er0, er1 *fastmath.Poly, k1 *fastmath.
 	lrb := crypto.NewLinearRelationBuilder()
 	for i := 0; i < params.A.Size(); i++ {
 		a := params.A.Get(i)
+		b := params.B.Get(i)
 		w := params.W.Get(i)
 		h0i := crypto.NewLinearEquation(emptyLHS, 0).
-			AppendTerm(params.T.Copy().AsIntMatrix().Neg().AsIntMatrix().DiagMulMat(a.Coeffs()), u.Coeffs()).
+			AppendTerm(params.T.Copy().AsIntMatrix().DiagMulMat(a.Coeffs()), u.Coeffs()).
 			AppendTerm(params.T.Copy().AsIntMatrix().DiagMulMat(w.Coeffs()), s.Coeffs()).
 			AppendRLWEErrorDecompositionSum(er0, params.T, params.RLWEConfig)
 		h0i.UpdateLHS()
 		h1i := crypto.NewLinearEquation(emptyLHS, 0).
-			AppendTerm(params.T.Copy().AsIntMatrix().DiagMulMat(a.Coeffs()), s.Coeffs()).
+			AppendTerm(params.T.Copy().AsIntMatrix().DiagMulMat(b.Coeffs()), u.Coeffs()).
 			AppendRLWEErrorDecompositionSum(er1, params.T, params.RLWEConfig)
 		h1i.UpdateLHS()
 		if i > 0 {
@@ -59,6 +61,7 @@ func GenerateRelinKeyGenRelation(s, u, r, er0, er1 *fastmath.Poly, k1 *fastmath.
 func getRandomRelinKeyGenParams(size int, rlweConfig crypto.RLWEConfig, ajtaiConfig crypto.AjtaiConfig) RelinKeyGenPublicParams {
 	uni, _, _ := fastmath.GetSamplers(rlweConfig.RingParams, 1)
 	A := fastmath.NewRandomPolyVec(size, uni, rlweConfig.BaseRing)
+	B := fastmath.NewRandomPolyVec(size, uni, rlweConfig.BaseRing)
 	W := fastmath.NewRandomPolyVec(size, uni, rlweConfig.BaseRing)
 	T := fastmath.LoadNTTTransform("NTTTransform.test", rlweConfig.BaseRing)
 	A1 := fastmath.PersistentIntMatrix("KeyGenA1.test", func() *fastmath.IntMatrix {
@@ -71,6 +74,7 @@ func getRandomRelinKeyGenParams(size int, rlweConfig crypto.RLWEConfig, ajtaiCon
 		AjtaiConfig: ajtaiConfig,
 		RLWEConfig:  rlweConfig,
 		A:           A,
+		B:           B,
 		W:           W,
 		A1:          A1,
 		A2:          A2,
