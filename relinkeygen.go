@@ -81,7 +81,8 @@ func getRandomRelinKeyGenParams(size int, rlweConfig crypto.RLWEConfig, ajtaiCon
 func RunRelinKeyGenRelation() {
 	rlweConfig := GetDefaultRLWEConfig()
 	ajtaiConfig := GetDefaultAjtaiConfig()
-	params := getRandomRelinKeyGenParams(5, rlweConfig, ajtaiConfig)
+	size := 5
+	params := getRandomRelinKeyGenParams(size, rlweConfig, ajtaiConfig)
 
 	uni, ter, _ := fastmath.GetSamplers(rlweConfig.RingParams, 1)
 	e0 := logging.LogExecStart("Main", "input creation")
@@ -106,8 +107,8 @@ func RunRelinKeyGenRelation() {
 
 	e0 = logging.LogExecStart("Main", "protocol config creation")
 	protocolConfig := GetDefaultProtocolConfig(rebasedRel.A.Rows(), rebasedRel.A.Cols()).
-		WithABP(128, rlweConfig.Q, fastmath.NewSlice(rlweConfig.D*6, rlweConfig.D*7)).
-		WithTernarySlice(fastmath.NewSlice(0, 2*rlweConfig.D))
+		WithABP(128, rlweConfig.Q, fastmath.NewSlice(rlweConfig.D*10, rlweConfig.D*11)).
+		WithTernarySlice(fastmath.NewSlice(0, 10*rlweConfig.D))
 	e0.LogExecEnd()
 
 	e0 = logging.LogExecStart("Main", "public parameters creation")

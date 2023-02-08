@@ -139,8 +139,8 @@ func RunCollectiveBootstrappingRelation() {
 
 	e0 = logging.LogExecStart("Main", "protocol config creation")
 	protocolConfig := GetDefaultProtocolConfig(rebasedRel.A.Rows(), rebasedRel.A.Cols()).
-		WithABP(128, rlweConfig.Q, fastmath.NewSlice(rlweConfig.D*6, rlweConfig.D*7)).
-		WithTernarySlice(fastmath.NewSlice(0, 2*rlweConfig.D))
+		WithABP(128, rlweConfig.Q, fastmath.NewSlice(rlweConfig.D*10, rlweConfig.D*12)).
+		WithTernarySlice(fastmath.NewSlice(0, 10*rlweConfig.D))
 	e0.LogExecEnd()
 
 	e0 = logging.LogExecStart("Main", "public parameters creation")

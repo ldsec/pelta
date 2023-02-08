@@ -111,8 +111,8 @@ func RunKeySwitchRelation() {
 
 	e0 = logging.LogExecStart("Main", "protocol config creation")
 	protocolConfig := GetDefaultProtocolConfig(rebasedRel.A.Rows(), rebasedRel.A.Cols()).
-		WithABP(128, rlweConfig.Q, fastmath.NewSlice(rlweConfig.D*6, rlweConfig.D*7)).
-		WithTernarySlice(fastmath.NewSlice(0, 2*rlweConfig.D))
+		WithABP(128, rlweConfig.Q, fastmath.NewSlice(rlweConfig.D*11, rlweConfig.D*13)).
+		WithTernarySlice(fastmath.NewSlice(0, 11*rlweConfig.D))
 	e0.LogExecEnd()
 
 	e0 = logging.LogExecStart("Main", "public parameters creation")
