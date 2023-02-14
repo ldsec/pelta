@@ -24,7 +24,8 @@ func NewCoeffFromUint64(v uint64, mods []uint64) Coeff {
 func NewCoeffFromBigInt(v *big.Int, mods []uint64) Coeff {
 	c := make([]uint64, len(mods))
 	for lvl, mod := range mods {
-		c[lvl] = big.NewInt(0).Mod(v, big.NewInt(int64(mod))).Uint64()
+		qlvl := big.NewInt(int64(mod))
+		c[lvl] = big.NewInt(0).Mod(v, qlvl).Uint64()
 	}
 	return c
 }

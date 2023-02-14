@@ -24,7 +24,7 @@ type CollectiveBootstrappingPublicParams struct {
 	T     *fastmath.IntMatrix // NTT transform
 }
 
-func GenerateCollectiveBootstrappingRelation(s, sp, spp, r, er0, er1, er2 *fastmath.Poly, k1, k2, k3 *fastmath.IntVec, params CollectiveBootstrappingPublicParams) *crypto.ImmutLinearRelation {
+func GenerateCollectiveBootstrappingRelation(s, sp, spp, r, er0, er1, er2 *fastmath.Poly, k2, k3 *fastmath.IntVec, params CollectiveBootstrappingPublicParams) *crypto.ImmutLinearRelation {
 	id := fastmath.NewIdIntMatrix(params.RLWEConfig.D, params.RLWEConfig.BaseRing)
 	emptyLHS := fastmath.NewIntVec(params.RLWEConfig.D, params.RLWEConfig.BaseRing)
 	DM := crypto.NewLinearEquation(emptyLHS, 0).
@@ -59,11 +59,9 @@ func GenerateCollectiveBootstrappingRelation(s, sp, spp, r, er0, er1, er2 *fastm
 	for i := range h0Terms[:len(h0Terms)-len(e0Terms)] {
 		h1.AddDependency(i, i)
 	}
-	t := crypto.NewLinearEquation(emptyLHS, 0).
-		AppendTerm(params.A1, s.Coeffs()).
-		AppendTerm(params.A2, r.Coeffs()).
-		AppendTerm(id.Copy().AsIntMatrix().Scale(-params.AjtaiConfig.P.Uint64()), k1)
-	t.UpdateLHS()
+	comQ, comP := crypto.GetAjtaiCommitments(params.A1, params.A2, s.Coeffs(), r.Coeffs(), params.AjtaiConfig)
+	k1 := crypto.GetAjtaiKappa(comP, comQ, params.AjtaiConfig)
+	t := crypto.NewPaddedAjtaiEquation(comP, params.A1, params.A2, s.Coeffs(), r.Coeffs(), k1, params.AjtaiConfig)
 	t.AddDependency(0, 0)
 	lrb := crypto.NewLinearRelationBuilder().
 		AppendEqn(h0).
@@ -121,13 +119,13 @@ func RunCollectiveBootstrappingRelation() {
 	er1 := fastmath.NewRandomPoly(rlweConfig.ErrorSampler, rlweConfig.BaseRing)
 	er2 := fastmath.NewRandomPoly(rlweConfig.ErrorSampler, rlweConfig.BaseRing)
 	r := fastmath.NewRandomPoly(ter, rlweConfig.BaseRing)
-	k1 := fastmath.NewRandomPoly(uni, rlweConfig.BaseRing).Coeffs()
+	// k1 := fastmath.NewRandomPoly(uni, rlweConfig.BaseRing).Coeffs()
 	k2 := fastmath.NewRandomPoly(uni, rlweConfig.BaseRing).Coeffs()
 	k3 := fastmath.NewRandomPoly(uni, rlweConfig.BaseRing).Coeffs()
 	e0.LogExecEnd()
 
 	e0 = logging.LogExecStart("Main", "relation creation")
-	rel := GenerateCollectiveBootstrappingRelation(s, sp, spp, r, er0, er1, er2, k1, k2, k3, params)
+	rel := GenerateCollectiveBootstrappingRelation(s, sp, spp, r, er0, er1, er2, k2, k3, params)
 	e0.LogExecEnd()
 	if !rel.IsValid() {
 		panic("invalid relation")

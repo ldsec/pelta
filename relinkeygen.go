@@ -18,8 +18,7 @@ type RelinKeyGenPublicParams struct {
 	T  *fastmath.IntMatrix // NTT transform
 }
 
-func GenerateRelinKeyGenRelation(s, u, r, er0, er1 *fastmath.Poly, k1 *fastmath.IntVec, params RelinKeyGenPublicParams) *crypto.ImmutLinearRelation {
-	id := fastmath.NewIdIntMatrix(params.RLWEConfig.D, params.RLWEConfig.BaseRing)
+func GenerateRelinKeyGenRelation(s, u, r, er0, er1 *fastmath.Poly, params RelinKeyGenPublicParams) *crypto.ImmutLinearRelation {
 	emptyLHS := fastmath.NewIntVec(params.RLWEConfig.D, params.RLWEConfig.BaseRing)
 	lrb := crypto.NewLinearRelationBuilder()
 	for i := 0; i < params.A.Size(); i++ {
@@ -49,15 +48,14 @@ func GenerateRelinKeyGenRelation(s, u, r, er0, er1 *fastmath.Poly, k1 *fastmath.
 		lrb.AppendEqn(h0i)
 		lrb.AppendEqn(h1i)
 	}
-	t := crypto.NewLinearEquation(emptyLHS, 0).
-		AppendTerm(params.A1, s.Coeffs()).
-		AppendTerm(params.A2, r.Coeffs()).
-		AppendTerm(id.Copy().AsIntMatrix().Scale(-params.AjtaiConfig.P.Uint64()), k1)
-	t.UpdateLHS()
+	comQ, comP := crypto.GetAjtaiCommitments(params.A1, params.A2, s.Coeffs(), r.Coeffs(), params.AjtaiConfig)
+	k1 := crypto.GetAjtaiKappa(comP, comQ, params.AjtaiConfig)
+	t := crypto.NewPaddedAjtaiEquation(comP, params.A1, params.A2, s.Coeffs(), r.Coeffs(), k1, params.AjtaiConfig)
 	t.AddDependency(0, 0)
 	lrb.AppendEqn(t)
 	return lrb.BuildFast(params.RLWEConfig.BaseRing)
 }
+
 func getRandomRelinKeyGenParams(size int, rlweConfig crypto.RLWEConfig, ajtaiConfig crypto.AjtaiConfig) RelinKeyGenPublicParams {
 	uni, _, _ := fastmath.GetSamplers(rlweConfig.RingParams, 1)
 	A := fastmath.NewRandomPolyVec(size, uni, rlweConfig.BaseRing)
@@ -91,18 +89,18 @@ func RunRelinKeyGenRelation() {
 	size := int((float64(logQ)+float64(logP))/float64(logP) + 0.5)
 	params := getRandomRelinKeyGenParams(size, rlweConfig, ajtaiConfig)
 
-	uni, ter, _ := fastmath.GetSamplers(rlweConfig.RingParams, 1)
+	_, ter, _ := fastmath.GetSamplers(rlweConfig.RingParams, 1)
 	e0 := logging.LogExecStart("Main", "input creation")
 	s := fastmath.NewRandomPoly(ter, rlweConfig.BaseRing)
 	u := fastmath.NewRandomPoly(ter, rlweConfig.BaseRing)
 	r := fastmath.NewRandomPoly(ter, rlweConfig.BaseRing)
 	er0 := fastmath.NewRandomPoly(rlweConfig.ErrorSampler, rlweConfig.BaseRing)
 	er1 := fastmath.NewRandomPoly(rlweConfig.ErrorSampler, rlweConfig.BaseRing)
-	k1 := fastmath.NewRandomPoly(uni, rlweConfig.BaseRing).Coeffs()
+	// k1 := fastmath.NewRandomPoly(uni, rlweConfig.BaseRing).Coeffs()
 	e0.LogExecEnd()
 
 	e0 = logging.LogExecStart("Main", "relation creation")
-	rel := GenerateRelinKeyGenRelation(s, u, r, er0, er1, k1, params)
+	rel := GenerateRelinKeyGenRelation(s, u, r, er0, er1, params)
 	e0.LogExecEnd()
 	if !rel.IsValid() {
 		panic("invalid relation")

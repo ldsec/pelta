@@ -149,6 +149,11 @@ func (p *Poly) GetLevel(index, level int) uint64 {
 	return p.ref.Coeffs[level][index]
 }
 
+// GetWholeLevel returns all the coefficient of this polynomial at the given level.
+func (p *Poly) GetWholeLevel(level int) []uint64 {
+	return p.ref.Coeffs[level]
+}
+
 // N returns the degree of the polynomial.
 func (p *Poly) N() int {
 	return p.ref.N()
@@ -230,7 +235,7 @@ func (p *Poly) Scale(factor uint64) *Poly {
 	return p
 }
 
-// Scale scales this polynomial with the given coefficient.
+// ScaleCoeff scales this polynomial with the given coefficient.
 func (p *Poly) ScaleCoeff(factors Coeff) *Poly {
 	if p.IsUnset() {
 		return p
@@ -275,7 +280,7 @@ func (p *Poly) MaxLevel(level int) uint64 {
 	return max
 }
 
-// MaxLevel returns the maximum coefficient.
+// Max returns the maximum coefficient.
 func (p *Poly) Max(q *big.Int) *big.Int {
 	if p.IsUnset() {
 		return big.NewInt(0)
@@ -306,7 +311,10 @@ func (p *Poly) SumCoeffs() Coeff {
 			// qiHalf := qi >> 1
 			lvlSum := uint64(0)
 			for _, v := range p.ref.Coeffs[lvl] {
-				lvlSum = (lvlSum + v) % qi
+				j := big.NewInt(0).Add(big.NewInt(int64(lvlSum)), big.NewInt(int64(v)))
+				j.Mod(j, big.NewInt(int64(qi)))
+				lvlSum = j.Uint64()
+				//lvlSum = (lvlSum + v) % qi
 				// if v >= qiHalf {
 				// 	lvlSum = ring.CRed(lvlSum+qi-v, qi)
 				// } else {

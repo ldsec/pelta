@@ -20,7 +20,7 @@ type KeySwitchPublicParams struct {
 	T     *fastmath.IntMatrix // NTT transform
 }
 
-func GenerateKeySwitchRelation(s, sp, u, r, er0, er1 *fastmath.Poly, k1, k2 *fastmath.IntVec, params KeySwitchPublicParams) *crypto.ImmutLinearRelation {
+func GenerateKeySwitchRelation(s, sp, u, r, er0, er1 *fastmath.Poly, k2 *fastmath.IntVec, params KeySwitchPublicParams) *crypto.ImmutLinearRelation {
 	id := fastmath.NewIdIntMatrix(params.RLWEConfig.D, params.RLWEConfig.BaseRing)
 	emptyLHS := fastmath.NewIntVec(params.RLWEConfig.D, params.RLWEConfig.BaseRing)
 	e0 := crypto.NewLinearEquation(emptyLHS, 0).
@@ -38,11 +38,9 @@ func GenerateKeySwitchRelation(s, sp, u, r, er0, er1 *fastmath.Poly, k1, k2 *fas
 		AppendRLWEErrorDecompositionSum(er1, params.T, params.RLWEConfig)
 	h1.UpdateLHS()
 	h1.AddDependency(0, 1)
-	t := crypto.NewLinearEquation(emptyLHS, 0).
-		AppendTerm(params.A1, s.Coeffs()).
-		AppendTerm(params.A2, r.Coeffs()).
-		AppendTerm(id.Copy().AsIntMatrix().Scale(-params.AjtaiConfig.P.Uint64()), k1)
-	t.UpdateLHS()
+	comQ, comP := crypto.GetAjtaiCommitments(params.A1, params.A2, s.Coeffs(), r.Coeffs(), params.AjtaiConfig)
+	k1 := crypto.GetAjtaiKappa(comP, comQ, params.AjtaiConfig)
+	t := crypto.NewPaddedAjtaiEquation(comP, params.A1, params.A2, s.Coeffs(), r.Coeffs(), k1, params.AjtaiConfig)
 	t.AddDependency(0, 0)
 	lrb := crypto.NewLinearRelationBuilder().
 		AppendEqn(h0).
@@ -94,12 +92,12 @@ func RunKeySwitchRelation() {
 	er0 := fastmath.NewRandomPoly(rlweConfig.ErrorSampler, rlweConfig.BaseRing)
 	er1 := fastmath.NewRandomPoly(rlweConfig.ErrorSampler, rlweConfig.BaseRing)
 	r := fastmath.NewRandomPoly(ter, rlweConfig.BaseRing)
-	k1 := fastmath.NewRandomPoly(uni, rlweConfig.BaseRing).Coeffs()
+	// k1 := fastmath.NewRandomPoly(uni, rlweConfig.BaseRing).Coeffs()
 	k2 := fastmath.NewRandomPoly(uni, rlweConfig.BaseRing).Coeffs()
 	e0.LogExecEnd()
 
 	e0 = logging.LogExecStart("Main", "relation creation")
-	rel := GenerateKeySwitchRelation(s, sp, u, r, er0, er1, k1, k2, params)
+	rel := GenerateKeySwitchRelation(s, sp, u, r, er0, er1, k2, params)
 	e0.LogExecEnd()
 	if !rel.IsValid() {
 		panic("invalid relation")

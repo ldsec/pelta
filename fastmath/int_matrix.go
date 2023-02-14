@@ -337,6 +337,9 @@ func (m *IntMatrix) MulVec(v *IntVec) *IntVec {
 		return NewIntVec(m.Rows(), m.baseRing)
 	}
 	return logging.LogShortExecution(fmt.Sprintf("%s.MulVec", m.SizeString()), "multiplying", func() interface{} {
+		if m.unrebasedRef != nil && v.unrebasedRef != nil {
+			return m.unrebasedRef.MulVec(v.unrebasedRef)
+		}
 		out := NewIntVec(m.Rows(), m.baseRing)
 		for i, row := range m.rows {
 			dotResult := row.Dot(v)
@@ -344,6 +347,26 @@ func (m *IntMatrix) MulVec(v *IntVec) *IntVec {
 		}
 		return out
 	}).(*IntVec)
+}
+
+// MulVecTranspose performs a matrix-vector multiplication with the transpose of this matrix.
+func (m *IntMatrix) MulVecTranspose(v *IntVec) *IntVec {
+	if m.Rows() != v.Size() {
+		panic("IntMatrix.MulVec sizes incorrect")
+	}
+	if m.IsUnset() {
+		return NewIntVec(m.Cols(), m.baseRing)
+	}
+	return logging.LogShortExecution(fmt.Sprintf("%s.MulVecTranspose & %d", m.SizeString(), v.Size()), "multiplying",
+		func() interface{} {
+			if m.unrebasedRef != nil && v.unrebasedRef != nil {
+				return MulVecTransposeBlazingFast(m.unrebasedRef, v.unrebasedRef, m.unrebasedRef.baseRing)
+			} else if m.unrebasedRef != nil && v.unrebasedRef == nil {
+				v.unrebasedRef = v.MergedPolys(m.unrebasedRef.baseRing)
+				return MulVecTransposeBlazingFast(m.unrebasedRef, v.unrebasedRef, m.unrebasedRef.baseRing)
+			}
+			return MulVecTransposeBlazingFast(m, v, m.baseRing)
+		}).(*IntVec)
 }
 
 // MulMat performs a matrix-matrix multiplication.

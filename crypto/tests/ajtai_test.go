@@ -1,6 +1,7 @@
 package tests
 
 import (
+	"fmt"
 	"math/big"
 	"testing"
 
@@ -10,7 +11,7 @@ import (
 
 func GetTestAjtaiConfig() crypto.AjtaiConfig {
 	bfvRing := fastmath.BFVFullRing()
-	p := big.NewInt(5857)
+	p := big.NewInt(int64(uint64(1<<20 - 3)))
 	return crypto.NewAjtaiConfig(p, bfvRing)
 }
 
@@ -29,6 +30,29 @@ func TestAjtaiCommitments(t *testing.T) {
 	}
 }
 
+func TestAjtaiComPLevels(t *testing.T) {
+	config := GetTestAjtaiConfig()
+	comSize := 4
+	s := fastmath.NewRandomTernaryIntVec(config.D, config.BaseRing)
+	r := fastmath.NewRandomTernaryIntVec(config.D, config.BaseRing)
+	A := fastmath.NewRandomIntMatrix(comSize, s.Size(), config.P, config.BaseRing)
+	B := fastmath.NewRandomIntMatrix(comSize, s.Size(), config.P, config.BaseRing)
+	comQ, comP := crypto.GetAjtaiCommitments(A, B, s, r, config)
+	kappa := crypto.GetAjtaiKappa(comP, comQ, config)
+	// comP = comQ - kappa * p
+	comPReconstructed := comQ.Copy().Add(kappa.Copy().
+		ScaleCoeff(fastmath.NewCoeffFromBigInt(config.P, config.BaseRing.Modulus)).
+		Neg())
+	for i := 0; i < comP.Size(); i++ {
+		coeff := comPReconstructed.GetCoeff(i)
+		for _, ci := range coeff {
+			if ci != coeff[0] {
+				t.Errorf("com_p values not equal across levels")
+			}
+		}
+	}
+}
+
 func TestAjtaiKappa(t *testing.T) {
 	config := GetTestAjtaiConfig()
 	comSize := 4
@@ -40,12 +64,14 @@ func TestAjtaiKappa(t *testing.T) {
 	kappa := crypto.GetAjtaiKappa(comP, comQ, config)
 	// comP = comQ - kappa * p
 	comPReconstructed := comQ.Copy().Add(kappa.Copy().
-		Scale(config.P.Uint64()).
+		ScaleCoeff(fastmath.NewCoeffFromBigInt(config.P, config.BaseRing.Modulus)).
 		Neg())
 	if !comPReconstructed.Eq(comP) {
 		t.Errorf("construction of kappa incorrect")
 	}
-
+	fmt.Println(kappa)
+	fmt.Println(comPReconstructed)
+	fmt.Println(comP)
 }
 
 func TestAjtaiEquationBuild(t *testing.T) {

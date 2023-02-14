@@ -174,6 +174,11 @@ func (m *CachedIntMatrix) MulVec(v *IntVec) *IntVec {
 	return m.A.MulVec(v)
 }
 
+// MulVecTranspose performs a matrix-vector multiplication with the transpose of this matrix.
+func (m *CachedIntMatrix) MulVecTranspose(v *IntVec) *IntVec {
+	return m.At.MulVec(v)
+}
+
 func (m *CachedIntMatrix) AsIntMatrix() *IntMatrix {
 	return m.A.AsIntMatrix()
 }

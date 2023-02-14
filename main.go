@@ -1,9 +1,9 @@
 package main
 
 func main() {
-	// RunKeyGenRelation()
+	RunKeyGenRelation()
 	// RunCollectiveDecRelation()
-	RunKeySwitchRelation()
+	// RunKeySwitchRelation()
 	// RunCollectiveBootstrappingRelation()
 	// RunRelinKeyGenRelation()
 }

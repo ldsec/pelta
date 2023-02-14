@@ -12,7 +12,7 @@ var mainRing fastmath.RingParams = fastmath.BFVFullRing()
 var rebaseRing fastmath.RingParams = fastmath.BFVFullShortCommtRing(7)
 
 func GetDefaultAjtaiConfig() crypto.AjtaiConfig {
-	p := big.NewInt(int64((1 << 20) - 3))
+	p := big.NewInt(int64(uint64(1<<20 - 3)))
 	return crypto.NewAjtaiConfig(p, mainRing)
 }
 

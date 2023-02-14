@@ -18,24 +18,22 @@ type CollectiveDecPublicParams struct {
 	T     *fastmath.IntMatrix // NTT transform
 }
 
-func GenerateCollectiveDecRelation(s, sp, r, er *fastmath.Poly, k1, k2 *fastmath.IntVec, params CollectiveDecPublicParams) *crypto.ImmutLinearRelation {
+func GenerateCollectiveDecRelation(s, sp, r, er *fastmath.Poly, k2 *fastmath.IntVec, params CollectiveDecPublicParams) *crypto.ImmutLinearRelation {
 	id := fastmath.NewIdIntMatrix(params.RLWEConfig.D, params.RLWEConfig.BaseRing)
 	emptyLHS := fastmath.NewIntVec(params.RLWEConfig.D, params.RLWEConfig.BaseRing)
 	e := crypto.NewLinearEquation(emptyLHS, 0).
 		AppendTerm(params.T.Copy().Hadamard(params.A3), sp.Coeffs()).
 		AppendRLWEErrorDecompositionSum(er, params.T, params.RLWEConfig).
-		AppendTerm(id.Copy().AsIntMatrix().Scale(-params.QSmdg), k2)
+		AppendTerm(id.Copy().AsIntMatrix().Scale(params.QSmdg).Neg(), k2)
 	e.UpdateLHS()
 	h := crypto.NewLinearEquation(emptyLHS, 0).
 		AppendTerm(params.T.Copy().AsIntMatrix().DiagMulMat(params.C1.Coeffs()), s.Coeffs()).
 		AppendEquation(e)
 	h.UpdateLHS()
 	// Create the commitment.
-	t := crypto.NewLinearEquation(emptyLHS, 0).
-		AppendTerm(params.A1, s.Coeffs()).
-		AppendTerm(params.A2, r.Coeffs()).
-		AppendTerm(id.Copy().AsIntMatrix().Scale(-params.AjtaiConfig.P.Uint64()), k1)
-	t.UpdateLHS()
+	comQ, comP := crypto.GetAjtaiCommitments(params.A1, params.A2, s.Coeffs(), r.Coeffs(), params.AjtaiConfig)
+	k1 := crypto.GetAjtaiKappa(comP, comQ, params.AjtaiConfig)
+	t := crypto.NewPaddedAjtaiEquation(comP, params.A1, params.A2, s.Coeffs(), r.Coeffs(), k1, params.AjtaiConfig)
 	t.AddDependency(0, 0)
 	lrb := crypto.NewLinearRelationBuilder().
 		AppendEqn(h).
@@ -80,12 +78,11 @@ func RunCollectiveDecRelation() {
 	sp := fastmath.NewRandomPoly(ter, rlweConfig.BaseRing)
 	er0 := fastmath.NewRandomPoly(rlweConfig.ErrorSampler, rlweConfig.BaseRing)
 	r := fastmath.NewRandomPoly(ter, rlweConfig.BaseRing)
-	k1 := fastmath.NewRandomPoly(uni, rlweConfig.BaseRing).Coeffs()
 	k2 := fastmath.NewRandomPoly(uni, rlweConfig.BaseRing).Coeffs()
 	e0.LogExecEnd()
 
 	e0 = logging.LogExecStart("Main", "relation creation")
-	rel := GenerateCollectiveDecRelation(s, sp, r, er0, k1, k2, params)
+	rel := GenerateCollectiveDecRelation(s, sp, r, er0, k2, params)
 	e0.LogExecEnd()
 	if !rel.IsValid() {
 		panic("invalid relation")
