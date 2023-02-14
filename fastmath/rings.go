@@ -14,6 +14,7 @@ type RingParams struct {
 	D        int
 	LogD     int
 	Sigma    float64
+	T        uint64
 }
 
 func BFVFullRing() RingParams {
@@ -31,6 +32,7 @@ func BFVFullRing() RingParams {
 		D:        ringParams.N(),
 		LogD:     ringParams.LogN(),
 		Sigma:    ringParams.Sigma(),
+		T:        ringParams.T(),
 	}
 }
 
@@ -49,6 +51,7 @@ func BFVZeroLevelRing() RingParams {
 		D:        ringParams.N(),
 		LogD:     ringParams.LogN(),
 		Sigma:    ringParams.Sigma(),
+		T:        ringParams.T(),
 	}
 }
 
@@ -67,6 +70,7 @@ func BFVZeroLevelShortCommtRing(logD int) RingParams {
 		D:        ringParams.N(),
 		LogD:     ringParams.LogN(),
 		Sigma:    ringParams.Sigma(),
+		T:        ringParams.T(),
 	}
 }
 
@@ -85,5 +89,6 @@ func BFVFullShortCommtRing(logD int) RingParams {
 		D:        ringParams.N(),
 		LogD:     ringParams.LogN(),
 		Sigma:    ringParams.Sigma(),
+		T:        ringParams.T(),
 	}
 }

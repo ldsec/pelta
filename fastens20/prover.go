@@ -123,8 +123,8 @@ func (p Prover) CommitToRelation(alpha *fastmath.PolyNTTVec, gamma *fastmath.Int
 	e = logging.LogExecStart("Prover.CommitToRelation", "psi calculation")
 	psi := fastmath.NewPolyMatrix(p.params.config.K, p.params.config.NumSplits(), p.params.config.BaseRing).NTT()
 	psi.PopulateRows(func(mu int) *fastmath.PolyNTTVec {
-		tmp2 := p.params.At.MulVec(gamma.RowView(mu))
-		return SplitInvNTT(tmp2, p.params).NTT()
+		tmp := p.params.A.(*fastmath.PartitionedIntMatrix).MulVecTranspose(gamma.RowView(mu))
+		return SplitInvNTT(tmp, p.params).NTT()
 	})
 	e.LogExecEnd()
 

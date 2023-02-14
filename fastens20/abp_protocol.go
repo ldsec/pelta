@@ -44,8 +44,8 @@ func updateProtocol(p *ABPProver, v *ABPVerifier, ps *ABPProverState, vs *ABPVer
 	// Update the public parameters with the new relation.
 	p.params.A = newRel.A
 	v.params.A = p.params.A
-	p.params.At = newRel.A.Transposed()
-	v.params.At = p.params.At
+	// p.params.At = newRel.A.Transposed()
+	// v.params.At = p.params.At
 	p.params.U = newRel.U
 	v.params.U = p.params.U
 	// Update the configuration parameters.

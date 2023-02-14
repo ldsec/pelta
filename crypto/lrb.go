@@ -12,10 +12,19 @@ import (
 // term represents A*b
 type term struct {
 	A            fastmath.ImmutIntMatrix
-	OriginalCols int // # of cols that are originally in this term (We maintain this to not copy A in Linearize method)
 	b            *fastmath.IntVec
+	OriginalCols int // # of cols that are originally in this term (We maintain this to not copy A in Linearize method)
 	dependent    bool
 	depVecIndex  int
+
+	cachedResult *fastmath.IntVec
+}
+
+func (t *term) Compute() *fastmath.IntVec {
+	if t.cachedResult == nil {
+		t.cachedResult = t.A.MulVec(t.b)
+	}
+	return t.cachedResult
 }
 
 // LinearEquation represents a linear equation of form lhs = \sum_{i=1}^k A_i * b_i
@@ -27,8 +36,35 @@ type LinearEquation struct {
 }
 
 // NewLinearEquation constructs an empty equation from the given lhs.
+// TODO: remove the `cols` parameter
 func NewLinearEquation(lhs *fastmath.IntVec, cols int) *LinearEquation {
 	return &LinearEquation{lhs, []term{}, lhs.Size(), false}
+}
+
+// UpdateLHS computes the lhs of the equation and updates the `lhs` of this equation accordingly.
+func (eqn *LinearEquation) UpdateLHS() *fastmath.IntVec {
+	if eqn.dependent {
+		panic("cannot compute dependent equation")
+	}
+	out := fastmath.NewIntVec(eqn.lhs.Size(), eqn.lhs.BaseRing())
+	for _, t := range eqn.GetIndependentTerms() {
+		out.Add(t.Compute())
+	}
+	if !eqn.lhs.Eq(out) {
+		logging.Log("LinearEquation.ComputeLHS", "computed value was different")
+	}
+	eqn.lhs = out
+	return out
+}
+
+func (eqn *LinearEquation) GetLHS() *fastmath.IntVec {
+	return eqn.lhs
+}
+
+func (eqn *LinearEquation) AppendEquation(other *LinearEquation) *LinearEquation {
+	eqn.lhs.Add(other.lhs)
+	eqn.rhs = append(eqn.rhs, other.rhs...)
+	return eqn
 }
 
 // AppendTerm adds a new term A*b to this equation.
@@ -36,21 +72,21 @@ func (eqn *LinearEquation) AppendTerm(A fastmath.ImmutIntMatrix, b *fastmath.Int
 	if A.Rows() != eqn.m || A.Cols() != b.Size() {
 		panic("cannot append term with invalid size")
 	}
-	eqn.rhs = append(eqn.rhs, term{A, A.Cols(), b, false, 0})
+	eqn.rhs = append(eqn.rhs, term{A, b, A.Cols(), false, 0, nil})
 	return eqn
 }
 
 // AppendVecTerm appends a new vector term Id*b to this equation.
 func (eqn *LinearEquation) AppendVecTerm(b *fastmath.IntVec, baseRing *ring.Ring) *LinearEquation {
 	id := fastmath.NewIdIntMatrix(b.Size(), baseRing)
-	eqn.rhs = append(eqn.rhs, term{fastmath.NewCachedIntMatrix(id), id.Cols(), b, false, 0})
+	eqn.rhs = append(eqn.rhs, term{fastmath.NewCachedIntMatrix(id), b, id.Cols(), false, 0, nil})
 	return eqn
 }
 
 // AddDependentTerm adds a dependent term to this equation with the associated vector defined in another equation,
 // indicated by its position in the system by `vecIndex`.
 func (eqn *LinearEquation) AppendDependentTerm(A fastmath.MutIntMatrix, vecIndex int) *LinearEquation {
-	eqn.rhs = append(eqn.rhs, term{A, A.Cols(), nil, true, vecIndex})
+	eqn.rhs = append(eqn.rhs, term{A, nil, A.Cols(), true, vecIndex, nil})
 	eqn.dependent = true
 	return eqn
 }
@@ -60,7 +96,7 @@ func (eqn *LinearEquation) AppendDependentTerm(A fastmath.MutIntMatrix, vecIndex
 // Note: The referenced vector must have the correct size (i.e., m) !!
 func (eqn *LinearEquation) AppendDependentVecTerm(vecIndex int, baseRing *ring.Ring) *LinearEquation {
 	id := fastmath.NewIdIntMatrix(eqn.m, baseRing)
-	eqn.rhs = append(eqn.rhs, term{fastmath.NewCachedIntMatrix(id), id.Cols(), nil, true, vecIndex})
+	eqn.rhs = append(eqn.rhs, term{fastmath.NewCachedIntMatrix(id), nil, id.Cols(), true, vecIndex, nil})
 	eqn.dependent = true
 	return eqn
 }

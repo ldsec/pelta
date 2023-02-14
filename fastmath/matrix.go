@@ -10,6 +10,7 @@ type ImmutIntMatrix interface {
 	RowsView() []*IntVec
 	RowView(int) *IntVec
 	MulVec(*IntVec) *IntVec
+	MulVecTranspose(*IntVec) *IntVec
 	Hadamard(ImmutIntMatrix) ImmutIntMatrix
 	Transposed() ImmutIntMatrix
 	Eq(ImmutIntMatrix) bool

@@ -195,6 +195,7 @@ func (m *PartitionedIntMatrix) Copy() ImmutIntMatrix {
 	return c
 }
 
+// MulVec performs a matrix-vector multiplication.
 func (m *PartitionedIntMatrix) MulVec(v *IntVec) *IntVec {
 	if m.Cols() != v.Size() {
 		panic("invalid sizes for mulvec")
@@ -220,6 +221,43 @@ func (m *PartitionedIntMatrix) MulVec(v *IntVec) *IntVec {
 			vp := v.Slice(NewSlice(resolved, resolved+w))
 			out[i].Add(p.MulVec(vp))
 			resolved += w
+		}
+	}
+	// Vectorize the output.
+	outAggr := out[0]
+	for _, o := range out[1:] {
+		outAggr.Append(o)
+	}
+	return outAggr
+}
+
+// MulVecTranspose performs a matrix-vector multiplication with the transpose of this matrix.
+func (m *PartitionedIntMatrix) MulVecTranspose(v *IntVec) *IntVec {
+	if m.Rows() != v.Size() {
+		fmt.Println(m.SizeString(), v.Size())
+		panic("invalid sizes for mulvec transpose")
+	}
+	if m.baseRing != v.baseRing {
+		panic("different rings for mulvec")
+	}
+	e := logging.LogExecStart(fmt.Sprintf("%s.MulVecTranspose", m.SizeString()), "multiplying")
+	defer e.LogExecEnd()
+	out := make([]*IntVec, len(m.parts[0]))
+	for j := 0; j < len(m.colSizes); j++ {
+		w := m.PartitionWidth(j)
+		out[j] = NewIntVec(w, m.baseRing)
+		resolved := 0
+		for i := 0; i < len(m.rowSizes); i++ {
+			h := m.PartitionHeight(i)
+			p := m.parts[i][j]
+			if p == nil {
+				resolved += h
+				continue
+			}
+			vp := v.Slice(NewSlice(resolved, resolved+h))
+			mvp := p.MulVecTranspose(vp)
+			out[j].Add(mvp)
+			resolved += h
 		}
 	}
 	// Vectorize the output.

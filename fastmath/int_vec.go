@@ -214,6 +214,23 @@ func (v *IntVec) RebaseLossless(newRing RingParams) *IntVec {
 	return vp
 }
 
+func (v *IntVec) MergedPolys(newRing *ring.Ring) *IntVec {
+	if newRing.N != v.Size() {
+		panic("invalid merge operation")
+	}
+	newCoeffs := make([][]uint64, len(v.baseRing.Modulus))
+	for lvl := range newCoeffs {
+		for _, p := range v.polys {
+			newCoeffs[lvl] = append(newCoeffs[lvl], p.ref.Coeffs[lvl]...)
+		}
+	}
+	p := NewPoly(newRing)
+	p.unset = v.IsUnset()
+	p.ref.Coeffs = newCoeffs
+	p.ref.Buff = nil
+	return NewIntVecFromPolys([]*Poly{p}, v.Size(), newRing)
+}
+
 func (v *IntVec) All(pred func(el uint64) bool) bool {
 	for i := 0; i < v.Size(); i++ {
 		if !pred(v.GetLevel(i, 0)) {
@@ -326,7 +343,7 @@ func (v *IntVec) Max(q *big.Int) *big.Int {
 // Add adds two integer vectors.
 func (v *IntVec) Add(r *IntVec) *IntVec {
 	if v.size != r.size {
-		panic("IntVec.Add sizes do not match")
+		panic(fmt.Sprintf("IntVec.Add sizes do not match %d != %d", v.size, r.size))
 	}
 	numPolys := len(v.polys)
 	if len(r.polys) < numPolys {

@@ -1,8 +1,9 @@
 package crypto
 
 import (
-	"github.com/ldsec/codeBase/commitment/fastmath"
 	"math/big"
+
+	"github.com/ldsec/codeBase/commitment/fastmath"
 )
 
 type AjtaiConfig struct {
@@ -25,11 +26,18 @@ func GetAjtaiCommitments(A, B *fastmath.IntMatrix, s, r *fastmath.IntVec, config
 func GetAjtaiKappa(comP, comQ *fastmath.IntVec, params AjtaiConfig) *fastmath.IntVec {
 	// comQ - comP = (As + Br) - [(As + Br) mod p]
 	diff := comQ.Copy().Add(comP.Copy().Neg())
-	// kappa := (comQ - comP) / p s.t. kappa * p is the difference between
-	// pInv := big.NewInt(0).ModInverse(p, config.Q).Uint64()
+	// kappa := (comQ - comP) / p s.t. kappa * p is the difference
 	kappa := fastmath.NewIntVec(diff.Size(), params.RingParams.BaseRing)
-	kappa.Populate(func(i int) uint64 {
-		return diff.GetLevel(i, 0) / params.P.Uint64()
+	kappa.PopulateCoeffs(func(i int) fastmath.Coeff {
+		diffi := diff.GetCoeff(i)
+		for lvl := range diffi {
+			qlvl := big.NewInt(int64(params.RingParams.BaseRing.Modulus[lvl]))
+			pInv := big.NewInt(0).ModInverse(params.P, qlvl)
+			res := big.NewInt(0).Mul(big.NewInt(int64(diffi[lvl])), pInv)
+			res.Mod(res, qlvl)
+			diffi[lvl] = res.Uint64()
+		}
+		return diffi
 	})
 	return kappa
 }

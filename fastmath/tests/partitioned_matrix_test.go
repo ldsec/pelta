@@ -1,6 +1,8 @@
 package tests
 
 import (
+	"fmt"
+	"math/big"
 	"testing"
 
 	"github.com/ldsec/codeBase/commitment/fastmath"
@@ -83,6 +85,24 @@ func TestPartitionedIntMatrixMulVec3(t *testing.T) {
 	v := fastmath.NewRandomIntVecFast(M2.Cols(), uni, testRing.BaseRing)
 	r1 := M2.MulVec(v)
 	r2 := M2.AsIntMatrix().MulVec(v)
+	if !r1.Eq(r2) {
+		t.Errorf("partitioned mulvec incorrect")
+	}
+}
+
+func TestPartitionedIntMatrixMulVecTranspose(t *testing.T) {
+	testRing := fastmath.BFVFullShortCommtRing(7)
+	//uni, _, _ := fastmath.GetSamplers(testRing, 128)
+	A4 := fastmath.NewRandomIntMatrix(testRing.D, testRing.D, big.NewInt(5), testRing.BaseRing)
+	A5 := fastmath.NewRandomIntMatrix(testRing.D, testRing.D, big.NewInt(5), testRing.BaseRing)
+	M2 := fastmath.NewEmptyPartitionedIntMatrix(testRing.BaseRing)
+	M2.Emplace(0, 0, A4)
+	M2.Emplace(0, 1, A5)
+	v := fastmath.NewRandomIntVec(M2.Rows(), big.NewInt(5), testRing.BaseRing)
+	r1 := M2.MulVecTranspose(v)
+	r2 := M2.AsIntMatrix().Transposed().MulVec(v)
+	fmt.Println(r1)
+	fmt.Println(r2)
 	if !r1.Eq(r2) {
 		t.Errorf("partitioned mulvec incorrect")
 	}

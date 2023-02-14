@@ -57,6 +57,15 @@ func NewIndependentRLWE(p0 *fastmath.PolyNTT, p1, s, err *fastmath.Poly, T *fast
 	return eqn
 }
 
+// NewIndependentRLWE construct an independent RLWE equation p0 = A * s + err
+func NewIndependentRLWEWithMatrix(p0 *fastmath.PolyNTT, A *fastmath.IntMatrix, s, err *fastmath.Poly, T *fastmath.IntMatrix, config RLWEConfig) *LinearEquation {
+	eqn := NewLinearEquation(p0.Coeffs(), T.Cols())
+	TA := T.Copy().Hadamard(A)
+	eqn.AppendTerm(TA, s.Coeffs()).
+		AppendRLWEErrorDecompositionSum(err, T, config)
+	return eqn
+}
+
 func (eqn *LinearEquation) AppendRLWEErrorDecompositionSum(err *fastmath.Poly, T *fastmath.IntMatrix, params RLWEConfig) *LinearEquation {
 	e, b := RLWEErrorDecomposition(err, params)
 	for i := 0; i < b.Size(); i++ {

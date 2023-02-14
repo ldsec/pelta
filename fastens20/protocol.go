@@ -96,7 +96,6 @@ func (c ProtocolConfig) Beta() int {
 type PublicParams struct {
 	config ProtocolConfig
 	A      fastmath.ImmutIntMatrix
-	At     fastmath.ImmutIntMatrix
 	U      *fastmath.IntVec
 	B0     *fastmath.PolyNTTMatrix
 	B      *fastmath.PolyNTTMatrix
@@ -116,7 +115,6 @@ func GeneratePublicParameters(config ProtocolConfig, targetRel *crypto.ImmutLine
 	return PublicParams{
 		config: config,
 		A:      targetRel.A,
-		At:     targetRel.A.Transposed(),
 		U:      targetRel.U,
 		B0:     B0.NTT(),
 		B:      b.NTT(),
