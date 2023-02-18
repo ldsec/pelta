@@ -250,7 +250,8 @@ func (v *IntVec) GetAllLevel(level int) []uint64 {
 	// for i := 0; i < len(a); i++ {
 	// 	a[i] = v.polys[0].ref.Coeffs[level][i]
 	// }
-	a := v.polys[0].ref.Coeffs[level]
+	a := make([]uint64, len(v.polys[0].ref.Coeffs[level]))
+	copy(a, v.polys[0].ref.Coeffs[level])
 	for _, b := range v.polys[1:] {
 		a = append(a, b.ref.Coeffs[level]...)
 	}

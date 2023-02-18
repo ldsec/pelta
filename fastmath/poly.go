@@ -311,10 +311,10 @@ func (p *Poly) SumCoeffs() Coeff {
 			// qiHalf := qi >> 1
 			lvlSum := uint64(0)
 			for _, v := range p.ref.Coeffs[lvl] {
-				j := big.NewInt(0).Add(big.NewInt(int64(lvlSum)), big.NewInt(int64(v)))
-				j.Mod(j, big.NewInt(int64(qi)))
-				lvlSum = j.Uint64()
-				//lvlSum = (lvlSum + v) % qi
+				//j := big.NewInt(0).Add(big.NewInt(int64(lvlSum)), big.NewInt(int64(v)))
+				//j.Mod(j, big.NewInt(int64(qi)))
+				//lvlSum = j.Uint64()
+				lvlSum = (lvlSum + v) % qi
 				// if v >= qiHalf {
 				// 	lvlSum = ring.CRed(lvlSum+qi-v, qi)
 				// } else {

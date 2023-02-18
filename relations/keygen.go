@@ -1,4 +1,4 @@
-package main
+package relations
 
 import (
 	"github.com/ldsec/codeBase/commitment/crypto"

@@ -1,7 +1,6 @@
 package tests
 
 import (
-	"fmt"
 	"math/big"
 	"testing"
 
@@ -93,16 +92,36 @@ func TestPartitionedIntMatrixMulVec3(t *testing.T) {
 func TestPartitionedIntMatrixMulVecTranspose(t *testing.T) {
 	testRing := fastmath.BFVFullShortCommtRing(7)
 	//uni, _, _ := fastmath.GetSamplers(testRing, 128)
-	A4 := fastmath.NewRandomIntMatrix(testRing.D, testRing.D, big.NewInt(5), testRing.BaseRing)
-	A5 := fastmath.NewRandomIntMatrix(testRing.D, testRing.D, big.NewInt(5), testRing.BaseRing)
+	A1 := fastmath.NewRandomIntMatrix(testRing.D, testRing.D, big.NewInt(5), testRing.BaseRing)
+	A2 := fastmath.NewRandomIntMatrix(testRing.D, testRing.D, big.NewInt(5), testRing.BaseRing)
 	M2 := fastmath.NewEmptyPartitionedIntMatrix(testRing.BaseRing)
-	M2.Emplace(0, 0, A4)
-	M2.Emplace(0, 1, A5)
+	M2.Emplace(0, 0, A1)
+	M2.Emplace(0, 1, A2)
 	v := fastmath.NewRandomIntVec(M2.Rows(), big.NewInt(5), testRing.BaseRing)
 	r1 := M2.MulVecTranspose(v)
 	r2 := M2.AsIntMatrix().Transposed().MulVec(v)
-	fmt.Println(r1)
-	fmt.Println(r2)
+	if !r1.Eq(r2) {
+		t.Errorf("partitioned mulvec incorrect")
+	}
+}
+
+func TestPartitionedIntMatrixMulVecTranspose2(t *testing.T) {
+	testRing := fastmath.BFVFullShortCommtRing(7)
+	//uni, _, _ := fastmath.GetSamplers(testRing, 128)
+	A1 := fastmath.NewRandomIntMatrix(testRing.D, testRing.D, testRing.Q, testRing.BaseRing)
+	A2 := fastmath.NewRandomIntMatrix(testRing.D, testRing.D, testRing.Q, testRing.BaseRing)
+	A3 := fastmath.NewRandomIntMatrix(testRing.D, testRing.D, testRing.Q, testRing.BaseRing)
+	A4 := fastmath.NewRandomIntMatrix(testRing.D, testRing.D, testRing.Q, testRing.BaseRing)
+	A5 := fastmath.NewRandomIntMatrix(testRing.D, testRing.D, testRing.Q, testRing.BaseRing)
+	M2 := fastmath.NewEmptyPartitionedIntMatrix(testRing.BaseRing)
+	M2.Emplace(0, 0, A1)
+	M2.Emplace(0, 1, A2)
+	M2.Emplace(0, 2, A3)
+	M2.Emplace(1, 3, A4)
+	M2.Emplace(1, 4, A5)
+	v := fastmath.NewRandomIntVec(M2.Rows(), big.NewInt(5), testRing.BaseRing)
+	r1 := M2.MulVecTranspose(v)
+	r2 := M2.AsIntMatrix().Transposed().MulVec(v)
 	if !r1.Eq(r2) {
 		t.Errorf("partitioned mulvec incorrect")
 	}

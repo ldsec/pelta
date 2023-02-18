@@ -1,7 +1,9 @@
 package main
 
+import "github.com/ldsec/codeBase/commitment/relations"
+
 func main() {
-	RunKeyGenRelation()
+	relations.RunKeyGenRelation()
 	// RunCollectiveDecRelation()
 	// RunKeySwitchRelation()
 	// RunCollectiveBootstrappingRelation()
