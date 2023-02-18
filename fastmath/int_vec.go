@@ -245,11 +245,12 @@ func (v *IntVec) BaseRing() *ring.Ring {
 	return v.baseRing
 }
 
-func (v *IntVec) GetAllLevel(level int) []uint64 {
-	// a := make([]uint64, len(v.polys[0].ref.Coeffs[level]))
-	// for i := 0; i < len(a); i++ {
-	// 	a[i] = v.polys[0].ref.Coeffs[level][i]
-	// }
+// GetWholeLevel returns all the coefficient's (mod q_i) at the given level.
+func (v *IntVec) GetWholeLevel(level int) []uint64 {
+	// no need to merge, so we can skip the copy
+	if v.Size() == v.baseRing.N {
+		return v.polys[0].ref.Coeffs[level]
+	}
 	a := make([]uint64, len(v.polys[0].ref.Coeffs[level]))
 	copy(a, v.polys[0].ref.Coeffs[level])
 	for _, b := range v.polys[1:] {
@@ -258,7 +259,8 @@ func (v *IntVec) GetAllLevel(level int) []uint64 {
 	return a[:v.Size()]
 }
 
-func (v *IntVec) SetAllLevel(level int, vals []uint64) {
+// SetWholeLevel sets the coefficients at the given level to the given values.
+func (v *IntVec) SetWholeLevel(level int, vals []uint64) {
 	start := 0
 	for _, p := range v.polys {
 		end := start + p.N()
@@ -274,6 +276,7 @@ func (v *IntVec) SetAllLevel(level int, vals []uint64) {
 	}
 }
 
+// IsUnset returns true iff this vector is a zero-vector.
 func (v *IntVec) IsUnset() bool {
 	for _, p := range v.polys {
 		if !p.IsUnset() {

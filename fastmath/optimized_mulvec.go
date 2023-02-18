@@ -9,21 +9,14 @@ import (
 )
 
 func MulVecTransposeBlazingFast(A *IntMatrix, b *IntVec, baseRing *ring.Ring) *IntVec {
-	out := NewIntVec(A.Rows(), baseRing)
-	APolys := make([]*Poly, A.Rows())
-	for i := 0; i < A.Rows(); i++ {
-		APolys[i] = A.RowView(i).UnderlyingPolys()[0]
-	}
-	bPoly := b.UnderlyingPolys()[0]
-	outPoly := out.UnderlyingPolys()[0]
-	outPoly.unset = false
+	out := NewIntVec(A.Cols(), baseRing)
 	for lvl, qi := range baseRing.Modulus {
 		ACoeffs := make([][]uint64, A.Rows())
 		for i := 0; i < len(ACoeffs); i++ {
-			ACoeffs[i] = APolys[i].GetWholeLevel(lvl)
+			ACoeffs[i] = A.RowView(i).GetWholeLevel(lvl)
 		}
-		bCoeffs := bPoly.GetWholeLevel(lvl)
-		outCoeffs := outPoly.GetWholeLevel(lvl)
+		bCoeffs := b.GetWholeLevel(lvl)
+		outCoeffs := out.GetWholeLevel(lvl)
 		MulATransposeByGammaV1(ACoeffs, bCoeffs, outCoeffs, qi)
 	}
 	return out
@@ -39,21 +32,27 @@ func MulATransposeByGammaV1(A [][]uint64, Gamma, U []uint64, qi uint64) {
 	if rows != len(Gamma) || cols != len(U) {
 		panic(fmt.Sprintf("%s (%d, %d) != (%d, %d)", "dimensions A^T incompatible with Gamma or U", rows, cols, len(Gamma), len(U)))
 	}
+	//var wg sync.WaitGroup
 	for i := 0; i < rows; i++ {
 		Ai := A[i]
 		Gi := ring.MForm(Gamma[i], qi, bredConstant)
+		//wg.Add(cols / 8)
 		for j := 0; j < cols; j += 8 {
-			x := (*[8]uint64)(unsafe.Pointer(&Ai[j]))
-			z := (*[8]uint64)(unsafe.Pointer(&U[j]))
-			z[0] = ring.CRed(z[0]+ring.MRed(x[0], Gi, qi, mredConstant), qi)
-			z[1] = ring.CRed(z[1]+ring.MRed(x[1], Gi, qi, mredConstant), qi)
-			z[2] = ring.CRed(z[2]+ring.MRed(x[2], Gi, qi, mredConstant), qi)
-			z[3] = ring.CRed(z[3]+ring.MRed(x[3], Gi, qi, mredConstant), qi)
-			z[4] = ring.CRed(z[4]+ring.MRed(x[4], Gi, qi, mredConstant), qi)
-			z[5] = ring.CRed(z[5]+ring.MRed(x[5], Gi, qi, mredConstant), qi)
-			z[6] = ring.CRed(z[6]+ring.MRed(x[6], Gi, qi, mredConstant), qi)
-			z[7] = ring.CRed(z[7]+ring.MRed(x[7], Gi, qi, mredConstant), qi)
+			func(j int) {
+				x := (*[8]uint64)(unsafe.Pointer(&Ai[j]))
+				z := (*[8]uint64)(unsafe.Pointer(&U[j]))
+				z[0] = ring.CRed(z[0]+ring.MRed(x[0], Gi, qi, mredConstant), qi)
+				z[1] = ring.CRed(z[1]+ring.MRed(x[1], Gi, qi, mredConstant), qi)
+				z[2] = ring.CRed(z[2]+ring.MRed(x[2], Gi, qi, mredConstant), qi)
+				z[3] = ring.CRed(z[3]+ring.MRed(x[3], Gi, qi, mredConstant), qi)
+				z[4] = ring.CRed(z[4]+ring.MRed(x[4], Gi, qi, mredConstant), qi)
+				z[5] = ring.CRed(z[5]+ring.MRed(x[5], Gi, qi, mredConstant), qi)
+				z[6] = ring.CRed(z[6]+ring.MRed(x[6], Gi, qi, mredConstant), qi)
+				z[7] = ring.CRed(z[7]+ring.MRed(x[7], Gi, qi, mredConstant), qi)
+				//wg.Done()
+			}(j)
 		}
+		//wg.Wait()
 	}
 }
 

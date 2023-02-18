@@ -276,7 +276,7 @@ func (m *IntMatrix) Transposed() ImmutIntMatrix {
 		// pull in the level
 		A := make([][]uint64, m.Rows())
 		for i, row := range m.rows {
-			A[i] = row.GetAllLevel(lvl)
+			A[i] = row.GetWholeLevel(lvl)
 		}
 		// transpose the level
 		At := make([][]uint64, m.Cols())
@@ -288,7 +288,7 @@ func (m *IntMatrix) Transposed() ImmutIntMatrix {
 		}
 		// move out
 		for i, r := range At {
-			mt.RowView(i).SetAllLevel(lvl, r)
+			mt.RowView(i).SetWholeLevel(lvl, r)
 		}
 	}
 	return mt
@@ -357,16 +357,16 @@ func (m *IntMatrix) MulVecTranspose(v *IntVec) *IntVec {
 	if m.IsUnset() {
 		return NewIntVec(m.Cols(), m.baseRing)
 	}
-	procName := fmt.Sprintf("%s.MulVecTranspose & %d", m.SizeString(), v.Size())
+	procName := fmt.Sprintf("%s.MulVecTranspose", m.SizeString())
 	return logging.LogExecution(procName, "multiplying",
 		func() interface{} {
 			if m.unrebasedRef != nil && v.unrebasedRef != nil {
 				logging.Log(procName, "using unrebased references")
 				return MulVecTransposeBlazingFast(m.unrebasedRef, v.unrebasedRef, m.unrebasedRef.baseRing)
 			} else if m.unrebasedRef != nil && v.unrebasedRef == nil && v.Size() == m.unrebasedRef.baseRing.N {
-				e2 := logging.LogExecStart(procName, "unrebasing v")
-				v.unrebasedRef = v.MergedPolys(m.unrebasedRef.baseRing)
-				e2.LogExecEnd()
+				v.unrebasedRef = logging.LogShortExecution(procName, "unrebasing v", func() interface{} {
+					return v.MergedPolys(m.unrebasedRef.baseRing)
+				}).(*IntVec)
 				return MulVecTransposeBlazingFast(m.unrebasedRef, v.unrebasedRef, m.unrebasedRef.baseRing)
 			}
 			logging.Log(procName, "unrebase not possible")
