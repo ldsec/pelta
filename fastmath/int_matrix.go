@@ -329,30 +329,55 @@ func (m *IntMatrix) Eq(b ImmutIntMatrix) bool {
 }
 
 // MulVec performs a matrix-vector multiplication.
+//func (m *IntMatrix) MulVecSlow(v *IntVec) *IntVec {
+//	if m.Cols() != v.Size() {
+//		panic("IntMatrix.MulVec sizes incorrect")
+//	}
+//	if m.IsUnset() {
+//		return NewIntVec(m.Rows(), m.baseRing)
+//	}
+//	return logging.LogShortExecution(fmt.Sprintf("%s.MulVec", m.SizeString()), "multiplying", func() interface{} {
+//		if m.unrebasedRef != nil && v.unrebasedRef != nil {
+//			return m.unrebasedRef.MulVec(v.unrebasedRef)
+//		}
+//		out := NewIntVec(m.Rows(), m.baseRing)
+//		for i, row := range m.rows {
+//			dotResult := row.Dot(v)
+//			out.SetCoeff(i, dotResult)
+//		}
+//		return out
+//	}).(*IntVec)
+//}
+
+// MulVec performs a matrix-vector multiplication.
 func (m *IntMatrix) MulVec(v *IntVec) *IntVec {
 	if m.Cols() != v.Size() {
 		panic("IntMatrix.MulVec sizes incorrect")
 	}
 	if m.IsUnset() {
-		return NewIntVec(m.Rows(), m.baseRing)
+		return NewIntVec(m.Cols(), m.baseRing)
 	}
-	return logging.LogShortExecution(fmt.Sprintf("%s.MulVec", m.SizeString()), "multiplying", func() interface{} {
-		if m.unrebasedRef != nil && v.unrebasedRef != nil {
-			return m.unrebasedRef.MulVec(v.unrebasedRef)
-		}
-		out := NewIntVec(m.Rows(), m.baseRing)
-		for i, row := range m.rows {
-			dotResult := row.Dot(v)
-			out.SetCoeff(i, dotResult)
-		}
-		return out
-	}).(*IntVec)
+	procName := fmt.Sprintf("%s.MulVec", m.SizeString())
+	return logging.LogExecution(procName, "multiplying",
+		func() interface{} {
+			if m.unrebasedRef != nil && v.unrebasedRef != nil {
+				logging.Log(procName, "using unrebased references")
+				return MulVecBlazingFast(m.unrebasedRef, v.unrebasedRef, m.unrebasedRef.baseRing)
+			} else if m.unrebasedRef != nil && v.unrebasedRef == nil && v.Size() == m.unrebasedRef.baseRing.N {
+				v.unrebasedRef = logging.LogShortExecution(procName, "unrebasing v", func() interface{} {
+					return v.MergedPolys(m.unrebasedRef.baseRing)
+				}).(*IntVec)
+				return MulVecBlazingFast(m.unrebasedRef, v.unrebasedRef, m.unrebasedRef.baseRing)
+			}
+			logging.Log(procName, "unrebase not possible")
+			return MulVecBlazingFast(m, v, m.baseRing)
+		}).(*IntVec)
 }
 
 // MulVecTranspose performs a matrix-vector multiplication with the transpose of this matrix.
 func (m *IntMatrix) MulVecTranspose(v *IntVec) *IntVec {
 	if m.Rows() != v.Size() {
-		panic("IntMatrix.MulVec sizes incorrect")
+		panic("IntMatrix.MulVecTranspose sizes incorrect")
 	}
 	if m.IsUnset() {
 		return NewIntVec(m.Cols(), m.baseRing)

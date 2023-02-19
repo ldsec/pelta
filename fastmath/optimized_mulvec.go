@@ -1,7 +1,6 @@
 package fastmath
 
 import (
-	"fmt"
 	"math/bits"
 	"unsafe"
 
@@ -17,38 +16,64 @@ func MulVecTransposeBlazingFast(A *IntMatrix, b *IntVec, baseRing *ring.Ring) *I
 		}
 		bCoeffs := b.GetWholeLevel(lvl)
 		outCoeffs := out.GetWholeLevel(lvl)
-		MulATransposeByGammaV1(ACoeffs, bCoeffs, outCoeffs, qi)
+		MulVecTransposeBlazingFastLevel(ACoeffs, bCoeffs, outCoeffs, qi)
 	}
 	return out
 }
 
-// MulATransposeByGammaV1 takes the matrix A and the vector Gamma and
-// returns U = A^T x Gamma.
-func MulATransposeByGammaV1(A [][]uint64, Gamma, U []uint64, qi uint64) {
+func MulVecBlazingFast(A *IntMatrix, b *IntVec, baseRing *ring.Ring) *IntVec {
+	out := NewIntVec(A.Rows(), baseRing)
+	for lvl, qi := range baseRing.Modulus {
+		ACoeffs := make([][]uint64, A.Rows())
+		for i := 0; i < len(ACoeffs); i++ {
+			ACoeffs[i] = A.RowView(i).GetWholeLevel(lvl)
+		}
+		bCoeffs := b.GetWholeLevel(lvl)
+		outCoeffs := out.GetWholeLevel(lvl)
+		for i := 0; i < A.Rows(); i++ {
+			outCoeffs[i] = DotBlazingFastLevel(ACoeffs[i], bCoeffs, qi)
+		}
+	}
+	return out
+}
+
+func DotBlazingFastLevel(V1, V2 []uint64, qi uint64) uint64 {
+	mredConstant := ring.MRedParams(qi)
+	bredConstant := ring.BRedParams(qi)
+	out := uint64(0)
+	for j := 0; j < len(V2); j += 1 {
+		V2j := ring.MForm(V2[j], qi, bredConstant)
+		out = ring.CRed(out+ring.MRed(V1[j], V2j, qi, mredConstant), qi)
+	}
+	return out
+}
+
+// MulVecTransposeBlazingFastLevel takes the matrix A and the vector V and
+// returns U = A^T x V.
+func MulVecTransposeBlazingFastLevel(A [][]uint64, V, U []uint64, qi uint64) {
+	// U[j] = <A[*][j], V>
 	mredConstant := ring.MRedParams(qi)
 	bredConstant := ring.BRedParams(qi)
 	rows := len(A)
 	cols := len(A[0])
-	if rows != len(Gamma) || cols != len(U) {
-		panic(fmt.Sprintf("%s (%d, %d) != (%d, %d)", "dimensions A^T incompatible with Gamma or U", rows, cols, len(Gamma), len(U)))
-	}
 	//var wg sync.WaitGroup
 	for i := 0; i < rows; i++ {
 		Ai := A[i]
-		Gi := ring.MForm(Gamma[i], qi, bredConstant)
+		Vi := ring.MForm(V[i], qi, bredConstant)
 		//wg.Add(cols / 8)
 		for j := 0; j < cols; j += 8 {
 			func(j int) {
 				x := (*[8]uint64)(unsafe.Pointer(&Ai[j]))
 				z := (*[8]uint64)(unsafe.Pointer(&U[j]))
-				z[0] = ring.CRed(z[0]+ring.MRed(x[0], Gi, qi, mredConstant), qi)
-				z[1] = ring.CRed(z[1]+ring.MRed(x[1], Gi, qi, mredConstant), qi)
-				z[2] = ring.CRed(z[2]+ring.MRed(x[2], Gi, qi, mredConstant), qi)
-				z[3] = ring.CRed(z[3]+ring.MRed(x[3], Gi, qi, mredConstant), qi)
-				z[4] = ring.CRed(z[4]+ring.MRed(x[4], Gi, qi, mredConstant), qi)
-				z[5] = ring.CRed(z[5]+ring.MRed(x[5], Gi, qi, mredConstant), qi)
-				z[6] = ring.CRed(z[6]+ring.MRed(x[6], Gi, qi, mredConstant), qi)
-				z[7] = ring.CRed(z[7]+ring.MRed(x[7], Gi, qi, mredConstant), qi)
+				// U[j] = U[j] + Ai[j] * v[i]
+				z[0] = ring.CRed(z[0]+ring.MRed(x[0], Vi, qi, mredConstant), qi)
+				z[1] = ring.CRed(z[1]+ring.MRed(x[1], Vi, qi, mredConstant), qi) // U[j+1]
+				z[2] = ring.CRed(z[2]+ring.MRed(x[2], Vi, qi, mredConstant), qi) // U[j+2]
+				z[3] = ring.CRed(z[3]+ring.MRed(x[3], Vi, qi, mredConstant), qi) // U[j+3]
+				z[4] = ring.CRed(z[4]+ring.MRed(x[4], Vi, qi, mredConstant), qi) // ...
+				z[5] = ring.CRed(z[5]+ring.MRed(x[5], Vi, qi, mredConstant), qi)
+				z[6] = ring.CRed(z[6]+ring.MRed(x[6], Vi, qi, mredConstant), qi)
+				z[7] = ring.CRed(z[7]+ring.MRed(x[7], Vi, qi, mredConstant), qi) // U[j+7]
 				//wg.Done()
 			}(j)
 		}

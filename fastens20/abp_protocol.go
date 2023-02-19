@@ -171,15 +171,17 @@ func (vf ABPVerifier) CreateChallenge(t *fastmath.PolyNTTVec, h, v *fastmath.Pol
 }
 
 func (vf ABPVerifier) Verify(z *fastmath.PolyNTTMatrix, state ABPVerifierState) bool {
-	e := logging.LogExecStart("ABPVerifier.Verifier", "working")
+	e := logging.LogExecStart("ABPVerifier.Verify", "working")
 	defer e.LogExecEnd()
 	// Infinity norm check.
+	e2 := logging.LogExecStart("ABPVerifier.Verify", "bound check")
 	bound := vf.params.config.Bound
 	if state.ABPMaskedOpening.Max(vf.params.config.Q).Cmp(bound) >= 0 {
 		fmt.Println("abp verifier failed infinity norm check")
 		fmt.Printf("** bound = %d, norm = %d, q = %d\n", bound, state.ABPMaskedOpening.Max(vf.params.config.Q), vf.params.config.Q)
 		return false
 	}
+	e2.LogExecEnd()
 	res := vf.Verifier.Verify(z, state.VerifierState)
 	if !res {
 		fmt.Println("abp verifier original failed")

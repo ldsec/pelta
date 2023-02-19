@@ -147,6 +147,25 @@ func TestIntMatrixMulVec(t *testing.T) {
 	}
 }
 
+//func TestIntMatrixMulVecSlowConsistency(t *testing.T) {
+//	baseRing := getBaseRing()
+//	a := fastmath.NewIntMatrix(3, 5, baseRing)
+//	v := fastmath.NewIntVec(5, baseRing)
+//	a.Populate(func(i, j int) uint64 {
+//		return uint64(i + j)
+//	})
+//	v.Populate(func(i int) uint64 {
+//		return uint64(2 * i)
+//	})
+//	c1 := a.MulVec(v)
+//	c2 := a.MulVecSlow(v)
+//	if !c1.Eq(c2) {
+//		t.Errorf("MulVec not consistent with regular MulVecSlow")
+//		t.Logf(c1.String())
+//		t.Logf(c2.String())
+//	}
+//}
+
 func TestIntMatrixMulVecTranspose(t *testing.T) {
 	baseRing := getBaseRing()
 	a := fastmath.NewIntMatrix(baseRing.N, baseRing.N, baseRing)

@@ -248,8 +248,8 @@ func (v *IntVec) BaseRing() *ring.Ring {
 // GetWholeLevel returns all the coefficient's (mod q_i) at the given level.
 func (v *IntVec) GetWholeLevel(level int) []uint64 {
 	// no need to merge, so we can skip the copy
-	if v.Size() == v.baseRing.N {
-		return v.polys[0].ref.Coeffs[level]
+	if v.Size() <= v.baseRing.N && len(v.polys) == 1 {
+		return v.polys[0].ref.Coeffs[level][:v.Size()]
 	}
 	a := make([]uint64, len(v.polys[0].ref.Coeffs[level]))
 	copy(a, v.polys[0].ref.Coeffs[level])

@@ -3,9 +3,9 @@ package main
 import "github.com/ldsec/codeBase/commitment/relations"
 
 func main() {
-	relations.RunKeyGenRelation()
-	// RunCollectiveDecRelation()
-	// RunKeySwitchRelation()
-	// RunCollectiveBootstrappingRelation()
-	// RunRelinKeyGenRelation()
+	//relations.RunKeyGenRelation()
+	relations.RunCollectiveDecRelation()
+	//relations.RunKeySwitchRelation()
+	//relations.RunCollectiveBootstrappingRelation()
+	//relations.RunRelinKeyGenRelation()
 }
