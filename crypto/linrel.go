@@ -31,7 +31,13 @@ func (r *ImmutLinearRelation) Cleanup() {
 
 // IsValid returns true iff As = u holds.
 func (r *ImmutLinearRelation) IsValid() bool {
-	return r.A.MulVec(r.S).Eq(r.U)
+	up := r.A.MulVec(r.S)
+	if !up.Eq(r.U) {
+		fmt.Println(up.String())
+		fmt.Println(r.U.String())
+		return false
+	}
+	return true
 }
 
 func (r *ImmutLinearRelation) Copy() *ImmutLinearRelation {

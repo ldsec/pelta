@@ -132,6 +132,12 @@ func (v *IntVec) SetCoeff(index int, newValues []uint64) {
 	v.polys[polyIndex].SetCoeff(coeffIndex, newValues)
 }
 
+func (v *IntVec) SetLevel(index, level int, newValue uint64) {
+	polyIndex := index / v.baseRing.N
+	coeffIndex := index % v.baseRing.N
+	v.polys[polyIndex].SetLevel(coeffIndex, level, newValue)
+}
+
 // Copy copies the vector.
 func (v *IntVec) Copy() *IntVec {
 	polys := make([]*Poly, len(v.polys))

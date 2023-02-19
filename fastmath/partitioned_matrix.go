@@ -219,7 +219,8 @@ func (m *PartitionedIntMatrix) MulVec(v *IntVec) *IntVec {
 			}
 			// Apply the partition.
 			vp := v.Slice(NewSlice(resolved, resolved+w))
-			out[i].Add(p.MulVec(vp))
+			term := p.MulVec(vp)
+			out[i].Add(term)
 			resolved += w
 		}
 	}

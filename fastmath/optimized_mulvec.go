@@ -9,6 +9,11 @@ import (
 
 func MulVecTransposeBlazingFast(A *IntMatrix, b *IntVec, baseRing *ring.Ring) *IntVec {
 	out := NewIntVec(A.Cols(), baseRing)
+	// force unset the `unset` flag because we are directly working
+	// with the underlying polys
+	for _, p := range out.UnderlyingPolys() {
+		p.unset = false
+	}
 	for lvl, qi := range baseRing.Modulus {
 		ACoeffs := make([][]uint64, A.Rows())
 		for i := 0; i < len(ACoeffs); i++ {
@@ -29,9 +34,9 @@ func MulVecBlazingFast(A *IntMatrix, b *IntVec, baseRing *ring.Ring) *IntVec {
 			ACoeffs[i] = A.RowView(i).GetWholeLevel(lvl)
 		}
 		bCoeffs := b.GetWholeLevel(lvl)
-		outCoeffs := out.GetWholeLevel(lvl)
 		for i := 0; i < A.Rows(); i++ {
-			outCoeffs[i] = DotBlazingFastLevel(ACoeffs[i], bCoeffs, qi)
+			dotResult := DotBlazingFastLevel(ACoeffs[i], bCoeffs, qi)
+			out.SetLevel(i, lvl, dotResult)
 		}
 	}
 	return out
