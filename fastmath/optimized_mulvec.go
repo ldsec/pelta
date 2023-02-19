@@ -2,6 +2,7 @@ package fastmath
 
 import (
 	"math/bits"
+	"sync"
 	"unsafe"
 
 	"github.com/tuneinsight/lattigo/v4/ring"
@@ -14,15 +15,22 @@ func MulVecTransposeBlazingFast(A *IntMatrix, b *IntVec, baseRing *ring.Ring) *I
 	for _, p := range out.UnderlyingPolys() {
 		p.unset = false
 	}
+	var wg sync.WaitGroup
+	wg.Add(len(baseRing.Modulus))
 	for lvl, qi := range baseRing.Modulus {
-		ACoeffs := make([][]uint64, A.Rows())
-		for i := 0; i < len(ACoeffs); i++ {
-			ACoeffs[i] = A.RowView(i).GetWholeLevel(lvl)
-		}
-		bCoeffs := b.GetWholeLevel(lvl)
-		outCoeffs := out.GetWholeLevel(lvl)
-		MulVecTransposeBlazingFastLevel(ACoeffs, bCoeffs, outCoeffs, qi)
+		go func(lvl int, qi uint64) {
+			ACoeffs := make([][]uint64, A.Rows())
+			for i := 0; i < len(ACoeffs); i++ {
+				ACoeffs[i] = A.RowView(i).GetWholeLevel(lvl)
+			}
+			bCoeffs := b.GetWholeLevel(lvl)
+			// WARNING: Assuming we get a reference from this call (i.e., out.Size() <= D)
+			outCoeffs := out.GetWholeLevel(lvl)
+			MulVecTransposeBlazingFastLevel(ACoeffs, bCoeffs, outCoeffs, qi)
+			wg.Done()
+		}(lvl, qi)
 	}
+	wg.Wait()
 	return out
 }
 
@@ -30,14 +38,20 @@ func MulVecBlazingFast(A *IntMatrix, b *IntVec, baseRing *ring.Ring) *IntVec {
 	out := NewIntVec(A.Rows(), baseRing)
 	for lvl, qi := range baseRing.Modulus {
 		ACoeffs := make([][]uint64, A.Rows())
+		bCoeffs := b.GetWholeLevel(lvl)
 		for i := 0; i < len(ACoeffs); i++ {
 			ACoeffs[i] = A.RowView(i).GetWholeLevel(lvl)
 		}
-		bCoeffs := b.GetWholeLevel(lvl)
+		var wg sync.WaitGroup
+		wg.Add(A.Rows())
 		for i := 0; i < A.Rows(); i++ {
-			dotResult := DotBlazingFastLevel(ACoeffs[i], bCoeffs, qi)
-			out.SetLevel(i, lvl, dotResult)
+			go func(i, lvl int, ACoeffs [][]uint64, bCoeffs []uint64) {
+				dotResult := DotBlazingFastLevel(ACoeffs[i], bCoeffs, qi)
+				out.SetLevel(i, lvl, dotResult)
+				wg.Done()
+			}(i, lvl, ACoeffs, bCoeffs)
 		}
+		wg.Wait()
 	}
 	return out
 }
