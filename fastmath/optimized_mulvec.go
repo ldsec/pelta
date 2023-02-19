@@ -24,9 +24,9 @@ func MulVecTransposeBlazingFast(A *IntMatrix, b *IntVec, baseRing *ring.Ring) *I
 				ACoeffs[i] = A.RowView(i).GetWholeLevel(lvl)
 			}
 			bCoeffs := b.GetWholeLevel(lvl)
-			// WARNING: Assuming we get a reference from this call (i.e., out.Size() <= D)
-			outCoeffs := out.GetWholeLevel(lvl)
+			outCoeffs := make([]uint64, A.Cols())
 			MulVecTransposeBlazingFastLevel(ACoeffs, bCoeffs, outCoeffs, qi)
+			out.SetWholeLevel(lvl, outCoeffs)
 			wg.Done()
 		}(lvl, qi)
 	}

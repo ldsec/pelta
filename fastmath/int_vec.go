@@ -252,6 +252,8 @@ func (v *IntVec) BaseRing() *ring.Ring {
 }
 
 // GetWholeLevel returns all the coefficient's (mod q_i) at the given level.
+// Note that this method returns a direct reference to the underlying coefficients if the
+// size of the vector is smaller than the polynomial degree.
 func (v *IntVec) GetWholeLevel(level int) []uint64 {
 	// no need to merge, so we can skip the copy
 	if v.Size() <= v.baseRing.N && len(v.polys) == 1 {
