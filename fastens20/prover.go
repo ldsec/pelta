@@ -123,7 +123,7 @@ func (p Prover) CommitToRelation(alpha *fastmath.PolyNTTVec, gamma *fastmath.Int
 	e = logging.LogExecStart("Prover.CommitToRelation", "psi calculation")
 	psi := fastmath.NewPolyMatrix(p.params.config.K, p.params.config.NumSplits(), p.params.config.BaseRing).NTT()
 	psi.PopulateRows(func(mu int) *fastmath.PolyNTTVec {
-		tmp := p.params.A.(*fastmath.PartitionedIntMatrix).MulVecTranspose(gamma.RowView(mu))
+		tmp := p.params.A.MulVecTranspose(gamma.RowView(mu))
 		return SplitInvNTT(tmp, p.params).NTT()
 	})
 	e.LogExecEnd()
@@ -151,26 +151,14 @@ func (p Prover) CommitToRelation(alpha *fastmath.PolyNTTVec, gamma *fastmath.Int
 		add := p.params.B.Row(p.params.config.NumSplits()).Dot(state.Y.Row(i))
 		outerSum := LmuSumOuter(p.params.config.K, p.params.config.NumSplits(), p.params.config.Cache.InvK,
 			func(mu int, v int, j int) *fastmath.PolyNTT {
-				index := (i - v)
+				index := i - v
 				if index < 0 {
 					index += p.params.config.K
 				}
 				index = index % p.params.config.K
-				dotResult := p.params.B.Row(j).Dot(state.Y.Row(int(index)))
+				dotResult := p.params.B.Row(j).Dot(state.Y.Row(index))
 				return dotResult.Scale(uint64(p.params.config.D)).Mul(psi.Get(mu, j))
 			}, p.params)
-		// outerSum := LmuSumOuterDot(p.params.config.K, p.params.config.NumSplits(), p.params.config.Cache.InvK,
-		// 	func(mu, v, j int) *fastmath.PolyNTTVec {
-		// 		index := i - v
-		// 		if index < 0 {
-		// 			index += p.params.config.K
-		// 		}
-		// 		index = index % p.params.config.K
-		// 		return state.Y.Row(int(index)).Copy()
-		// 	},
-		// 	func(mu, v, j int) *fastmath.PolyNTTVec {
-		// 		return p.params.B.Row(j).Copy().MulAll(psi.Get(mu, j)).Scale(uint64(p.params.config.D))
-		// 	}, p.params)
 		return outerSum.Add(add)
 	})
 	e.LogExecEnd()

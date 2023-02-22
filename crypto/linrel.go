@@ -17,8 +17,8 @@ type ImmutLinearRelation struct {
 func (r *ImmutLinearRelation) Rebased(newRing fastmath.RingParams) *ImmutLinearRelation {
 	return &ImmutLinearRelation{
 		A: r.A.RebaseRowsLossless(newRing),
-		S: r.S.RebaseLossless(newRing),
-		U: r.U.RebaseLossless(newRing),
+		S: r.S.RebaseLossless(newRing.BaseRing),
+		U: r.U.RebaseLossless(newRing.BaseRing),
 	}
 }
 
@@ -71,8 +71,8 @@ func (r *LinearRelation) Rebased(newRing fastmath.RingParams) *LinearRelation {
 	Ap := r.A.RebaseRowsLossless(newRing).(fastmath.MutIntMatrix)
 	return &LinearRelation{
 		A: Ap,
-		S: r.S.RebaseLossless(newRing),
-		U: r.U.RebaseLossless(newRing),
+		S: r.S.RebaseLossless(newRing.BaseRing),
+		U: r.U.RebaseLossless(newRing.BaseRing),
 	}
 }
 

@@ -22,7 +22,7 @@ func GetAjtaiCommitments(A, B *fastmath.IntMatrix, s, r *fastmath.IntVec, config
 	return comQ, comP
 }
 
-// GetKappa returns k s.t. (As + Br) - ([As + Br] mod p) = kp
+// GetAjtaiKappa returns k s.t. (As + Br) - ([As + Br] mod p) = kp
 func GetAjtaiKappa(comP, comQ *fastmath.IntVec, params AjtaiConfig) *fastmath.IntVec {
 	// comQ - comP = (As + Br) - [(As + Br) mod p]
 	diff := comQ.Copy().Add(comP.Copy().Neg())

@@ -140,7 +140,7 @@ func (vf Verifier) Verify(z *fastmath.PolyNTTMatrix, state VerifierState) bool {
 	e2 := logging.LogExecStart("Verifier.Verify", "recalculating psi")
 	psi := fastmath.NewPolyMatrix(vf.params.config.K, vf.params.config.NumSplits(), vf.params.config.BaseRing).NTT()
 	psi.PopulateRows(func(mu int) *fastmath.PolyNTTVec {
-		tmp := vf.params.A.(*fastmath.PartitionedIntMatrix).MulVecTranspose(state.Gamma.RowView(mu))
+		tmp := vf.params.A.MulVecTranspose(state.Gamma.RowView(mu))
 		return SplitInvNTT(tmp, vf.params).NTT()
 	})
 	e2.LogExecEnd()

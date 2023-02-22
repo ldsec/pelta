@@ -218,7 +218,7 @@ func (m *IntMatrix) RebaseRowsLossless(newRing RingParams) ImmutIntMatrix {
 	rebasedRows := make([]*IntVec, len(m.rows))
 	logging.LogShortExecution(fmt.Sprintf("%s.RebaseRowsLossless", m.SizeString()), "rebasing", func() interface{} {
 		for i, row := range m.rows {
-			rebasedRows[i] = row.RebaseLossless(newRing)
+			rebasedRows[i] = row.RebaseLossless(newRing.BaseRing)
 		}
 		return nil
 	})
@@ -362,12 +362,14 @@ func (m *IntMatrix) MulVec(v *IntVec) *IntVec {
 		func() interface{} {
 			if m.unrebasedRef != nil && v.unrebasedRef != nil {
 				logging.Log(procName, "using unrebased references")
-				return MulVecBlazingFast(m.unrebasedRef, v.unrebasedRef, m.unrebasedRef.baseRing)
+				res := MulVecBlazingFast(m.unrebasedRef, v.unrebasedRef, m.unrebasedRef.baseRing)
+				// rebase back
+				return res.RebaseLossless(v.baseRing)
 			} else if m.unrebasedRef != nil && v.unrebasedRef == nil && v.Size() == m.unrebasedRef.baseRing.N {
-				v.unrebasedRef = logging.LogShortExecution(procName, "unrebasing v", func() interface{} {
-					return v.MergedPolys(m.unrebasedRef.baseRing)
-				}).(*IntVec)
-				return MulVecBlazingFast(m.unrebasedRef, v.unrebasedRef, m.unrebasedRef.baseRing)
+				v.unrebasedRef = v.MergedPolys(m.unrebasedRef.baseRing)
+				res := MulVecBlazingFast(m.unrebasedRef, v.unrebasedRef, m.unrebasedRef.baseRing)
+				// rebase back
+				return res.RebaseLossless(v.baseRing)
 			}
 			logging.Log(procName, "unrebase not possible")
 			return MulVecBlazingFast(m, v, m.baseRing)
@@ -389,9 +391,7 @@ func (m *IntMatrix) MulVecTranspose(v *IntVec) *IntVec {
 				logging.Log(procName, "using unrebased references")
 				return MulVecTransposeBlazingFast(m.unrebasedRef, v.unrebasedRef, m.unrebasedRef.baseRing)
 			} else if m.unrebasedRef != nil && v.unrebasedRef == nil && v.Size() == m.unrebasedRef.baseRing.N {
-				v.unrebasedRef = logging.LogShortExecution(procName, "unrebasing v", func() interface{} {
-					return v.MergedPolys(m.unrebasedRef.baseRing)
-				}).(*IntVec)
+				v.unrebasedRef = v.MergedPolys(m.unrebasedRef.baseRing)
 				return MulVecTransposeBlazingFast(m.unrebasedRef, v.unrebasedRef, m.unrebasedRef.baseRing)
 			}
 			logging.Log(procName, "unrebase not possible")

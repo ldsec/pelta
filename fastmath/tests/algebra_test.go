@@ -37,7 +37,7 @@ func TestIntVecRebaseLossless(t *testing.T) {
 	if v.Size() != 256 {
 		t.Errorf("actual=%d, expected=%d", v.Size(), 256)
 	}
-	v = v.RebaseLossless(fastmath.BFVZeroLevelShortCommtRing(4))
+	v = v.RebaseLossless(fastmath.BFVZeroLevelShortCommtRing(4).BaseRing)
 	// After rebase.
 	if len(v.UnderlyingPolys()) != 16 {
 		t.Errorf("actual=%d, expected=%d", len(v.UnderlyingPolys()), 16)

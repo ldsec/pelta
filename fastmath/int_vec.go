@@ -205,17 +205,17 @@ func (v *IntVec) Cleanup() {
 
 // RebaseLossless rebases every underlying polynomial, splitting them when necessary so that
 // no coefficient will be discarded.
-func (v *IntVec) RebaseLossless(newRing RingParams) *IntVec {
-	if v.baseRing.N <= newRing.D || v.baseRing.N%newRing.D != 0 {
-		panic(fmt.Sprintf("cannot rebase lossless %d to %d", v.baseRing.N, newRing.D))
+func (v *IntVec) RebaseLossless(newBaseRing *ring.Ring) *IntVec {
+	if v.baseRing.N <= newBaseRing.N || v.baseRing.N%newBaseRing.N != 0 {
+		panic(fmt.Sprintf("cannot rebase lossless %d to %d", v.baseRing.N, newBaseRing.N))
 	}
 	// Each underlying polynomial will be represented by this many rebased polynomials.
-	splitsPerPoly := v.baseRing.N / newRing.D
+	splitsPerPoly := v.baseRing.N / newBaseRing.N
 	newPolys := make([]*Poly, 0, splitsPerPoly*len(v.polys))
 	for _, p := range v.polys {
-		newPolys = append(newPolys, p.SplitCoeffs(newRing.BaseRing)...)
+		newPolys = append(newPolys, p.SplitCoeffs(newBaseRing)...)
 	}
-	vp := NewIntVecFromPolys(newPolys, v.Size(), newRing.BaseRing)
+	vp := NewIntVecFromPolys(newPolys, v.Size(), newBaseRing)
 	vp.unrebasedRef = v
 	return vp
 }

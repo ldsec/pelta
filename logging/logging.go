@@ -6,8 +6,7 @@ import (
 	"time"
 )
 
-var logging bool = true
-var errorLogging bool = true
+var logging bool = false
 var indentation int = 0
 
 type LogExecData struct {
