@@ -102,6 +102,27 @@ func (m *IntMatrix) SubsectionCopy(rowStart, rowEnd int, colStart, colEnd int) *
 	return subMatrix
 }
 
+// SplitCols splits a matrix with k * d (where d is the poly. degree) cols into k many matrices with d cols,
+// such that each row is represented by a single polynomial.
+func (m *IntMatrix) SplitCols() []*IntMatrix {
+	if m.Cols()%m.baseRing.N != 0 {
+		panic("cannot split over columns")
+	}
+	numMatrices := m.Cols() / m.baseRing.N
+	matrixRows := make([][]*IntVec, numMatrices)
+	for i := 0; i < len(matrixRows); i++ {
+		matrixRows[i] = make([]*IntVec, len(m.rows))
+		for j, r := range m.rows {
+			matrixRows[i][j] = r.UnderlyingPolysAsIntVecs()[i]
+		}
+	}
+	matrices := make([]*IntMatrix, numMatrices)
+	for i := 0; i < len(matrices); i++ {
+		matrices[i] = NewIntMatrixFromRows(matrixRows[i], m.baseRing)
+	}
+	return matrices
+}
+
 // GetCoeff returns the element at the given coordinates.
 func (m *IntMatrix) GetCoeff(row, col int) Coeff {
 	if row >= m.Rows() || col >= m.Cols() {
@@ -361,11 +382,12 @@ func (m *IntMatrix) MulVec(v *IntVec) *IntVec {
 	return logging.LogExecution(procName, "multiplying",
 		func() interface{} {
 			if m.unrebasedRef != nil && v.unrebasedRef != nil {
-				logging.Log(procName, "using unrebased references")
+				logging.Log(procName, "using unrebased references directly")
 				res := MulVecBlazingFast(m.unrebasedRef, v.unrebasedRef, m.unrebasedRef.baseRing)
 				// rebase back
 				return res.RebaseLossless(v.baseRing)
 			} else if m.unrebasedRef != nil && v.unrebasedRef == nil && v.Size() == m.unrebasedRef.baseRing.N {
+				logging.Log(procName, "unrebasing the vector")
 				v.unrebasedRef = v.MergedPolys(m.unrebasedRef.baseRing)
 				res := MulVecBlazingFast(m.unrebasedRef, v.unrebasedRef, m.unrebasedRef.baseRing)
 				// rebase back
@@ -388,11 +410,16 @@ func (m *IntMatrix) MulVecTranspose(v *IntVec) *IntVec {
 	return logging.LogExecution(procName, "multiplying",
 		func() interface{} {
 			if m.unrebasedRef != nil && v.unrebasedRef != nil {
-				logging.Log(procName, "using unrebased references")
-				return MulVecTransposeBlazingFast(m.unrebasedRef, v.unrebasedRef, m.unrebasedRef.baseRing)
+				logging.Log(procName, "using unrebased references directly")
+				res := MulVecTransposeBlazingFast(m.unrebasedRef, v.unrebasedRef, m.unrebasedRef.baseRing)
+				// rebase back
+				return res.RebaseLossless(v.baseRing)
 			} else if m.unrebasedRef != nil && v.unrebasedRef == nil && v.Size() == m.unrebasedRef.baseRing.N {
+				logging.Log(procName, "unrebasing the vector")
 				v.unrebasedRef = v.MergedPolys(m.unrebasedRef.baseRing)
-				return MulVecTransposeBlazingFast(m.unrebasedRef, v.unrebasedRef, m.unrebasedRef.baseRing)
+				res := MulVecTransposeBlazingFast(m.unrebasedRef, v.unrebasedRef, m.unrebasedRef.baseRing)
+				// rebase back
+				return res.RebaseLossless(v.baseRing)
 			}
 			logging.Log(procName, "unrebase not possible")
 			return MulVecTransposeBlazingFast(m, v, m.baseRing)

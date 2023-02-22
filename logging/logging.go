@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-var logging bool = false
+var logging bool = true
 var indentation int = 0
 
 type LogExecData struct {
@@ -35,17 +35,6 @@ func Log(prefix, msg string) {
 	msg = strings.ReplaceAll(msg, "\n", fmt.Sprintf("\n%s%s: ", getIndentation(), prefix))
 	fmt.Printf("%s%s: %s\n", getIndentation(), prefix, msg)
 }
-
-// func LogError(prefix, msg string, err error, stopExecution bool) {
-// 	if err != nil {
-// 		if errorLogging {
-// 			Log(fmt.Sprintf("!! %s", prefix), fmt.Sprintf("%s"))
-// 		}
-// 		if stopExecution {
-
-// 		}
-// 	}
-// }
 
 func IsProductionBuild() bool {
 	return !logging
@@ -79,6 +68,9 @@ func LogExecShortStart(prefix, name string) LogExecData {
 }
 
 func (l LogExecData) LogExecEnd() {
+	if !logging {
+		return
+	}
 	unindent()
 	t1 := time.Now()
 	if l.short {

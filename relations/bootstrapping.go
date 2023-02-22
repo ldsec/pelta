@@ -24,7 +24,7 @@ type CollectiveBootstrappingPublicParams struct {
 	T     *fastmath.IntMatrix // NTT transform
 }
 
-func GenerateCollectiveBootstrappingRelation(s, sp, spp, r, er0, er1, er2 *fastmath.Poly, k2, k3 *fastmath.IntVec, params CollectiveBootstrappingPublicParams) *crypto.ImmutLinearRelation {
+func GenerateCollectiveBootstrappingRelation(s, sp, spp, er0, er1, er2 *fastmath.Poly, r, k2, k3 *fastmath.IntVec, params CollectiveBootstrappingPublicParams) *crypto.ImmutLinearRelation {
 	id := fastmath.NewIdIntMatrix(params.RLWEConfig.D, params.RLWEConfig.BaseRing)
 	emptyLHS := fastmath.NewIntVec(params.RLWEConfig.D, params.RLWEConfig.BaseRing)
 	DM := crypto.NewLinearEquation(emptyLHS, 0).
@@ -59,9 +59,9 @@ func GenerateCollectiveBootstrappingRelation(s, sp, spp, r, er0, er1, er2 *fastm
 	for i := range h0Terms[:len(h0Terms)-len(e0Terms)] {
 		h1.AddDependency(i, i)
 	}
-	comQ, comP := crypto.GetAjtaiCommitments(params.A1, params.A2, s.Coeffs(), r.Coeffs(), params.AjtaiConfig)
+	comQ, comP := crypto.GetAjtaiCommitments(params.A1, params.A2, s.Coeffs(), r, params.AjtaiConfig)
 	k1 := crypto.GetAjtaiKappa(comP, comQ, params.AjtaiConfig)
-	t := crypto.NewPaddedAjtaiEquation(comP, params.A1, params.A2, s.Coeffs(), r.Coeffs(), k1, params.AjtaiConfig)
+	t := crypto.NewPaddedAjtaiEquation(comP, params.A1, params.A2, s.Coeffs(), r, k1, params.AjtaiConfig)
 	t.AddDependency(0, 0)
 	lrb := crypto.NewLinearRelationBuilder().
 		AppendEqn(h0).
@@ -78,8 +78,8 @@ func getRandomCollectiveBootstrappingParams(rlweConfig crypto.RLWEConfig, ajtaiC
 	A1 := fastmath.PersistentIntMatrix("KeyGenA1.test", func() *fastmath.IntMatrix {
 		return fastmath.NewRandomIntMatrix(ajtaiConfig.D, ajtaiConfig.D, ajtaiConfig.P, ajtaiConfig.BaseRing)
 	}, ajtaiConfig.BaseRing)
-	A2 := fastmath.PersistentIntMatrix("KeyGenA1.test", func() *fastmath.IntMatrix {
-		return fastmath.NewRandomIntMatrix(ajtaiConfig.D, ajtaiConfig.D, ajtaiConfig.P, ajtaiConfig.BaseRing)
+	A2 := fastmath.PersistentIntMatrix("KeyGenA2.test", func() *fastmath.IntMatrix {
+		return fastmath.NewRandomIntMatrix(ajtaiConfig.D, 2*ajtaiConfig.D, ajtaiConfig.P, ajtaiConfig.BaseRing)
 	}, ajtaiConfig.BaseRing)
 	A3 := fastmath.PersistentIntMatrix("KeyGenA3.test", func() *fastmath.IntMatrix {
 		return fastmath.NewRandomIntMatrixFast(rlweConfig.D, rlweConfig.D, uni, rlweConfig.BaseRing)
@@ -118,14 +118,14 @@ func RunCollectiveBootstrappingRelation() {
 	er0 := fastmath.NewRandomPoly(rlweConfig.ErrorSampler, rlweConfig.BaseRing)
 	er1 := fastmath.NewRandomPoly(rlweConfig.ErrorSampler, rlweConfig.BaseRing)
 	er2 := fastmath.NewRandomPoly(rlweConfig.ErrorSampler, rlweConfig.BaseRing)
-	r := fastmath.NewRandomPoly(ter, rlweConfig.BaseRing)
+	r := fastmath.NewRandomIntVecFast(params.A2.Cols(), ter, rlweConfig.BaseRing)
 	// k1 := fastmath.NewRandomPoly(uni, rlweConfig.BaseRing).Coeffs()
 	k2 := fastmath.NewRandomPoly(uni, rlweConfig.BaseRing).Coeffs()
 	k3 := fastmath.NewRandomPoly(uni, rlweConfig.BaseRing).Coeffs()
 	e0.LogExecEnd()
 
 	e0 = logging.LogExecStart("Main", "relation creation")
-	rel := GenerateCollectiveBootstrappingRelation(s, sp, spp, r, er0, er1, er2, k2, k3, params)
+	rel := GenerateCollectiveBootstrappingRelation(s, sp, spp, er0, er1, er2, r, k2, k3, params)
 	e0.LogExecEnd()
 	if !rel.IsValid() {
 		panic("invalid relation")

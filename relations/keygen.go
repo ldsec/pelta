@@ -16,9 +16,9 @@ type KeyGenPublicParams struct {
 	T  *fastmath.IntMatrix // NTT transform
 }
 
-func GenerateKeyGenRelation(s, r *fastmath.Poly, k *fastmath.IntVec, params KeyGenPublicParams) *crypto.ImmutLinearRelation {
-	_, comP := crypto.GetAjtaiCommitments(params.A1, params.A2, s.Coeffs(), r.Coeffs(), params.AjtaiConfig)
-	ajtaiEqn := crypto.NewPaddedAjtaiEquation(comP, params.A1, params.A2, s.Coeffs(), r.Coeffs(), k, params.AjtaiConfig)
+func GenerateKeyGenRelation(s *fastmath.Poly, r, k *fastmath.IntVec, params KeyGenPublicParams) *crypto.ImmutLinearRelation {
+	_, comP := crypto.GetAjtaiCommitments(params.A1, params.A2, s.Coeffs(), r, params.AjtaiConfig)
+	ajtaiEqn := crypto.NewPaddedAjtaiEquation(comP, params.A1, params.A2, s.Coeffs(), r, k, params.AjtaiConfig)
 	ajtaiEqn.AddDependency(0, 0)
 	lrb := crypto.NewLinearRelationBuilder()
 	p0, e := crypto.RLWESample(params.P1, s, params.RLWEConfig)
@@ -34,8 +34,8 @@ func getRandomKeyGenParams(rlweConfig crypto.RLWEConfig, ajtaiConfig crypto.Ajta
 	A1 := fastmath.PersistentIntMatrix("KeyGenA1.test", func() *fastmath.IntMatrix {
 		return fastmath.NewRandomIntMatrix(ajtaiConfig.D, ajtaiConfig.D, ajtaiConfig.P, ajtaiConfig.BaseRing)
 	}, ajtaiConfig.BaseRing)
-	A2 := fastmath.PersistentIntMatrix("KeyGenA1.test", func() *fastmath.IntMatrix {
-		return fastmath.NewRandomIntMatrix(ajtaiConfig.D, ajtaiConfig.D, ajtaiConfig.P, ajtaiConfig.BaseRing)
+	A2 := fastmath.PersistentIntMatrix("KeyGenA2.test", func() *fastmath.IntMatrix {
+		return fastmath.NewRandomIntMatrix(ajtaiConfig.D, 2*ajtaiConfig.D, ajtaiConfig.P, ajtaiConfig.BaseRing)
 	}, ajtaiConfig.BaseRing)
 	params := KeyGenPublicParams{
 		AjtaiConfig: ajtaiConfig,
@@ -56,8 +56,8 @@ func RunKeyGenRelation() {
 	_, ter, _ := fastmath.GetSamplers(rlweConfig.RingParams, 1)
 	e0 := logging.LogExecStart("Main", "input creation")
 	s := fastmath.NewRandomPoly(ter, rlweConfig.BaseRing)
-	r := fastmath.NewRandomPoly(ter, rlweConfig.BaseRing)
-	comQ, comP := crypto.GetAjtaiCommitments(params.A1, params.A2, s.Coeffs(), r.Coeffs(), ajtaiConfig)
+	r := fastmath.NewRandomIntVecFast(params.A2.Cols(), ter, rlweConfig.BaseRing)
+	comQ, comP := crypto.GetAjtaiCommitments(params.A1, params.A2, s.Coeffs(), r, ajtaiConfig)
 	k := crypto.GetAjtaiKappa(comP, comQ, ajtaiConfig)
 	e0.LogExecEnd()
 
@@ -70,9 +70,6 @@ func RunKeyGenRelation() {
 
 	e0 = logging.LogExecStart("Main", "rebasing")
 	rebasedRel := rel.Rebased(rebaseRing)
-	// rebasedRel.Cleanup()
-	// commitmentRing := config.Ring
-	// rebasedRel := rel
 	e0.LogExecEnd()
 
 	e0 = logging.LogExecStart("Main", "protocol config creation")

@@ -20,7 +20,7 @@ type KeySwitchPublicParams struct {
 	T     *fastmath.IntMatrix // NTT transform
 }
 
-func GenerateKeySwitchRelation(s, sp, u, r, er0, er1 *fastmath.Poly, k2 *fastmath.IntVec, params KeySwitchPublicParams) *crypto.ImmutLinearRelation {
+func GenerateKeySwitchRelation(s, sp, u, er0, er1 *fastmath.Poly, r, k2 *fastmath.IntVec, params KeySwitchPublicParams) *crypto.ImmutLinearRelation {
 	id := fastmath.NewIdIntMatrix(params.RLWEConfig.D, params.RLWEConfig.BaseRing)
 	emptyLHS := fastmath.NewIntVec(params.RLWEConfig.D, params.RLWEConfig.BaseRing)
 	e0 := crypto.NewLinearEquation(emptyLHS, 0).
@@ -38,9 +38,9 @@ func GenerateKeySwitchRelation(s, sp, u, r, er0, er1 *fastmath.Poly, k2 *fastmat
 		AppendRLWEErrorDecompositionSum(er1, params.T, params.RLWEConfig)
 	h1.UpdateLHS()
 	h1.AddDependency(0, 1)
-	comQ, comP := crypto.GetAjtaiCommitments(params.A1, params.A2, s.Coeffs(), r.Coeffs(), params.AjtaiConfig)
+	comQ, comP := crypto.GetAjtaiCommitments(params.A1, params.A2, s.Coeffs(), r, params.AjtaiConfig)
 	k1 := crypto.GetAjtaiKappa(comP, comQ, params.AjtaiConfig)
-	t := crypto.NewPaddedAjtaiEquation(comP, params.A1, params.A2, s.Coeffs(), r.Coeffs(), k1, params.AjtaiConfig)
+	t := crypto.NewPaddedAjtaiEquation(comP, params.A1, params.A2, s.Coeffs(), r, k1, params.AjtaiConfig)
 	t.AddDependency(0, 0)
 	lrb := crypto.NewLinearRelationBuilder().
 		AppendEqn(h0).
@@ -58,8 +58,8 @@ func getRandomKeySwitchParams(rlweConfig crypto.RLWEConfig, ajtaiConfig crypto.A
 	A1 := fastmath.PersistentIntMatrix("KeyGenA1.test", func() *fastmath.IntMatrix {
 		return fastmath.NewRandomIntMatrix(ajtaiConfig.D, ajtaiConfig.D, ajtaiConfig.P, ajtaiConfig.BaseRing)
 	}, ajtaiConfig.BaseRing)
-	A2 := fastmath.PersistentIntMatrix("KeyGenA1.test", func() *fastmath.IntMatrix {
-		return fastmath.NewRandomIntMatrix(ajtaiConfig.D, ajtaiConfig.D, ajtaiConfig.P, ajtaiConfig.BaseRing)
+	A2 := fastmath.PersistentIntMatrix("KeyGenA2.test", func() *fastmath.IntMatrix {
+		return fastmath.NewRandomIntMatrix(ajtaiConfig.D, 2*ajtaiConfig.D, ajtaiConfig.P, ajtaiConfig.BaseRing)
 	}, ajtaiConfig.BaseRing)
 	A3 := fastmath.PersistentIntMatrix("KeyGenA3.test", func() *fastmath.IntMatrix {
 		return fastmath.NewRandomIntMatrixFast(rlweConfig.D, rlweConfig.D, uni, rlweConfig.BaseRing)
@@ -91,13 +91,13 @@ func RunKeySwitchRelation() {
 	u := fastmath.NewRandomPoly(ter, rlweConfig.BaseRing)
 	er0 := fastmath.NewRandomPoly(rlweConfig.ErrorSampler, rlweConfig.BaseRing)
 	er1 := fastmath.NewRandomPoly(rlweConfig.ErrorSampler, rlweConfig.BaseRing)
-	r := fastmath.NewRandomPoly(ter, rlweConfig.BaseRing)
+	r := fastmath.NewRandomIntVecFast(params.A2.Cols(), ter, rlweConfig.BaseRing)
 	// k1 := fastmath.NewRandomPoly(uni, rlweConfig.BaseRing).Coeffs()
 	k2 := fastmath.NewRandomPoly(uni, rlweConfig.BaseRing).Coeffs()
 	e0.LogExecEnd()
 
 	e0 = logging.LogExecStart("Main", "relation creation")
-	rel := GenerateKeySwitchRelation(s, sp, u, r, er0, er1, k2, params)
+	rel := GenerateKeySwitchRelation(s, sp, u, er0, er1, r, k2, params)
 	e0.LogExecEnd()
 	if !rel.IsValid() {
 		panic("invalid relation")

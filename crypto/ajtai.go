@@ -45,21 +45,28 @@ func GetAjtaiKappa(comP, comQ *fastmath.IntVec, params AjtaiConfig) *fastmath.In
 // NewPaddedAjtaiEquation returns the equation comP = As + Br - kp with rows padded up to the size of s. This is done to be able to generate
 // the Id * (-p) on the lhs.
 func NewPaddedAjtaiEquation(comP *fastmath.IntVec, A, B *fastmath.IntMatrix, s, r, kappa *fastmath.IntVec, config AjtaiConfig) *LinearEquation {
-	// Num cols
+	// Num cols / polynomial degree
 	d := s.Size()
 	// Num rows
 	l := comP.Size()
 	padLength := d - l
 	paddedA := A.Copy().(*fastmath.IntMatrix)
-	paddedA.ExtendRows(fastmath.NewIntMatrix(padLength, d, config.RingParams.BaseRing))
+	paddedA.ExtendRows(fastmath.NewIntMatrix(padLength, A.Cols(), config.RingParams.BaseRing))
 	paddedB := B.Copy().(*fastmath.IntMatrix)
-	paddedB.ExtendRows(fastmath.NewIntMatrix(padLength, d, config.RingParams.BaseRing))
+	paddedB.ExtendRows(fastmath.NewIntMatrix(padLength, B.Cols(), config.RingParams.BaseRing))
 	paddedKappa := kappa.Copy().Append(fastmath.NewIntVec(padLength, config.RingParams.BaseRing))
 	paddedComP := comP.Copy().Append(fastmath.NewIntVec(padLength, config.RingParams.BaseRing))
 	negP := fastmath.NewCoeffFromBigInt(config.P, config.RingParams.BaseRing.Modulus).Neg(config.RingParams.BaseRing.Modulus)
 	eqn := NewLinearEquation(paddedComP, d)
-	eqn.AppendTerm(paddedA, s).
-		AppendTerm(paddedB, r).
-		AppendTerm(fastmath.NewIdIntMatrix(d, config.BaseRing).ScaleCoeff(negP), paddedKappa)
+	eqn.AppendTerm(paddedA, s)
+	// size of B may be k*d for some k and d the polynomial degree
+	if paddedB.Cols() != d && paddedB.Cols()%d == 0 {
+		splittedB := paddedB.SplitCols()
+		for i := 0; i < len(splittedB); i++ {
+			eqn.AppendTerm(splittedB[i], r.UnderlyingPolysAsIntVecs()[i])
+		}
+	}
+	//eqn.AppendTerm(paddedB, r)
+	eqn.AppendTerm(fastmath.NewIdIntMatrix(d, config.BaseRing).ScaleCoeff(negP), paddedKappa)
 	return eqn
 }

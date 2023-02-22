@@ -18,7 +18,7 @@ type RelinKeyGenPublicParams struct {
 	T  *fastmath.IntMatrix // NTT transform
 }
 
-func GenerateRelinKeyGenRelation(s, u, r, er0, er1 *fastmath.Poly, params RelinKeyGenPublicParams) *crypto.ImmutLinearRelation {
+func GenerateRelinKeyGenRelation(s, u, er0, er1 *fastmath.Poly, r *fastmath.IntVec, params RelinKeyGenPublicParams) *crypto.ImmutLinearRelation {
 	emptyLHS := fastmath.NewIntVec(params.RLWEConfig.D, params.RLWEConfig.BaseRing)
 	lrb := crypto.NewLinearRelationBuilder()
 	for i := 0; i < params.A.Size(); i++ {
@@ -48,9 +48,9 @@ func GenerateRelinKeyGenRelation(s, u, r, er0, er1 *fastmath.Poly, params RelinK
 		lrb.AppendEqn(h0i)
 		lrb.AppendEqn(h1i)
 	}
-	comQ, comP := crypto.GetAjtaiCommitments(params.A1, params.A2, s.Coeffs(), r.Coeffs(), params.AjtaiConfig)
+	comQ, comP := crypto.GetAjtaiCommitments(params.A1, params.A2, s.Coeffs(), r, params.AjtaiConfig)
 	k1 := crypto.GetAjtaiKappa(comP, comQ, params.AjtaiConfig)
-	t := crypto.NewPaddedAjtaiEquation(comP, params.A1, params.A2, s.Coeffs(), r.Coeffs(), k1, params.AjtaiConfig)
+	t := crypto.NewPaddedAjtaiEquation(comP, params.A1, params.A2, s.Coeffs(), r, k1, params.AjtaiConfig)
 	t.AddDependency(0, 0)
 	lrb.AppendEqn(t)
 	return lrb.BuildFast(params.RLWEConfig.BaseRing)
@@ -65,8 +65,8 @@ func getRandomRelinKeyGenParams(size int, rlweConfig crypto.RLWEConfig, ajtaiCon
 	A1 := fastmath.PersistentIntMatrix("KeyGenA1.test", func() *fastmath.IntMatrix {
 		return fastmath.NewRandomIntMatrix(ajtaiConfig.D, ajtaiConfig.D, ajtaiConfig.P, ajtaiConfig.BaseRing)
 	}, ajtaiConfig.BaseRing)
-	A2 := fastmath.PersistentIntMatrix("KeyGenA1.test", func() *fastmath.IntMatrix {
-		return fastmath.NewRandomIntMatrix(ajtaiConfig.D, ajtaiConfig.D, ajtaiConfig.P, ajtaiConfig.BaseRing)
+	A2 := fastmath.PersistentIntMatrix("KeyGenA2.test", func() *fastmath.IntMatrix {
+		return fastmath.NewRandomIntMatrix(ajtaiConfig.D, 2*ajtaiConfig.D, ajtaiConfig.P, ajtaiConfig.BaseRing)
 	}, ajtaiConfig.BaseRing)
 	params := RelinKeyGenPublicParams{
 		AjtaiConfig: ajtaiConfig,
@@ -93,14 +93,14 @@ func RunRelinKeyGenRelation() {
 	e0 := logging.LogExecStart("Main", "input creation")
 	s := fastmath.NewRandomPoly(ter, rlweConfig.BaseRing)
 	u := fastmath.NewRandomPoly(ter, rlweConfig.BaseRing)
-	r := fastmath.NewRandomPoly(ter, rlweConfig.BaseRing)
+	r := fastmath.NewRandomIntVecFast(params.A2.Cols(), ter, rlweConfig.BaseRing)
 	er0 := fastmath.NewRandomPoly(rlweConfig.ErrorSampler, rlweConfig.BaseRing)
 	er1 := fastmath.NewRandomPoly(rlweConfig.ErrorSampler, rlweConfig.BaseRing)
 	// k1 := fastmath.NewRandomPoly(uni, rlweConfig.BaseRing).Coeffs()
 	e0.LogExecEnd()
 
 	e0 = logging.LogExecStart("Main", "relation creation")
-	rel := GenerateRelinKeyGenRelation(s, u, r, er0, er1, params)
+	rel := GenerateRelinKeyGenRelation(s, u, er0, er1, r, params)
 	e0.LogExecEnd()
 	if !rel.IsValid() {
 		panic("invalid relation")
