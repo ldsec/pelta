@@ -2,6 +2,7 @@ package fastmath
 
 import (
 	"fmt"
+	"math/big"
 
 	"github.com/tuneinsight/lattigo/v4/ring"
 )
@@ -82,11 +83,11 @@ func (v *PolyVec) Scale(factor uint64) *PolyVec {
 }
 
 // Max returns the largest coefficient among all the polynomials in this vector.
-func (v *PolyVec) Max() uint64 {
-	max := v.elems[0].MaxLevel(0)
+func (v *PolyVec) Max(q *big.Int) *big.Int {
+	max := v.elems[0].Max(q)
 	for _, p := range v.elems[1:] {
-		c := p.MaxLevel(0)
-		if c > max {
+		c := p.Max(q)
+		if c.Cmp(max) > 0 {
 			max = c
 		}
 	}

@@ -349,26 +349,26 @@ func (m *IntMatrix) Eq(b ImmutIntMatrix) bool {
 	return true
 }
 
-// MulVec performs a matrix-vector multiplication.
-//func (m *IntMatrix) MulVecSlow(v *IntVec) *IntVec {
-//	if m.Cols() != v.Size() {
-//		panic("IntMatrix.MulVec sizes incorrect")
-//	}
-//	if m.IsUnset() {
-//		return NewIntVec(m.Rows(), m.baseRing)
-//	}
-//	return logging.LogShortExecution(fmt.Sprintf("%s.MulVec", m.SizeString()), "multiplying", func() interface{} {
-//		if m.unrebasedRef != nil && v.unrebasedRef != nil {
-//			return m.unrebasedRef.MulVec(v.unrebasedRef)
-//		}
-//		out := NewIntVec(m.Rows(), m.baseRing)
-//		for i, row := range m.rows {
-//			dotResult := row.Dot(v)
-//			out.SetCoeff(i, dotResult)
-//		}
-//		return out
-//	}).(*IntVec)
-//}
+// MulVecSlow performs a matrix-vector multiplication.
+func (m *IntMatrix) MulVecSlow(v *IntVec) *IntVec {
+	if m.Cols() != v.Size() {
+		panic("IntMatrix.MulVec sizes incorrect")
+	}
+	if m.IsUnset() {
+		return NewIntVec(m.Rows(), m.baseRing)
+	}
+	return logging.LogShortExecution(fmt.Sprintf("%s.MulVec", m.SizeString()), "multiplying", func() interface{} {
+		if m.unrebasedRef != nil && v.unrebasedRef != nil {
+			return m.unrebasedRef.MulVec(v.unrebasedRef)
+		}
+		out := NewIntVec(m.Rows(), m.baseRing)
+		for i, row := range m.rows {
+			dotResult := row.Dot(v)
+			out.SetCoeff(i, dotResult)
+		}
+		return out
+	}).(*IntVec)
+}
 
 // MulVec performs a matrix-vector multiplication.
 func (m *IntMatrix) MulVec(v *IntVec) *IntVec {

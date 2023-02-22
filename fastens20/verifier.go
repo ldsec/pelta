@@ -62,9 +62,8 @@ func (vf Verifier) Verify(z *fastmath.PolyNTTMatrix, state VerifierState) bool {
 		func(i int, zi *fastmath.PolyNTTVec) bool {
 			perm := state.c.Permute(int64(i), vf.params.Sig).NTT()
 			rhs := state.T0.Copy().MulAll(perm).Add(state.W.Row(i))
-			// TODO masked opening bound check (need a good delta1 parameter)
-			//sizeCheck := zi.Copy().AsVec().NewPolyVec().L2Norm(vf.settings.Q) < vf.settings.Beta
-			return vf.params.B0.MulVec(zi).Eq(rhs) //&& sizeCheck
+			sizeCheck := zi.Copy().InvNTT().Max(vf.params.config.Q).Cmp(vf.params.config.Beta()) <= 0
+			return vf.params.B0.MulVec(zi).Eq(rhs) && sizeCheck
 		})
 	if !maskedOpeningTestResult {
 		logging.Log("Verifier.Verify", "verifier failed masked opening verification")
@@ -174,7 +173,7 @@ func (vf Verifier) Verify(z *fastmath.PolyNTTMatrix, state VerifierState) bool {
 					index += vf.params.config.K
 				}
 				index = index % vf.params.config.K
-				dotResult := vf.params.B.Row(j).Dot(z.Row(int(index)))
+				dotResult := vf.params.B.Row(j).Dot(z.Row(index))
 				// d * psi[mu][j] * (b[j] * z[i - v])
 				return dotResult.Scale(uint64(vf.params.config.D)).
 					Mul(psi.Get(mu, j))

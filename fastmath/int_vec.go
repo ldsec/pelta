@@ -383,21 +383,14 @@ func (v *IntVec) Dot(r *IntVec) Coeff {
 	// if the vectors are both rebased, do the dot product with the unrebased version
 	if v.unrebasedRef != nil && r.unrebasedRef != nil {
 		return v.unrebasedRef.Dot(r.unrebasedRef)
+	} else if v.unrebasedRef != nil && r.unrebasedRef == nil {
+		r.unrebasedRef = r.MergedPolys(v.unrebasedRef.baseRing)
+		return v.unrebasedRef.Dot(r.unrebasedRef)
+	} else if v.unrebasedRef == nil && r.unrebasedRef != nil {
+		v.unrebasedRef = v.MergedPolys(r.unrebasedRef.baseRing)
+		return v.unrebasedRef.Dot(r.unrebasedRef)
 	}
-	numPolys := len(v.polys)
-	if len(r.polys) < numPolys {
-		numPolys = len(r.polys)
-	}
-	preSum := NewPoly(v.baseRing)
-	for i := 0; i < numPolys; i++ {
-		a := v.polys[i]
-		b := r.polys[i]
-		if a.IsUnset() || b.IsUnset() {
-			continue
-		}
-		a.MulCoeffsAndAdd(b, preSum)
-	}
-	return preSum.SumCoeffs()
+	return DotBlazingFast(v, r, v.baseRing)
 }
 
 // Hadamard performs coefficient-wise multiplication.

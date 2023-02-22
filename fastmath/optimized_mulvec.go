@@ -56,6 +56,22 @@ func MulVecBlazingFast(A *IntMatrix, b *IntVec, baseRing *ring.Ring) *IntVec {
 	return out
 }
 
+func DotBlazingFast(V1, V2 *IntVec, baseRing *ring.Ring) Coeff {
+	out := NewZeroCoeff(len(baseRing.Modulus))
+	var wg sync.WaitGroup
+	wg.Add(len(baseRing.Modulus))
+	for lvl, qi := range baseRing.Modulus {
+		V1Coeffs := V1.GetWholeLevel(lvl)
+		V2Coeffs := V2.GetWholeLevel(lvl)
+		go func(lvl int, qi uint64) {
+			out[lvl] = DotBlazingFastLevel(V1Coeffs, V2Coeffs, qi)
+			wg.Done()
+		}(lvl, qi)
+	}
+	wg.Wait()
+	return out
+}
+
 func DotBlazingFastLevel(V1, V2 []uint64, qi uint64) uint64 {
 	mredConstant := ring.MRedParams(qi)
 	bredConstant := ring.BRedParams(qi)
@@ -75,28 +91,22 @@ func MulVecTransposeBlazingFastLevel(A [][]uint64, V, U []uint64, qi uint64) {
 	bredConstant := ring.BRedParams(qi)
 	rows := len(A)
 	cols := len(A[0])
-	//var wg sync.WaitGroup
 	for i := 0; i < rows; i++ {
 		Ai := A[i]
 		Vi := ring.MForm(V[i], qi, bredConstant)
-		//wg.Add(cols / 8)
 		for j := 0; j < cols; j += 8 {
-			func(j int) {
-				x := (*[8]uint64)(unsafe.Pointer(&Ai[j]))
-				z := (*[8]uint64)(unsafe.Pointer(&U[j]))
-				// U[j] = U[j] + Ai[j] * v[i]
-				z[0] = ring.CRed(z[0]+ring.MRed(x[0], Vi, qi, mredConstant), qi)
-				z[1] = ring.CRed(z[1]+ring.MRed(x[1], Vi, qi, mredConstant), qi) // U[j+1]
-				z[2] = ring.CRed(z[2]+ring.MRed(x[2], Vi, qi, mredConstant), qi) // U[j+2]
-				z[3] = ring.CRed(z[3]+ring.MRed(x[3], Vi, qi, mredConstant), qi) // U[j+3]
-				z[4] = ring.CRed(z[4]+ring.MRed(x[4], Vi, qi, mredConstant), qi) // ...
-				z[5] = ring.CRed(z[5]+ring.MRed(x[5], Vi, qi, mredConstant), qi)
-				z[6] = ring.CRed(z[6]+ring.MRed(x[6], Vi, qi, mredConstant), qi)
-				z[7] = ring.CRed(z[7]+ring.MRed(x[7], Vi, qi, mredConstant), qi) // U[j+7]
-				//wg.Done()
-			}(j)
+			x := (*[8]uint64)(unsafe.Pointer(&Ai[j]))
+			z := (*[8]uint64)(unsafe.Pointer(&U[j]))
+			// U[j] = U[j] + Ai[j] * v[i]
+			z[0] = ring.CRed(z[0]+ring.MRed(x[0], Vi, qi, mredConstant), qi)
+			z[1] = ring.CRed(z[1]+ring.MRed(x[1], Vi, qi, mredConstant), qi) // U[j+1]
+			z[2] = ring.CRed(z[2]+ring.MRed(x[2], Vi, qi, mredConstant), qi) // U[j+2]
+			z[3] = ring.CRed(z[3]+ring.MRed(x[3], Vi, qi, mredConstant), qi) // U[j+3]
+			z[4] = ring.CRed(z[4]+ring.MRed(x[4], Vi, qi, mredConstant), qi) // ...
+			z[5] = ring.CRed(z[5]+ring.MRed(x[5], Vi, qi, mredConstant), qi)
+			z[6] = ring.CRed(z[6]+ring.MRed(x[6], Vi, qi, mredConstant), qi)
+			z[7] = ring.CRed(z[7]+ring.MRed(x[7], Vi, qi, mredConstant), qi) // U[j+7]
 		}
-		//wg.Wait()
 	}
 }
 
