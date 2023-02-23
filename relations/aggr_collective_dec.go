@@ -8,27 +8,28 @@ import (
 	"math/big"
 )
 
-func GenerateAggrKeyGenRelation(points []fastmath.Coeff, s *fastmath.Poly, r, k *fastmath.IntVec, params KeyGenPublicParams) *crypto.ImmutLinearRelation {
-	relInner := GenerateKeyGenRelation(s, r, k, params)
+func GenerateAggrCollectiveDecRelation(points []fastmath.Coeff, s, sp, er *fastmath.Poly, r, k2 *fastmath.IntVec, params CollectiveDecPublicParams) *crypto.ImmutLinearRelation {
+	relInner := GenerateCollectiveDecRelation(s, sp, er, r, k2, params)
 	return relInner.ExtendWithPolyEval(1, points, params.RLWEConfig.BaseRing)
 }
 
-func RunAggrKeyGenRelation() {
+func RunAggrCollectiveDecRelation() {
 	rlweConfig := GetDefaultRLWEConfig()
 	ajtaiConfig := GetDefaultAjtaiConfig()
-	params := getRandomKeyGenParams(rlweConfig, ajtaiConfig)
+	params := getRandomCollectiveDecParams(rlweConfig, ajtaiConfig)
 
-	_, ter, _ := fastmath.GetSamplers(rlweConfig.RingParams, 1)
+	uni, ter, _ := fastmath.GetSamplers(rlweConfig.RingParams, 1)
 	e0 := logging.LogExecStart("Main", "input creation")
 	s := fastmath.NewRandomPoly(ter, rlweConfig.BaseRing)
+	sp := fastmath.NewRandomPoly(ter, rlweConfig.BaseRing)
+	er0 := fastmath.NewRandomPoly(rlweConfig.ErrorSampler, rlweConfig.BaseRing)
 	r := fastmath.NewRandomIntVecFast(params.A2.Cols(), ter, rlweConfig.BaseRing)
-	comQ, comP := crypto.GetAjtaiCommitments(params.A1, params.A2, s.Coeffs(), r, ajtaiConfig)
-	k := crypto.GetAjtaiKappa(comP, comQ, ajtaiConfig)
+	k2 := fastmath.NewRandomPoly(uni, rlweConfig.BaseRing).Coeffs()
 	points := crypto.RandomPoints(4, big.NewInt(int64(rlweConfig.BaseRing.Modulus[0])), rlweConfig.BaseRing)
 	e0.LogExecEnd()
 
 	e0 = logging.LogExecStart("Main", "relation creation")
-	rel := GenerateAggrKeyGenRelation(points, s, r, k, params)
+	rel := GenerateAggrCollectiveDecRelation(points, s, sp, er0, r, k2, params)
 	e0.LogExecEnd()
 	if !rel.IsValid() {
 		panic("invalid relation")
@@ -40,8 +41,8 @@ func RunAggrKeyGenRelation() {
 
 	e0 = logging.LogExecStart("Main", "protocol config creation")
 	protocolConfig := GetDefaultProtocolConfig(rebasedRel.A.Rows(), rebasedRel.A.Cols()).
-		WithABP(128, rlweConfig.Q, fastmath.NewSlice(rlweConfig.D*6, rlweConfig.D*7)).
-		WithTernarySlice(fastmath.NewSlice(0, 2*rlweConfig.D))
+		WithABP(128, rlweConfig.Q, fastmath.NewSlice(rlweConfig.D*7, rlweConfig.D*8)).
+		WithTernarySlice(fastmath.NewSlice(0, 7*rlweConfig.D))
 	e0.LogExecEnd()
 
 	e0 = logging.LogExecStart("Main", "public parameters creation")
