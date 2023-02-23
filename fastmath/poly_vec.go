@@ -217,9 +217,6 @@ func (v *PolyNTTVec) MulAll(r *PolyNTT) *PolyNTTVec {
 	return v
 }
 func (v *PolyNTTVec) Dot(r *PolyNTTVec) *PolyNTT {
-	// if v.Size() != r.Size() {
-	// 	panic(fmt.Sprintf("PolyNTTVec.Dot sizes do not match %d != %d", v.Size(), r.Size()))
-	// }
 	numPolys := r.Size()
 	if r.Size() > v.Size() {
 		numPolys = v.Size()

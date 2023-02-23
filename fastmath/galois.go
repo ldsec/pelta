@@ -25,7 +25,7 @@ func (p *Poly) Permute(exp int64, sig Automorphism) *Poly {
 	return p.PermuteWithGen(gen)
 }
 
-// Permute returns the permutation of this polynomial, i.e, sig^exp(p).
+// PermuteWithGen returns the permutation of this polynomial, i.e, sig^exp(p).
 func (p *Poly) PermuteWithGen(gen uint64) *Poly {
 	if p.IsUnset() || p.IsZero() {
 		return p
@@ -55,7 +55,7 @@ func (sig Automorphism) Exponent(exp int64) uint64 {
 	} else {
 		posExp = big.NewInt(0).Mod(big.NewInt(exp), big.NewInt(int64(sig.D))).Int64()
 	}
-	return big.NewInt(0).Exp(big.NewInt(int64(sig.G)), big.NewInt(int64(posExp)), nil).Uint64()
+	return big.NewInt(0).Exp(big.NewInt(int64(sig.G)), big.NewInt(posExp), nil).Uint64()
 	// NOTE: 2d works up to some degree. May need to tune a bit.
 	// return ring.ModExp(sig.G, posExp, 2*sig.D)
 }

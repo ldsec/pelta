@@ -248,6 +248,11 @@ func (p *Poly) ScaleCoeff(factors Coeff) *Poly {
 	return p
 }
 
+func (p *Poly) Eval(x Coeff) Coeff {
+	//p.baseRing
+	return nil
+}
+
 // Zero resets the coefficients of this polynomial to zero.
 func (p *Poly) Zero() *Poly {
 	p.unset = true

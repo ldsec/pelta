@@ -140,7 +140,7 @@ func NewRandomTernaryIntVec(size int, baseRing *ring.Ring) *IntVec {
 	return NewRandomIntVec(size, big.NewInt(3), baseRing)
 }
 
-// NewRandomTernaryIntVec constructs a random vector of integers where each element \in {0, 1, 2}.
+// NewRandomBinaryIntVec constructs a random vector of integers where each element \in {0, 1}.
 func NewRandomBinaryIntVec(size int, baseRing *ring.Ring) *IntVec {
 	return NewRandomIntVec(size, big.NewInt(2), baseRing)
 }
