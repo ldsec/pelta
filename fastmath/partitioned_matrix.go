@@ -22,6 +22,10 @@ func NewEmptyPartitionedIntMatrix(baseRing *ring.Ring) *PartitionedIntMatrix {
 	return &PartitionedIntMatrix{[]int{}, []int{}, [][]ImmutIntMatrix{}, nil, nil, baseRing}
 }
 
+func (m *PartitionedIntMatrix) Partitions() [][]ImmutIntMatrix {
+	return m.parts
+}
+
 func (m *PartitionedIntMatrix) Emplace(i, j int, b ImmutIntMatrix) {
 	m.transposeCache = nil
 	if i < len(m.parts) && m.rowSizes[i] != b.Rows() {
@@ -148,7 +152,6 @@ func (m *PartitionedIntMatrix) Eq(ImmutIntMatrix) bool {
 }
 
 func (m *PartitionedIntMatrix) SubsectionCopy(int, int, int, int) *IntMatrix {
-
 	panic("not implemented")
 	return nil
 }

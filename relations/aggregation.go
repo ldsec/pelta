@@ -18,26 +18,21 @@ type AggregationPublicParams struct {
 }
 
 func GenerateAggregationRelation(s *fastmath.Poly, r *fastmath.IntVec, params AggregationPublicParams) *crypto.ImmutLinearRelation {
-	// evaluation equations
-	eqns := make([]*crypto.LinearEquation, len(params.Points))
-	emptyLHS := fastmath.NewIntVec(params.RLWEConfig.D, params.RLWEConfig.BaseRing)
+	// create the evaluation matrix where each row represents a point
+	evalMatrix := fastmath.NewIntMatrix(len(params.Points), params.RLWEConfig.D, params.RLWEConfig.BaseRing)
 	for j, p := range params.Points {
-		// create the evaluation matrix
-		evalMatrix := fastmath.NewIdIntMatrix(params.RLWEConfig.D, params.RLWEConfig.BaseRing)
-		for i := 0; i < params.RLWEConfig.D; i++ {
+		// let the jth row of the eval matrix to be the point's exponentiations
+		evalMatrix.RowView(j).PopulateCoeffs(func(i int) fastmath.Coeff {
 			// compute p to the ith power
 			pi := big.NewInt(0).Exp(big.NewInt(int64(p)), big.NewInt(int64(i)), params.RLWEConfig.Q)
 			// coeffs
 			piCoeffs := fastmath.NewCoeffFromBigInt(pi, params.RLWEConfig.BaseRing.Modulus)
-			evalMatrix.RowView(i).ScaleCoeff(piCoeffs)
-		}
-		// add the evaluation equation
-		eqns[j] = crypto.NewLinearEquation(emptyLHS, 0).AppendTerm(evalMatrix, s.Coeffs())
-		eqns[j].UpdateLHS()
-		if j > 0 {
-			eqns[j].AddDependency(0, 0)
-		}
+			return piCoeffs
+		})
 	}
+	emptyLHS := fastmath.NewIntVec(len(params.Points), params.RLWEConfig.BaseRing)
+	evalEqn := crypto.NewLinearEquation(emptyLHS, 0).AppendTerm(evalMatrix, s.Coeffs())
+	evalEqn.UpdateLHS()
 	// commitment equation
 	comQ, comP := crypto.GetAjtaiCommitments(params.A1, params.A2, s.Coeffs(), r, params.AjtaiConfig)
 	k1 := crypto.GetAjtaiKappa(comP, comQ, params.AjtaiConfig)
@@ -45,9 +40,7 @@ func GenerateAggregationRelation(s *fastmath.Poly, r *fastmath.IntVec, params Ag
 	t.AddDependency(0, 0)
 	// create the relation
 	lrb := crypto.NewLinearRelationBuilder()
-	for _, eqn := range eqns {
-		lrb.AppendEqn(eqn)
-	}
+	lrb.AppendEqn(evalEqn)
 	lrb.AppendEqn(t)
 	return lrb.BuildFast(params.RLWEConfig.BaseRing)
 }
@@ -77,7 +70,7 @@ func getRandomAggregationParams(numPoints int, rlweConfig crypto.RLWEConfig, ajt
 func RunAggregationRelation() {
 	rlweConfig := GetDefaultRLWEConfig()
 	ajtaiConfig := GetDefaultAjtaiConfig()
-	params := getRandomAggregationParams(1, rlweConfig, ajtaiConfig)
+	params := getRandomAggregationParams(4, rlweConfig, ajtaiConfig)
 
 	_, ter, _ := fastmath.GetSamplers(rlweConfig.RingParams, 1)
 	e0 := logging.LogExecStart("Main", "input creation")
@@ -98,8 +91,8 @@ func RunAggregationRelation() {
 
 	e0 = logging.LogExecStart("Main", "protocol config creation")
 	protocolConfig := GetDefaultProtocolConfig(rebasedRel.A.Rows(), rebasedRel.A.Cols()).
-		WithABP(128, rlweConfig.Q, fastmath.NewSlice(rlweConfig.D*10, rlweConfig.D*12)).
-		WithTernarySlice(fastmath.NewSlice(0, 10*rlweConfig.D))
+		WithABP(128, rlweConfig.Q, fastmath.NewSlice(rlweConfig.D, rlweConfig.D*2)).
+		WithTernarySlice(fastmath.NewSlice(0, rlweConfig.D))
 	e0.LogExecEnd()
 
 	e0 = logging.LogExecStart("Main", "public parameters creation")

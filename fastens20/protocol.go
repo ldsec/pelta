@@ -53,6 +53,9 @@ func NewProtocolConfig(ringParams fastmath.RingParams, delta1 uint64, numRows, n
 }
 
 func (c ProtocolConfig) WithTernarySlice(ternarySlice fastmath.Slice) ProtocolConfig {
+	if ternarySlice.Start >= c.N || ternarySlice.End > c.N {
+		panic("ternary slice exceeds the bounds")
+	}
 	c.TernarySlice = ternarySlice
 	return c
 }
@@ -69,6 +72,9 @@ func (c ProtocolConfig) WithSecurityParameters(kappa, lambda int) ProtocolConfig
 }
 
 func (c ProtocolConfig) WithABP(tau int, bound *big.Int, boundSlice fastmath.Slice) ProtocolConfig {
+	if boundSlice.Start >= c.N || boundSlice.End > c.N {
+		panic("abp slice exceeds the bounds")
+	}
 	c.ABPEnabled = true
 	c.Tau = tau
 	c.Bound = bound

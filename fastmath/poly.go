@@ -248,9 +248,13 @@ func (p *Poly) ScaleCoeff(factors Coeff) *Poly {
 	return p
 }
 
+// Eval evaluates the polynomial at the given point.
 func (p *Poly) Eval(x Coeff) Coeff {
-	//p.baseRing
-	return nil
+	out := NewZeroCoeff(len(p.baseRing.Modulus))
+	for lvl, qi := range p.baseRing.Modulus {
+		out[lvl] = ring.EvalPolyModP(x[lvl], p.ref.Coeffs[lvl], qi)
+	}
+	return out
 }
 
 // Zero resets the coefficients of this polynomial to zero.
