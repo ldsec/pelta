@@ -43,7 +43,7 @@ func GenerateRelinKeyGenRelation(s, u, er0, er1 *fastmath.Poly, r *fastmath.IntV
 		if i > 0 {
 			h0i.AddDependency(1, 1)
 		}
-		// dependency on u
+		// dependency on u (h1_i depends on h0_i)
 		if i == 0 {
 			h1i.AddDependency(0, 0)
 		} else if i == 1 {
@@ -57,7 +57,7 @@ func GenerateRelinKeyGenRelation(s, u, er0, er1 *fastmath.Poly, r *fastmath.IntV
 	comQ, comP := crypto.GetAjtaiCommitments(params.A1, params.A2, s.Coeffs(), r, params.AjtaiConfig)
 	k1 := crypto.GetAjtaiKappa(comP, comQ, params.AjtaiConfig)
 	t := crypto.NewPaddedAjtaiEquation(comP, params.A1, params.A2, s.Coeffs(), r, k1, params.AjtaiConfig)
-	t.AddDependency(0, 0)
+	t.AddDependency(0, 1)
 	lrb.AppendEqn(t)
 	return lrb.BuildFast(params.RLWEConfig.BaseRing)
 }
