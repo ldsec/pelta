@@ -26,25 +26,31 @@ func GenerateRelinKeyGenRelation(s, u, er0, er1 *fastmath.Poly, r *fastmath.IntV
 		b := params.B.Get(i)
 		w := params.W.Get(i)
 		h0i := crypto.NewLinearEquation(emptyLHS, 0).
+			// aTu
 			AppendTerm(params.T.Copy().AsIntMatrix().DiagMulMat(a.Coeffs()), u.Coeffs()).
+			// wTs
 			AppendTerm(params.T.Copy().AsIntMatrix().DiagMulMat(w.Coeffs()), s.Coeffs()).
+			// T \sum{e0}
 			AppendRLWEErrorDecompositionSum(er0, params.T, params.RLWEConfig)
 		h0i.UpdateLHS()
 		h1i := crypto.NewLinearEquation(emptyLHS, 0).
+			// bTu
 			AppendTerm(params.T.Copy().AsIntMatrix().DiagMulMat(b.Coeffs()), u.Coeffs()).
+			// T \sum{e1}
 			AppendRLWEErrorDecompositionSum(er1, params.T, params.RLWEConfig)
 		h1i.UpdateLHS()
+		// dependency on s is the same across all equations
 		if i > 0 {
-			h0iTerms := h0i.GetTerms()
-			h1iTerms := h1i.GetTerms()
-			for j := range h0iTerms {
-				h0i.AddDependency(j, j)
-			}
-			for j := range h1iTerms {
-				h1i.AddDependency(j, len(h0iTerms)+j)
-			}
+			h0i.AddDependency(1, 1)
 		}
-		h1i.AddDependency(0, 1)
+		// dependency on u
+		if i == 0 {
+			h1i.AddDependency(0, 0)
+		} else if i == 1 {
+			h1i.AddDependency(0, 10)
+		} else if i > 1 {
+			h1i.AddDependency(0, 10+8*(i-1))
+		}
 		lrb.AppendEqn(h0i)
 		lrb.AppendEqn(h1i)
 	}
