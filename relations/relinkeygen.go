@@ -39,7 +39,7 @@ func GenerateRelinKeyGenRelation(s, u, er0, er1 *fastmath.Poly, r *fastmath.IntV
 			// T \sum{e1}
 			AppendRLWEErrorDecompositionSum(er1, params.T, params.RLWEConfig)
 		h1i.UpdateLHS()
-		// dependency on s is the same across all equations
+		// dependency on s (same s across all equations)
 		if i > 0 {
 			h0i.AddDependency(1, 1)
 		}
@@ -47,9 +47,11 @@ func GenerateRelinKeyGenRelation(s, u, er0, er1 *fastmath.Poly, r *fastmath.IntV
 		if i == 0 {
 			h1i.AddDependency(0, 0)
 		} else if i == 1 {
+			// first equation adds 9 independent terms
 			h1i.AddDependency(0, 10)
 		} else if i > 1 {
-			h1i.AddDependency(0, 10+8*(i-1))
+			// any new equation adds 8 independent terms
+			h1i.AddDependency(0, 10+9*(i-1))
 		}
 		lrb.AppendEqn(h0i)
 		lrb.AppendEqn(h1i)
