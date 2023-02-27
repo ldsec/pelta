@@ -1,6 +1,7 @@
 # LattiCom
+An experimental library for lattice-based commitments
 
-### Setting ring parameters
+## Setting ring parameters
 The ring parameters for the experiment can be adjusted in `relations/config.go`.
 `mainRing` denotes the FHE ring parameters, and `rebaseRing` denotes the commitment ring parameters. 
 For `rebaseRing`, we usually use the same configuration as `mainRing` -- with only `logD` parameter changed.
