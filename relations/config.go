@@ -8,8 +8,8 @@ import (
 	"github.com/ldsec/codeBase/commitment/fastmath"
 )
 
-var mainRing fastmath.RingParams = fastmath.BFVFullRing()
-var rebaseRing fastmath.RingParams = fastmath.BFVFullShortCommtRing(7)
+var mainRing fastmath.RingParams = fastmath.BFVZeroLevelRing()
+var rebaseRing fastmath.RingParams = fastmath.BFVZeroLevelShortCommtRing(7)
 
 func GetDefaultAjtaiConfig() crypto.AjtaiConfig {
 	p := big.NewInt(int64(uint64(1<<20 - 3)))

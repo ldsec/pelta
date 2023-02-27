@@ -36,6 +36,25 @@ func BFVFullRing() RingParams {
 	}
 }
 
+func BFVFullShortCommtRing(logD int) RingParams {
+	ringParamDef := bfv.PN13QP218
+	ringParamDef.T = 0x3ee0001
+	ringParamDef.LogN = logD
+	ringParams, err := bfv.NewParametersFromLiteral(ringParamDef)
+	if err != nil {
+		panic("could not initialize the ring parameters: " + err.Error())
+	}
+	baseRing := ringParams.RingQP().RingQ
+	return RingParams{
+		BaseRing: baseRing,
+		Q:        ringParams.QBigInt(),
+		D:        ringParams.N(),
+		LogD:     ringParams.LogN(),
+		Sigma:    ringParams.Sigma(),
+		T:        ringParams.T(),
+	}
+}
+
 func BFVZeroLevelRing() RingParams {
 	// Initialize the ring parameters.
 	ringParamDef := bfv.PN13QP218
@@ -45,9 +64,10 @@ func BFVZeroLevelRing() RingParams {
 		panic("could not initialize the ring parameters: " + err.Error())
 	}
 	baseRing := ringParams.RingQP().RingQ
+	baseRing.Modulus = baseRing.Modulus[0:1]
 	return RingParams{
 		BaseRing: baseRing,
-		Q:        baseRing.ModulusAtLevel[0],
+		Q:        big.NewInt(int64(baseRing.Modulus[0])),
 		D:        ringParams.N(),
 		LogD:     ringParams.LogN(),
 		Sigma:    ringParams.Sigma(),
@@ -64,28 +84,10 @@ func BFVZeroLevelShortCommtRing(logD int) RingParams {
 		panic("could not initialize the ring parameters: " + err.Error())
 	}
 	baseRing := ringParams.RingQP().RingQ
+	baseRing.Modulus = baseRing.Modulus[0:1]
 	return RingParams{
 		BaseRing: baseRing,
-		Q:        baseRing.ModulusAtLevel[0],
-		D:        ringParams.N(),
-		LogD:     ringParams.LogN(),
-		Sigma:    ringParams.Sigma(),
-		T:        ringParams.T(),
-	}
-}
-
-func BFVFullShortCommtRing(logD int) RingParams {
-	ringParamDef := bfv.PN13QP218
-	ringParamDef.T = 0x3ee0001
-	ringParamDef.LogN = logD
-	ringParams, err := bfv.NewParametersFromLiteral(ringParamDef)
-	if err != nil {
-		panic("could not initialize the ring parameters: " + err.Error())
-	}
-	baseRing := ringParams.RingQP().RingQ
-	return RingParams{
-		BaseRing: baseRing,
-		Q:        ringParams.QBigInt(),
+		Q:        big.NewInt(int64(baseRing.Modulus[0])),
 		D:        ringParams.N(),
 		LogD:     ringParams.LogN(),
 		Sigma:    ringParams.Sigma(),
