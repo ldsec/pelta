@@ -22,6 +22,12 @@ var mainRing fastmath.RingParams = fastmath.BFVZeroLevelRingCustom(bfv.PN13QP218
 var rebaseRing fastmath.RingParams = fastmath.BFVZeroLevelRingCustom(bfv.PN13QP218, 7)
 ```
 
+#### Full PN13 with Commt. Ring Size 128
+```go
+var mainRing fastmath.RingParams = fastmath.BFVFullRingCustom(bfv.PN13QP218, 13)
+var rebaseRing fastmath.RingParams = fastmath.BFVFullRingCustom(bfv.PN13QP218, 7)
+```
+
 #### Zero-level PN15 with Commt. Ring Size 128
 ```go
 var mainRing fastmath.RingParams = fastmath.BFVZeroLevelRingCustom(bfv.PN15QP880, 15)
