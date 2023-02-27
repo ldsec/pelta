@@ -16,7 +16,7 @@ func verifyRelation(t *testing.T, rel *crypto.ImmutLinearRelation) {
 }
 
 func TestLinRelConstruction(t *testing.T) {
-	bfvRing := fastmath.BFVFullRing()
+	bfvRing := fastmath.BFVFullRingPN13()
 	n := 200
 	m := 300
 	A := fastmath.NewRandomIntMatrix(m, n, bfvRing.Q, bfvRing.BaseRing)
@@ -41,7 +41,7 @@ func TestLinRelRebase(t *testing.T) {
 }
 
 func TestLinRelAppendIndependent(t *testing.T) {
-	bfvRing := fastmath.BFVFullRing()
+	bfvRing := fastmath.BFVFullRingPN13()
 	n := 8
 	m := 16
 	// First relation: As = u
@@ -62,7 +62,7 @@ func TestLinRelAppendIndependent(t *testing.T) {
 }
 
 func TestLinRelExtend(t *testing.T) {
-	bfvRing := fastmath.BFVFullRing()
+	bfvRing := fastmath.BFVFullRingPN13()
 	n := 8
 	m := 16
 	// First relation: As = u
@@ -84,7 +84,7 @@ func TestLinRelExtend(t *testing.T) {
 }
 
 func TestLinRelAppendDependentOnS(t *testing.T) {
-	bfvRing := fastmath.BFVFullRing()
+	bfvRing := fastmath.BFVFullRingPN13()
 	n := 8
 	m := 16
 	// First relation: As = u

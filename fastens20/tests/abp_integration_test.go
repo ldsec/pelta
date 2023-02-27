@@ -22,7 +22,7 @@ func TestABPSimpleShortRing(t *testing.T) {
 }
 
 func TestABPSimpleFullRing(t *testing.T) {
-	bfvRing := fastmath.BFVFullRing()
+	bfvRing := fastmath.BFVFullRingPN13()
 	m := bfvRing.D
 	n := bfvRing.D
 	tau := bfvRing.D
@@ -36,7 +36,7 @@ func TestABPSimpleFullRing(t *testing.T) {
 }
 
 func TestABPSimpleFullRingRebased(t *testing.T) {
-	bfvRing := fastmath.BFVFullRing()
+	bfvRing := fastmath.BFVFullRingPN13()
 	m := bfvRing.D
 	n := bfvRing.D
 	tau := 128

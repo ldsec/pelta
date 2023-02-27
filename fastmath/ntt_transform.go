@@ -18,14 +18,14 @@ func LoadNTTTransform(name string, baseRing *ring.Ring) *IntMatrix {
 func GenerateNTTTransform(baseRing *ring.Ring) *IntMatrix {
 	e := logging.LogExecStart("GenerateNTTTransform", "generation")
 	defer e.LogExecEnd()
-	Tlvls := make([][][]uint64, len(baseRing.ModulusAtLevel))
+	Tlvls := make([][][]uint64, len(baseRing.Modulus))
 	for lvl := range Tlvls {
 		Tlvls[lvl] = generateNTTTransformLevel(lvl, baseRing)
 	}
 	T := NewIntMatrix(baseRing.N, baseRing.N, baseRing)
 	for i := 0; i < baseRing.N; i++ {
 		for j := 0; j < baseRing.N; j++ {
-			c := make([]uint64, len(baseRing.ModulusAtLevel))
+			c := make([]uint64, len(baseRing.Modulus))
 			for lvl := range Tlvls {
 				c[lvl] = Tlvls[lvl][i][j]
 			}

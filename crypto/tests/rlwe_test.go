@@ -8,7 +8,7 @@ import (
 )
 
 func GetDefaultRLWEConfig() crypto.RLWEConfig {
-	bfvRing := fastmath.BFVFullRing()
+	bfvRing := fastmath.BFVFullRingPN13()
 	rlweErrorWidth := 128
 	return crypto.NewRLWEConfig(rlweErrorWidth, bfvRing)
 }

@@ -9,7 +9,7 @@ import (
 )
 
 func TestLinEqnLinearize(t *testing.T) {
-	bfvRing := fastmath.BFVZeroLevelRing()
+	bfvRing := fastmath.BFVZeroLevelRingPN13()
 	m := 2
 	n := 3
 	A := fastmath.NewRandomIntMatrix(m, n, big.NewInt(5), bfvRing.BaseRing)
@@ -25,7 +25,7 @@ func TestLinEqnLinearize(t *testing.T) {
 }
 
 func TestLRBTwoEqnsIndependentTerms(t *testing.T) {
-	bfvRing := fastmath.BFVZeroLevelRing()
+	bfvRing := fastmath.BFVZeroLevelRingPN13()
 	m := 2
 	n := 3
 	lrb := crypto.NewLinearRelationBuilder()
@@ -55,7 +55,7 @@ func TestLRBTwoEqnsIndependentTerms(t *testing.T) {
 }
 
 func TestLRBThreeEqnsIndependentTerms(t *testing.T) {
-	bfvRing := fastmath.BFVZeroLevelRing()
+	bfvRing := fastmath.BFVZeroLevelRingPN13()
 	m := 2
 	n := 3
 	lrb := crypto.NewLinearRelationBuilder()
@@ -92,7 +92,7 @@ func TestLRBThreeEqnsIndependentTerms(t *testing.T) {
 	verifyRelation(t, linRel)
 }
 func TestLRBTwoEqnsDependentTerms(t *testing.T) {
-	bfvRing := fastmath.BFVZeroLevelRing()
+	bfvRing := fastmath.BFVZeroLevelRingPN13()
 	m := 2
 	n := 2
 	lrb := crypto.NewLinearRelationBuilder()
@@ -119,7 +119,7 @@ func TestLRBTwoEqnsDependentTerms(t *testing.T) {
 }
 
 func TestLRBThreeEqnsDependentTerms(t *testing.T) {
-	bfvRing := fastmath.BFVZeroLevelRing()
+	bfvRing := fastmath.BFVZeroLevelRingPN13()
 	m := 2
 	n := 2
 	lrb := crypto.NewLinearRelationBuilder()

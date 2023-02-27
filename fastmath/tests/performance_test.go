@@ -7,7 +7,7 @@ import (
 )
 
 func TestPerformanceRebase(t *testing.T) {
-	bfvRing := fastmath.BFVFullRing()
+	bfvRing := fastmath.BFVFullRingPN13()
 	uni, _, _ := fastmath.GetSamplers(bfvRing, 128)
 	A := fastmath.NewRandomIntMatrixFast(bfvRing.D, bfvRing.D, uni, bfvRing.BaseRing)
 
@@ -16,7 +16,7 @@ func TestPerformanceRebase(t *testing.T) {
 }
 
 func TestPerformanceMulVec(t *testing.T) {
-	bfvRing := fastmath.BFVFullRing()
+	bfvRing := fastmath.BFVFullRingPN13()
 	uni, _, _ := fastmath.GetSamplers(bfvRing, 128)
 	numInstances := 2
 	numRetries := 5
@@ -34,7 +34,7 @@ func TestPerformanceMulVec(t *testing.T) {
 }
 
 // func TestPerformanceMulVecRebased(t *testing.T) {
-// 	bfvRing := fastmath.BFVFullRing()
+// 	bfvRing := fastmath.BFVFullRingPN13()
 // 	rebaseRing := fastmath.BFVFullShortCommtRing(8)
 // 	uni, _, _ := fastmath.GetSamplers(bfvRing, 128)
 // 	num := 2

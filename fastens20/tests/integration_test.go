@@ -41,7 +41,7 @@ func executeAndTestCorrectness(tst *testing.T, s *fastmath.IntVec, params fasten
 }
 
 func TestConsistency(tst *testing.T) {
-	bfvRing := fastmath.BFVZeroLevelRing()
+	bfvRing := fastmath.BFVZeroLevelRingPN13()
 	m := 16
 	n := bfvRing.D
 	rel := createRandomRelation(m, n, bfvRing)
@@ -159,7 +159,7 @@ func TestConsistency(tst *testing.T) {
 }
 
 func TestSimple(t *testing.T) {
-	bfvRing := fastmath.BFVZeroLevelRing()
+	bfvRing := fastmath.BFVZeroLevelRingPN13()
 	m := 16
 	n := bfvRing.D
 	rel := createRandomRelation(m, n, bfvRing)
@@ -169,7 +169,7 @@ func TestSimple(t *testing.T) {
 }
 
 func TestMultiReplication(t *testing.T) {
-	bfvRing := fastmath.BFVZeroLevelRing()
+	bfvRing := fastmath.BFVZeroLevelRingPN13()
 	m := 16
 	n := bfvRing.D
 	rel := createRandomRelation(m, n, bfvRing)
@@ -179,7 +179,7 @@ func TestMultiReplication(t *testing.T) {
 }
 
 func TestMultiSplit(t *testing.T) {
-	bfvRing := fastmath.BFVZeroLevelRing()
+	bfvRing := fastmath.BFVZeroLevelRingPN13()
 	m := 16
 	n := bfvRing.D * 4
 	rel := createRandomRelation(m, n, bfvRing)
@@ -189,7 +189,7 @@ func TestMultiSplit(t *testing.T) {
 }
 
 func TestMultiSplitMultiReplication(t *testing.T) {
-	bfvRing := fastmath.BFVZeroLevelRing()
+	bfvRing := fastmath.BFVZeroLevelRingPN13()
 	m := 16
 	n := bfvRing.D * 4
 	rel := createRandomRelation(m, n, bfvRing)
@@ -199,7 +199,7 @@ func TestMultiSplitMultiReplication(t *testing.T) {
 }
 
 func TestTernarySlice(t *testing.T) {
-	bfvRing := fastmath.BFVZeroLevelRing()
+	bfvRing := fastmath.BFVZeroLevelRingPN13()
 	m := 16
 	n := bfvRing.D * 4
 	A := fastmath.NewRandomIntMatrix(m, n, bfvRing.Q, bfvRing.BaseRing)
@@ -216,7 +216,7 @@ func TestTernarySlice(t *testing.T) {
 }
 
 func TestDRows(t *testing.T) {
-	bfvRing := fastmath.BFVZeroLevelRing()
+	bfvRing := fastmath.BFVZeroLevelRingPN13()
 	m := bfvRing.D
 	n := bfvRing.D
 	rel := createRandomRelation(m, n, bfvRing)
@@ -226,7 +226,7 @@ func TestDRows(t *testing.T) {
 }
 
 func TestMultiSplitDRows(t *testing.T) {
-	bfvRing := fastmath.BFVZeroLevelRing()
+	bfvRing := fastmath.BFVZeroLevelRingPN13()
 	m := bfvRing.D
 	n := bfvRing.D * 4
 	rel := createRandomRelation(m, n, bfvRing)
@@ -236,7 +236,7 @@ func TestMultiSplitDRows(t *testing.T) {
 }
 
 func TestFullRing(t *testing.T) {
-	bfvRing := fastmath.BFVFullRing()
+	bfvRing := fastmath.BFVFullRingPN13()
 	m := 16
 	n := bfvRing.D
 	rel := createRandomRelation(m, n, bfvRing)
@@ -246,7 +246,7 @@ func TestFullRing(t *testing.T) {
 }
 
 func TestFullRingDRows(t *testing.T) {
-	bfvRing := fastmath.BFVFullRing()
+	bfvRing := fastmath.BFVFullRingPN13()
 	m := bfvRing.D
 	n := bfvRing.D
 	rel := createRandomRelation(m, n, bfvRing)
@@ -257,7 +257,7 @@ func TestFullRingDRows(t *testing.T) {
 
 func TestFullRingRebaseDRows(t *testing.T) {
 	// Create the linear relation on the BFV ring.
-	bfvRing := fastmath.BFVFullRing()
+	bfvRing := fastmath.BFVFullRingPN13()
 	m := bfvRing.D
 	n := bfvRing.D
 	rel := createRandomRelation(m, n, bfvRing)

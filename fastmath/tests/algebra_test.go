@@ -8,7 +8,7 @@ import (
 )
 
 func getBaseRing() *ring.Ring {
-	return fastmath.BFVZeroLevelRing().BaseRing
+	return fastmath.BFVZeroLevelRingPN13().BaseRing
 }
 
 func TestPolySumCoeffs(t *testing.T) {

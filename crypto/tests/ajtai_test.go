@@ -10,7 +10,7 @@ import (
 )
 
 func GetTestAjtaiConfig() crypto.AjtaiConfig {
-	bfvRing := fastmath.BFVFullRing()
+	bfvRing := fastmath.BFVFullRingPN13()
 	p := big.NewInt(int64(uint64(1<<20 - 3)))
 	return crypto.NewAjtaiConfig(p, bfvRing)
 }
