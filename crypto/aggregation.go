@@ -30,22 +30,23 @@ func CreateEvalMatrix(points []fastmath.Coeff, baseRing *ring.Ring) *fastmath.In
 	return evalMatrix
 }
 
-func (relInner *ImmutLinearRelation) ExtendWithPolyEval(numPolysPrefix int, points []fastmath.Coeff, baseRing *ring.Ring) *ImmutLinearRelation {
-	eqnInner := NewLinearEquation(relInner.U, 0).AppendTerm(relInner.A, relInner.S)
-	lrb2 := NewLinearRelationBuilder().AppendEqn(eqnInner)
+type Evaluator = func(p fastmath.Coeff) fastmath.Coeff
+
+func (lrbInner *LinearRelationBuilder) ExtendWithPolyEval(points []fastmath.Coeff, evaluators []Evaluator, baseRing *ring.Ring) {
 	E := CreateEvalMatrix(points, baseRing)
-	for i := 1; i < numPolysPrefix; i++ {
-		E.ExtendCols(E.Copy())
+	for i, ai := range points {
+		eqnEval := NewLinearEquation(fastmath.NewIntVec(1, baseRing), 0)
+		for j, evaluator := range evaluators {
+			mult := evaluator(ai)
+			m := fastmath.NewIntMatrixFromRows([]*fastmath.IntVec{E.RowView(i).Copy().ScaleCoeff(mult)}, baseRing)
+			// TODO works ONLY for KeyGen! Fix!!
+			v := lrbInner.eqns[0].rhs[j].b
+			eqnEval.AppendTerm(m, v)
+		}
+		eqnEval.UpdateLHS()
+		for j := range evaluators {
+			eqnEval.AddDependency(j, j)
+		}
+		lrbInner.AppendEqn(eqnEval)
 	}
-	AIntMatrix := relInner.A.AsIntMatrix()
-	Ap := AIntMatrix.SubsectionCopy(0, numPolysPrefix*baseRing.N, 0, AIntMatrix.Cols())
-	EA := E.MulMat(Ap)
-	emptyLHS := fastmath.NewIntVec(EA.Rows(), baseRing)
-	// TODO: precompute lhs
-	eqnAggregation := NewLinearEquation(emptyLHS, 0)
-	eqnAggregation.AppendTerm(EA, relInner.S)
-	eqnAggregation.UpdateLHS()
-	eqnAggregation.AddDependency(0, 0)
-	lrb2.AppendEqn(eqnAggregation)
-	return lrb2.BuildFast(baseRing)
 }

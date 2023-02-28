@@ -9,8 +9,9 @@ import (
 )
 
 func GenerateAggrCollectiveDecRelation(points []fastmath.Coeff, s, sp, er *fastmath.Poly, r, k2 *fastmath.IntVec, params CollectiveDecPublicParams) *crypto.ImmutLinearRelation {
-	relInner := GenerateCollectiveDecRelation(s, sp, er, r, k2, params)
-	return relInner.ExtendWithPolyEval(1, points, params.RLWEConfig.BaseRing)
+	//relInner := GenerateCollectiveDecRelation(s, sp, er, r, k2, params)
+	//return relInner.ExtendWithPolyEval(1, points, params.RLWEConfig.BaseRing)
+	return nil
 }
 
 func RunAggrCollectiveDecRelation() {

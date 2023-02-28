@@ -10,10 +10,10 @@ func main() {
 	logging.RegisterTimingCollection("Setup")
 	logging.RegisterTimingCollection("ABPProver")
 	logging.RegisterTimingCollection("ABPVerifier")
-	for i := 0; i < 10; i++ {
+	for i := 0; i < 1; i++ {
 		fmt.Println("**** RUN", i+1, "START")
-		relations.RunKeyGenRelation()
-		//relations.RunAggrKeyGenRelation()
+		//relations.RunKeyGenRelation()
+		relations.RunAggrKeyGenRelation()
 		//relations.RunCollectiveDecRelation()
 		//relations.RunAggrCollectiveDecRelation()
 		//relations.RunKeySwitchRelation()

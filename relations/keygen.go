@@ -16,7 +16,7 @@ type KeyGenPublicParams struct {
 	T  *fastmath.IntMatrix // NTT transform
 }
 
-func GenerateKeyGenRelation(s *fastmath.Poly, r, k *fastmath.IntVec, params KeyGenPublicParams) *crypto.ImmutLinearRelation {
+func GenerateKeyGenSystem(s *fastmath.Poly, r, k *fastmath.IntVec, params KeyGenPublicParams) *crypto.LinearRelationBuilder {
 	_, comP := crypto.GetAjtaiCommitments(params.A1, params.A2, s.Coeffs(), r, params.AjtaiConfig)
 	ajtaiEqn := crypto.NewPaddedAjtaiEquation(comP, params.A1, params.A2, s.Coeffs(), r, k, params.AjtaiConfig)
 	ajtaiEqn.AddDependency(0, 0)
@@ -24,7 +24,11 @@ func GenerateKeyGenRelation(s *fastmath.Poly, r, k *fastmath.IntVec, params KeyG
 	p0, e := crypto.RLWESample(params.P1, s, params.RLWEConfig)
 	lrb.AppendEqn(crypto.NewIndependentRLWE(p0, params.P1, s, e.InvNTT(), params.T, params.RLWEConfig))
 	lrb.AppendEqn(ajtaiEqn)
-	return lrb.BuildFast(params.RLWEConfig.BaseRing)
+	return lrb
+}
+
+func GenerateKeyGenRelation(s *fastmath.Poly, r, k *fastmath.IntVec, params KeyGenPublicParams) *crypto.ImmutLinearRelation {
+	return GenerateKeyGenSystem(s, r, k, params).BuildFast(params.RLWEConfig.BaseRing)
 }
 
 func getRandomKeyGenParams(rlweConfig crypto.RLWEConfig, ajtaiConfig crypto.AjtaiConfig) KeyGenPublicParams {
