@@ -54,31 +54,31 @@ func RunKeyGenRelation() {
 	params := getRandomKeyGenParams(rlweConfig, ajtaiConfig)
 
 	_, ter, _ := fastmath.GetSamplers(rlweConfig.RingParams, 1)
-	e0 := logging.LogExecStart("Main", "input creation")
+	e0 := logging.LogExecStart("Setup.InputCreation", "working")
 	s := fastmath.NewRandomPoly(ter, rlweConfig.BaseRing)
 	r := fastmath.NewRandomIntVecFast(params.A2.Cols(), ter, rlweConfig.BaseRing)
 	comQ, comP := crypto.GetAjtaiCommitments(params.A1, params.A2, s.Coeffs(), r, ajtaiConfig)
 	k := crypto.GetAjtaiKappa(comP, comQ, ajtaiConfig)
 	e0.LogExecEnd()
 
-	e0 = logging.LogExecStart("Main", "relation creation")
+	e0 = logging.LogExecStart("Setup.RelationCreation", "working")
 	rel := GenerateKeyGenRelation(s, r, k, params)
 	e0.LogExecEnd()
 	if !rel.IsValid() {
 		panic("invalid relation")
 	}
 
-	e0 = logging.LogExecStart("Main", "rebasing")
+	e0 = logging.LogExecStart("Setup.Rebasing", "working")
 	rebasedRel := rel.Rebased(rebaseRing)
 	e0.LogExecEnd()
 
-	e0 = logging.LogExecStart("Main", "protocol config creation")
+	e0 = logging.LogExecStart("Setup.ConfigCreation", "working")
 	protocolConfig := GetDefaultProtocolConfig(rebasedRel.A.Rows(), rebasedRel.A.Cols()).
 		WithABP(128, rlweConfig.Q, fastmath.NewSlice(rlweConfig.D*6, rlweConfig.D*7)).
 		WithTernarySlice(fastmath.NewSlice(0, 2*rlweConfig.D))
 	e0.LogExecEnd()
 
-	e0 = logging.LogExecStart("Main", "public parameters creation")
+	e0 = logging.LogExecStart("Setup.ParamCreation", "working")
 	protocolParams := fastens20.GeneratePublicParameters(protocolConfig, rebasedRel)
 	e0.LogExecEnd()
 

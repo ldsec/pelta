@@ -10,10 +10,10 @@ var logging bool = true
 var indentation int = 0
 
 type LogExecData struct {
-	t0     time.Time
-	prefix string
-	name   string
-	short  bool
+	t0       time.Time
+	procName string
+	name     string
+	short    bool
 }
 
 func getIndentation() string {
@@ -28,23 +28,16 @@ func unindent() {
 	indentation -= 1
 }
 
+func IsProductionBuild() bool {
+	return !logging
+}
+
 func Log(prefix, msg string) {
 	if !logging {
 		return
 	}
 	msg = strings.ReplaceAll(msg, "\n", fmt.Sprintf("\n%s%s: ", getIndentation(), prefix))
 	fmt.Printf("%s%s: %s\n", getIndentation(), prefix, msg)
-}
-
-func IsProductionBuild() bool {
-	return !logging
-}
-
-func PanicOnProduction(prefix, msg string) {
-	Log(prefix, msg)
-	if !logging {
-		panic("execution failed!!")
-	}
 }
 
 func LogWithoutNewline(prefix, msg string) {
@@ -55,16 +48,23 @@ func LogWithoutNewline(prefix, msg string) {
 	fmt.Printf("%s%s: %s", getIndentation(), prefix, msg)
 }
 
-func LogExecStart(prefix, name string) LogExecData {
-	Log(prefix, fmt.Sprintf("%s started", name))
-	indent()
-	return LogExecData{time.Now(), prefix, name, false}
+func PanicOnProduction(prefix, msg string) {
+	Log(prefix, msg)
+	if !logging {
+		panic("execution failed!!")
+	}
 }
 
-func LogExecShortStart(prefix, name string) LogExecData {
-	LogWithoutNewline(prefix, fmt.Sprintf("%s...", name))
+func LogExecStart(procName, description string) LogExecData {
+	Log(procName, fmt.Sprintf("%s started", description))
 	indent()
-	return LogExecData{time.Now(), prefix, name, true}
+	return LogExecData{time.Now(), procName, description, false}
+}
+
+func LogExecShortStart(procName, description string) LogExecData {
+	LogWithoutNewline(procName, fmt.Sprintf("%s...", description))
+	indent()
+	return LogExecData{time.Now(), procName, description, true}
 }
 
 func (l LogExecData) LogExecEnd() {
@@ -78,31 +78,37 @@ func (l LogExecData) LogExecEnd() {
 		return
 	}
 	endStr := fmt.Sprintf("%s complete", l.name)
-	Log(l.prefix, fmt.Sprintf("%s (%dms)", endStr, t1.Sub(l.t0).Milliseconds()))
+	dt := t1.Sub(l.t0).Milliseconds()
+	updateData(l.procName, dt)
+	Log(l.procName, fmt.Sprintf("%s (%dms)", endStr, dt))
 }
 
-func LogShortExecution(prefix, name string, f func() interface{}) interface{} {
+func LogShortExecution(procName, description string, f func() interface{}) interface{} {
 	if !logging {
 		return f()
 	}
-	LogWithoutNewline(prefix, fmt.Sprintf("%s...", name))
+	LogWithoutNewline(procName, fmt.Sprintf("%s...", description))
 	t0 := time.Now()
 	out := f()
 	t1 := time.Now()
-	fmt.Printf("done (%dms)\n", t1.Sub(t0).Milliseconds())
+	dt := t1.Sub(t0).Milliseconds()
+	updateData(procName, dt)
+	fmt.Printf("done (%dms)\n", dt)
 	return out
 }
 
-func LogExecution(prefix, name string, f func() interface{}) interface{} {
+func LogExecution(procName, description string, f func() interface{}) interface{} {
 	if !logging {
 		return f()
 	}
-	Log(prefix, fmt.Sprintf("%s started", name))
+	Log(procName, fmt.Sprintf("%s started", description))
 	indent()
 	t0 := time.Now()
 	out := f()
 	t1 := time.Now()
 	unindent()
-	Log(prefix, fmt.Sprintf("%s complete (%dms)", name, t1.Sub(t0).Milliseconds()))
+	dt := t1.Sub(t0).Milliseconds()
+	updateData(procName, dt)
+	Log(procName, fmt.Sprintf("%s complete (%dms)", description, dt))
 	return out
 }

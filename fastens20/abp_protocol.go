@@ -24,8 +24,11 @@ func extendPublicParameters(params *PublicParams, tau int) {
 
 // Updates the protocol to include the approximate bound proof relation.
 func updateProtocol(p *ABPProver, v *ABPVerifier, ps *ABPProverState, vs *ABPVerifierState) {
-	e := logging.LogExecStart("updateProtocol", "working")
-	defer e.LogExecEnd()
+	// In reality, this process is done by both parties simultaneously. Emulate this behavior in our data collection.
+	e1 := logging.LogExecStart("ABPProver.UpdateProtocol", "working")
+	e2 := logging.LogExecStart("ABPVerifier.UpdateProtocol", "working")
+	defer e1.LogExecEnd()
+	defer e2.LogExecEnd()
 	A := p.params.A
 	s := ps.S
 	u := p.params.U
@@ -34,7 +37,6 @@ func updateProtocol(p *ABPProver, v *ABPVerifier, ps *ABPProverState, vs *ABPVer
 	// As = u
 	lrb.AppendEqn(crypto.NewLinearEquation(u, A.Cols()).AppendTerm(A, s))
 	// Rh + y = z where h is a subvector of s
-
 	lrb.AppendEqn(crypto.NewABPEquation(vs.ABPVerifierChal, 0, ps.ABPProverMask, ps.ABPMaskedOpening, p.params.config.BaseRing))
 	newRel := lrb.BuildFast(p.params.config.BaseRing)
 	// if !newRel.IsValid() {
@@ -174,7 +176,7 @@ func (vf ABPVerifier) Verify(z *fastmath.PolyNTTMatrix, state ABPVerifierState) 
 	e := logging.LogExecStart("ABPVerifier.Verify", "working")
 	defer e.LogExecEnd()
 	// Infinity norm check.
-	e2 := logging.LogExecStart("ABPVerifier.Verify", "bound check")
+	e2 := logging.LogExecStart("ABPVerifier.BoundCheck", "working")
 	bound := vf.params.config.Bound
 	if state.ABPMaskedOpening.Max(vf.params.config.Q).Cmp(bound) >= 0 {
 		fmt.Println("abp verifier failed infinity norm check")
