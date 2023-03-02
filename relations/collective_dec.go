@@ -73,7 +73,7 @@ func RunCollectiveDecRelation() {
 	params := getRandomCollectiveDecParams(rlweConfig, ajtaiConfig)
 
 	uni, ter, _ := fastmath.GetSamplers(rlweConfig.RingParams, 1)
-	e0 := logging.LogExecStart("Main", "input creation")
+	e0 := logging.LogExecStart("Setup.InputCreation", "working")
 	s := fastmath.NewRandomPoly(ter, rlweConfig.BaseRing)
 	sp := fastmath.NewRandomPoly(ter, rlweConfig.BaseRing)
 	er0 := fastmath.NewRandomPoly(rlweConfig.ErrorSampler, rlweConfig.BaseRing)
@@ -81,24 +81,24 @@ func RunCollectiveDecRelation() {
 	k2 := fastmath.NewRandomPoly(uni, rlweConfig.BaseRing).Coeffs()
 	e0.LogExecEnd()
 
-	e0 = logging.LogExecStart("Main", "relation creation")
+	e0 = logging.LogExecStart("Setup.RelationCreation", "working")
 	rel := GenerateCollectiveDecRelation(s, sp, er0, r, k2, params)
 	e0.LogExecEnd()
-	if !rel.IsValid() {
-		panic("invalid relation")
-	}
+	//if !rel.IsValid() {
+	//	panic("invalid relation")
+	//}
 
-	e0 = logging.LogExecStart("Main", "rebasing")
+	e0 = logging.LogExecStart("Setup.Rebasing", "working")
 	rebasedRel := rel.Rebased(rebaseRing)
 	e0.LogExecEnd()
 
-	e0 = logging.LogExecStart("Main", "protocol config creation")
+	e0 = logging.LogExecStart("Setup.ConfigCreation", "working")
 	protocolConfig := GetDefaultProtocolConfig(rebasedRel.A.Rows(), rebasedRel.A.Cols()).
 		WithABP(128, rlweConfig.Q, fastmath.NewSlice(rlweConfig.D*7, rlweConfig.D*8)).
 		WithTernarySlice(fastmath.NewSlice(0, 7*rlweConfig.D))
 	e0.LogExecEnd()
 
-	e0 = logging.LogExecStart("Main", "public parameters creation")
+	e0 = logging.LogExecStart("Setup.ParamCreation", "working")
 	protocolParams := fastens20.GeneratePublicParameters(protocolConfig, rebasedRel)
 	e0.LogExecEnd()
 

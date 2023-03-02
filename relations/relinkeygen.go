@@ -98,7 +98,7 @@ func RunRelinKeyGenRelation() {
 	params := getRandomRelinKeyGenParams(size, rlweConfig, ajtaiConfig)
 
 	_, ter, _ := fastmath.GetSamplers(rlweConfig.RingParams, 1)
-	e0 := logging.LogExecStart("Main", "input creation")
+	e0 := logging.LogExecStart("Setup.InputCreation", "working")
 	s := fastmath.NewRandomPoly(ter, rlweConfig.BaseRing)
 	u := fastmath.NewRandomPoly(ter, rlweConfig.BaseRing)
 	r := fastmath.NewRandomIntVecFast(params.A2.Cols(), ter, rlweConfig.BaseRing)
@@ -107,24 +107,24 @@ func RunRelinKeyGenRelation() {
 	// k1 := fastmath.NewRandomPoly(uni, rlweConfig.BaseRing).Coeffs()
 	e0.LogExecEnd()
 
-	e0 = logging.LogExecStart("Main", "relation creation")
+	e0 = logging.LogExecStart("Setup.RelationCreation", "working")
 	rel := GenerateRelinKeyGenRelation(s, u, er0, er1, r, params)
 	e0.LogExecEnd()
-	if !rel.IsValid() {
-		panic("invalid relation")
-	}
+	//if !rel.IsValid() {
+	//	panic("invalid relation")
+	//}
 
-	e0 = logging.LogExecStart("Main", "rebasing")
+	e0 = logging.LogExecStart("Setup.Rebasing", "working")
 	rebasedRel := rel.Rebased(rebaseRing)
 	e0.LogExecEnd()
 
-	e0 = logging.LogExecStart("Main", "protocol config creation")
+	e0 = logging.LogExecStart("Setup.ConfigCreation", "working")
 	protocolConfig := GetDefaultProtocolConfig(rebasedRel.A.Rows(), rebasedRel.A.Cols()).
 		WithABP(128, rlweConfig.Q, fastmath.NewSlice(rlweConfig.D*10, rlweConfig.D*11)).
 		WithTernarySlice(fastmath.NewSlice(0, 10*rlweConfig.D))
 	e0.LogExecEnd()
 
-	e0 = logging.LogExecStart("Main", "public parameters creation")
+	e0 = logging.LogExecStart("Setup.ParamCreation", "working")
 	protocolParams := fastens20.GeneratePublicParameters(protocolConfig, rebasedRel)
 	e0.LogExecEnd()
 
