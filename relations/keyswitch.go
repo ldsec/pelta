@@ -99,9 +99,9 @@ func RunKeySwitchRelation() {
 	e0 = logging.LogExecStart("Setup.RelationCreation", "working")
 	rel := GenerateKeySwitchRelation(s, sp, u, er0, er1, r, k2, params)
 	e0.LogExecEnd()
-	//if !rel.IsValid() {
-	//	panic("invalid relation")
-	//}
+	if !rel.IsValid() {
+		panic("invalid relation")
+	}
 
 	e0 = logging.LogExecStart("Setup.Rebasing", "working")
 	rebasedRel := rel.Rebased(rebaseRing)

@@ -84,9 +84,9 @@ func RunCollectiveDecRelation() {
 	e0 = logging.LogExecStart("Setup.RelationCreation", "working")
 	rel := GenerateCollectiveDecRelation(s, sp, er0, r, k2, params)
 	e0.LogExecEnd()
-	//if !rel.IsValid() {
-	//	panic("invalid relation")
-	//}
+	if !rel.IsValid() {
+		panic("invalid relation")
+	}
 
 	e0 = logging.LogExecStart("Setup.Rebasing", "working")
 	rebasedRel := rel.Rebased(rebaseRing)

@@ -74,6 +74,27 @@ func BFVFullShortCommtRing(logD int) RingParams {
 	}
 }
 
+func BFVTwoLevelRingCustom(paramLiteral bfv.ParametersLiteral, overrideLogD int) RingParams {
+	// Initialize the ring parameters.
+	ringParamDef := paramLiteral
+	ringParamDef.LogN = overrideLogD
+	ringParams, err := bfv.NewParametersFromLiteral(ringParamDef)
+	if err != nil {
+		panic("could not initialize the ring parameters: " + err.Error())
+	}
+	baseRing := ringParams.RingQP().RingQ
+	baseRing.Modulus = baseRing.Modulus[0:2]
+	baseRing.ModulusAtLevel = baseRing.ModulusAtLevel[0:2]
+	return RingParams{
+		BaseRing: baseRing,
+		Q:        baseRing.ModulusAtLevel[1],
+		D:        ringParams.N(),
+		LogD:     ringParams.LogN(),
+		Sigma:    ringParams.Sigma(),
+		T:        ringParams.T(),
+	}
+}
+
 func BFVZeroLevelRingPN13() RingParams {
 	// Initialize the ring parameters.
 	ringParamDef := bfv.PN13QP218

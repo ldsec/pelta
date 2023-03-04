@@ -127,9 +127,9 @@ func RunCollectiveBootstrappingRelation() {
 	e0 = logging.LogExecStart("Setup.RelationCreation", "working")
 	rel := GenerateCollectiveBootstrappingRelation(s, sp, spp, er0, er1, er2, r, k2, k3, params)
 	e0.LogExecEnd()
-	//if !rel.IsValid() {
-	//	panic("invalid relation")
-	//}
+	if !rel.IsValid() {
+		panic("invalid relation")
+	}
 
 	e0 = logging.LogExecStart("Setup.Rebasing", "working")
 	rebasedRel := rel.Rebased(rebaseRing)

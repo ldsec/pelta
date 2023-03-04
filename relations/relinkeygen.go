@@ -110,9 +110,9 @@ func RunRelinKeyGenRelation() {
 	e0 = logging.LogExecStart("Setup.RelationCreation", "working")
 	rel := GenerateRelinKeyGenRelation(s, u, er0, er1, r, params)
 	e0.LogExecEnd()
-	//if !rel.IsValid() {
-	//	panic("invalid relation")
-	//}
+	if !rel.IsValid() {
+		panic("invalid relation")
+	}
 
 	e0 = logging.LogExecStart("Setup.Rebasing", "working")
 	rebasedRel := rel.Rebased(rebaseRing)
