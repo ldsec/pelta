@@ -85,7 +85,7 @@ func (eqn *LinearEquation) AppendVecTerm(b *fastmath.IntVec, baseRing *ring.Ring
 
 // AddDependentTerm adds a dependent term to this equation with the associated vector defined in another equation,
 // indicated by its position in the system by `vecIndex`.
-func (eqn *LinearEquation) AppendDependentTerm(A fastmath.MutIntMatrix, vecIndex int) *LinearEquation {
+func (eqn *LinearEquation) AppendDependentTerm(A fastmath.ImmutIntMatrix, vecIndex int) *LinearEquation {
 	eqn.rhs = append(eqn.rhs, term{A, nil, A.Cols(), true, vecIndex, nil})
 	eqn.dependent = true
 	return eqn

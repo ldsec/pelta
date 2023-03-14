@@ -74,7 +74,7 @@ func BFVFullShortCommtRing(logD int) RingParams {
 	}
 }
 
-func BFVTwoLevelRingCustom(paramLiteral bfv.ParametersLiteral, overrideLogD int) RingParams {
+func BFVTwoLevelsRingCustom(paramLiteral bfv.ParametersLiteral, overrideLogD int) RingParams {
 	// Initialize the ring parameters.
 	ringParamDef := paramLiteral
 	ringParamDef.LogN = overrideLogD

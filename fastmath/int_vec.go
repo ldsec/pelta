@@ -60,7 +60,7 @@ func (v *IntVec) Populate(f func(int) uint64) {
 	}
 }
 
-// Populate is used to initialize the elements of this vector.
+// PopulateCoeffs is used to initialize the elements of this vector.
 func (v *IntVec) PopulateCoeffs(f func(int) Coeff) {
 	for i := 0; i < v.size; i++ {
 		val := f(i)
@@ -192,7 +192,7 @@ func (v *IntVec) Append(r *IntVec) *IntVec {
 	return v
 }
 
-// SliceCopy returns a (copied) slice of this vector.
+// SliceWithPolys returns a slice of this vector.
 func (v *IntVec) SliceWithPolys(startPoly, endPoly, size int) *IntVec {
 	return NewIntVecFromPolys(v.polys[startPoly:endPoly], size, v.baseRing)
 }
@@ -206,7 +206,7 @@ func (v *IntVec) Cleanup() {
 // RebaseLossless rebases every underlying polynomial, splitting them when necessary so that
 // no coefficient will be discarded.
 func (v *IntVec) RebaseLossless(newBaseRing *ring.Ring) *IntVec {
-	if v.baseRing.N <= newBaseRing.N || v.baseRing.N%newBaseRing.N != 0 {
+	if v.baseRing.N < newBaseRing.N || v.baseRing.N%newBaseRing.N != 0 {
 		panic(fmt.Sprintf("cannot rebase lossless %d to %d", v.baseRing.N, newBaseRing.N))
 	}
 	// Each underlying polynomial will be represented by this many rebased polynomials.

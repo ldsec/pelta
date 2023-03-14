@@ -1,6 +1,7 @@
 package fastens20
 
 import (
+	"fmt"
 	"github.com/ldsec/codeBase/commitment/fastmath"
 	"github.com/ldsec/codeBase/commitment/logging"
 )
@@ -77,6 +78,7 @@ func (vf Verifier) Verify(z *fastmath.PolyNTTMatrix, state VerifierState) bool {
 	hTestResult := true
 	hInvNTT := state.h.Copy().InvNTT()
 	for i := 0; i < vf.params.config.K; i++ {
+		// 0 at the first level => 0 at every level
 		if hInvNTT.GetLevel(i, 0) != 0 {
 			hTestResult = false
 			break
@@ -84,6 +86,7 @@ func (vf Verifier) Verify(z *fastmath.PolyNTTMatrix, state VerifierState) bool {
 	}
 	if !hTestResult {
 		logging.Log("Verifier.Verify", "verifier failed zero coefficient test")
+		fmt.Println(hInvNTT)
 		if logging.IsProductionBuild() {
 			return false
 		}

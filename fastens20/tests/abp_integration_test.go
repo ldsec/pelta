@@ -42,7 +42,7 @@ func TestABPSimpleFullRingRebased(t *testing.T) {
 	tau := 128
 	rel := createRandomRelation(m, n, bfvRing)
 	// Rebase
-	commitmentRing := fastmath.BFVFullShortCommtRing(7)
+	commitmentRing := fastmath.BFVFullShortCommtRing(13)
 	rebasedRel := rel.Rebased(commitmentRing)
 	config := GetTestProtocolConfig(rebasedRel, commitmentRing).
 		WithABP(tau, bfvRing.BaseRing.ModulusAtLevel[0], fastmath.NewSlice(0, n))

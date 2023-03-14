@@ -39,21 +39,17 @@ func updateProtocol(p *ABPProver, v *ABPVerifier, ps *ABPProverState, vs *ABPVer
 	// Rh + y = z where h is a subvector of s
 	lrb.AppendEqn(crypto.NewABPEquation(vs.ABPVerifierChal, 0, ps.ABPProverMask, ps.ABPMaskedOpening, p.params.config.BaseRing))
 	newRel := lrb.BuildFast(p.params.config.BaseRing)
-	// if !newRel.IsValid() {
-	// panic("invalid abp embedding")
-	// }
-	// fmt.Printf("abp equation embedded successfully: %s\n", newRel.SizesString())
+	if !newRel.IsValid() {
+		panic("invalid abp embedding")
+	}
 	// Update the public parameters with the new relation.
 	p.params.A = newRel.A
 	v.params.A = p.params.A
-	// p.params.At = newRel.A.Transposed()
-	// v.params.At = p.params.At
 	p.params.U = newRel.U
 	v.params.U = p.params.U
 	// Update the configuration parameters.
 	p.params.config.M = newRel.A.Rows()
 	v.params.config.M = newRel.A.Rows()
-	// Update the N.
 	p.params.config.N = newRel.A.Cols()
 	v.params.config.N = newRel.A.Cols()
 }
@@ -91,7 +87,13 @@ func (p ABPProver) CommitToMessage(s *fastmath.IntVec) (*fastmath.PolyNTTVec, *f
 	}
 	ps.T = t
 	// Reperform sHat calculation.
-	ps.SHat = SplitInvNTT(s.Copy().Append(abpMask), p.params).NTT()
+	if p.Tau%p.params.config.BaseRing.N != 0 {
+		//panic(fmt.Sprintf("y (mask) is not a multiple of poly degree (y size = %d)", abpMask.Size()))
+		padLength := p.params.config.BaseRing.N - (p.Tau % p.params.config.BaseRing.N)
+		ps.SHat = SplitInvNTT(s.Copy().Append(abpMask).Append(fastmath.NewIntVec(padLength, p.params.config.BaseRing)), p.params).NTT()
+	} else {
+		ps.SHat = SplitInvNTT(s.Copy().Append(abpMask), p.params).NTT()
+	}
 	return t0, t, w, ABPProverState{ProverState: ps, ABPProverMask: abpMask}
 }
 

@@ -2,7 +2,6 @@ package crypto
 
 import (
 	"fmt"
-
 	"github.com/ldsec/codeBase/commitment/fastmath"
 	"github.com/ldsec/codeBase/commitment/logging"
 	"github.com/tuneinsight/lattigo/v4/ring"
@@ -33,16 +32,20 @@ func NewABPEquation(abpChal *fastmath.IntMatrix, sIndex int, abpMask, abpMaskedO
 	R := abpChal.Copy().(*fastmath.IntMatrix)
 	y := abpMask
 	z := abpMaskedOpening
+	Rp := fastmath.NewEmptyPartitionedIntMatrix(baseRing)
+	Rp.Emplace(0, 0, R)
 	if y.Size()%baseRing.N != 0 {
+		//panic(fmt.Sprintf("y (mask) is not a multiple of poly degree (y size = %d)", abpMask.Size()))
 		padLength := baseRing.N - (y.Size() % baseRing.N)
 		logging.Log("NewABPEquation",
 			fmt.Sprintf("y (mask) is not a multiple of poly degree (size = %d), padding accordingly (+%d)", abpMask.Size(), padLength))
 		y.Append(fastmath.NewIntVec(padLength, baseRing))
 		z.Append(fastmath.NewIntVec(padLength, baseRing))
-		R.ExtendRows(fastmath.NewIntMatrix(padLength, R.Cols(), baseRing))
+		Rp.ExtendRowsWithZero(padLength)
+		//R.ExtendRows(fastmath.NewIntMatrix(padLength, R.Cols(), baseRing))
 	}
 	eqn := NewLinearEquation(z, R.Cols())
-	eqn.AppendDependentTerm(R, sIndex)
+	eqn.AppendDependentTerm(Rp, sIndex)
 	eqn.AppendVecTerm(y, baseRing)
 	e.LogExecEnd()
 	return eqn

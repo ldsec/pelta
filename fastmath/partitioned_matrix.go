@@ -58,6 +58,11 @@ func (m *PartitionedIntMatrix) Emplace(i, j int, b ImmutIntMatrix) {
 	m.parts[i][j] = b
 }
 
+func (m *PartitionedIntMatrix) ExtendRowsWithZero(sizeExt int) {
+	m.parts = append(m.parts, make([]ImmutIntMatrix, len(m.parts[0])))
+	m.rowSizes = append(m.rowSizes, sizeExt)
+}
+
 func (m *PartitionedIntMatrix) PartitionHeight(i int) int {
 	return m.rowSizes[i]
 }
