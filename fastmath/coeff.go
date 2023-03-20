@@ -16,7 +16,9 @@ func NewZeroCoeff(length int) Coeff {
 func NewCoeffFromUint64(v uint64, mods []uint64) Coeff {
 	c := make([]uint64, len(mods))
 	for lvl, mod := range mods {
-		c[lvl] = v % mod
+		go func(lvl int, mod uint64) {
+			c[lvl] = v % mod
+		}(lvl, mod)
 	}
 	return c
 }
@@ -24,8 +26,10 @@ func NewCoeffFromUint64(v uint64, mods []uint64) Coeff {
 func NewCoeffFromBigInt(v *big.Int, mods []uint64) Coeff {
 	c := make([]uint64, len(mods))
 	for lvl, mod := range mods {
-		qlvl := big.NewInt(int64(mod))
-		c[lvl] = big.NewInt(0).Mod(v, qlvl).Uint64()
+		go func(lvl int, mod uint64) {
+			qlvl := big.NewInt(int64(mod))
+			c[lvl] = big.NewInt(0).Mod(v, qlvl).Uint64()
+		}(lvl, mod)
 	}
 	return c
 }
@@ -48,14 +52,18 @@ func (c Coeff) AsBigInt(q *big.Int) *big.Int {
 // Neg negates the coefficient across levels.
 func (c Coeff) Neg(mods []uint64) Coeff {
 	for i := range c {
-		c[i] = mods[i] - c[i]
+		go func(i int) {
+			c[i] = mods[i] - c[i]
+		}(i)
 	}
 	return c
 }
 
 func (c Coeff) Add(c2 Coeff, mods []uint64) Coeff {
 	for i := range c {
-		c[i] = (c[i] + c2[i]) % mods[i]
+		go func(i int) {
+			c[i] = (c[i] + c2[i]) % mods[i]
+		}(i)
 	}
 	return c
 }
