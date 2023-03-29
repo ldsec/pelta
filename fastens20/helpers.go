@@ -3,6 +3,7 @@ package fastens20
 import (
 	"github.com/ldsec/codeBase/commitment/fastmath"
 	"github.com/ldsec/codeBase/commitment/logging"
+	"sync"
 )
 
 // SplitInvNTT extracts the underlying polynomials from an integer vector such that the integer vector
@@ -44,20 +45,38 @@ func LmuSum(k int, invk uint64, f func(int, int) *fastmath.PolyNTT, params Publi
 
 // LmuSumOuter computes the value of the function \sum_{mu=0}^{k-1} (1/k) * X^mu * \sum_{v=0}^{k-1} \sum_{j=0}^{numSplits-1} sig^v (f(mu, v, j))
 func LmuSumOuter(k, numSplits int, invk uint64, f func(int, int, int) *fastmath.PolyNTT, params PublicParams) *fastmath.PolyNTT {
+	// each batch should perform 128 operations
+	numBatches := numSplits / 128
+	if numBatches == 0 {
+		numBatches = 1
+	}
 	return logging.LogShortExecution("LmuSumOuter", "calculating", func() interface{} {
 		out := fastmath.NewPolyVec(k, params.config.BaseRing).NTT()
 		for mu := 0; mu < k; mu++ {
-			func(k, mu int) {
-				tmp2 := fastmath.NewPoly(params.config.BaseRing)
-				for v := 0; v < k; v++ {
-					gen := params.config.Cache.SigmaExpCache[int64(v)]
-					for j := 0; j < numSplits; j++ {
-						sigf := f(mu, v, j).InvNTT().PermuteWithGen(gen)
-						tmp2.Add(sigf)
-					}
+			tmp2 := fastmath.NewPoly(params.config.BaseRing)
+			for v := 0; v < k; v++ {
+				gen := params.config.Cache.SigmaExpCache[int64(v)]
+				sigfs := fastmath.NewPolyVec(numSplits, params.config.BaseRing)
+				opPerBatch := numSplits / numBatches
+				var wg sync.WaitGroup
+				wg.Add(numBatches + 1)
+				for b := 0; b < numBatches+1; b++ {
+					go func(batchId int) {
+						for j := batchId * opPerBatch; j < (batchId+1)*opPerBatch; j++ {
+							// for the last batch
+							if j >= numSplits {
+								break
+							}
+							sigf := f(mu, v, j).InvNTT().PermuteWithGen(gen)
+							sigfs.Set(j, sigf)
+						}
+						wg.Done()
+					}(b)
 				}
-				out.Set(mu, Lmu(mu, invk, tmp2.NTT(), params))
-			}(k, mu)
+				wg.Wait()
+				tmp2.Add(sigfs.Sum())
+			}
+			out.Set(mu, Lmu(mu, invk, tmp2.NTT(), params))
 		}
 		return out.Sum()
 	}).(*fastmath.PolyNTT)

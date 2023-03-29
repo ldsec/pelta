@@ -2,6 +2,7 @@ package fastmath
 
 import (
 	"math/big"
+	"sync"
 
 	"github.com/tuneinsight/lattigo/v4/ring"
 )
@@ -15,22 +16,30 @@ func NewZeroCoeff(length int) Coeff {
 
 func NewCoeffFromUint64(v uint64, mods []uint64) Coeff {
 	c := make([]uint64, len(mods))
+	var wg sync.WaitGroup
+	wg.Add(len(mods))
 	for lvl, mod := range mods {
-		go func(lvl int, mod uint64) {
+		func(lvl int, mod uint64) {
 			c[lvl] = v % mod
+			wg.Done()
 		}(lvl, mod)
 	}
+	wg.Wait()
 	return c
 }
 
 func NewCoeffFromBigInt(v *big.Int, mods []uint64) Coeff {
 	c := make([]uint64, len(mods))
+	var wg sync.WaitGroup
+	wg.Add(len(mods))
 	for lvl, mod := range mods {
-		go func(lvl int, mod uint64) {
+		func(lvl int, mod uint64) {
 			qlvl := big.NewInt(int64(mod))
 			c[lvl] = big.NewInt(0).Mod(v, qlvl).Uint64()
+			wg.Done()
 		}(lvl, mod)
 	}
+	wg.Wait()
 	return c
 }
 
@@ -51,20 +60,28 @@ func (c Coeff) AsBigInt(q *big.Int) *big.Int {
 
 // Neg negates the coefficient across levels.
 func (c Coeff) Neg(mods []uint64) Coeff {
+	var wg sync.WaitGroup
+	wg.Add(len(c))
 	for i := range c {
-		go func(i int) {
+		func(i int) {
 			c[i] = mods[i] - c[i]
+			wg.Done()
 		}(i)
 	}
+	wg.Wait()
 	return c
 }
 
 func (c Coeff) Add(c2 Coeff, mods []uint64) Coeff {
+	var wg sync.WaitGroup
+	wg.Add(len(c))
 	for i := range c {
-		go func(i int) {
+		func(i int) {
 			c[i] = (c[i] + c2[i]) % mods[i]
+			wg.Done()
 		}(i)
 	}
+	wg.Wait()
 	return c
 }
 

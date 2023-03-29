@@ -32,7 +32,7 @@ func NewOnePoly(scale uint64, baseRing *ring.Ring) *Poly {
 	return p
 }
 
-// NewOnePoly returns a one polynomial scaled with the given factor.
+// NewOnePolyLevels returns a one polynomial scaled with the given factor.
 func NewOnePolyLevels(scales []uint64, baseRing *ring.Ring) *Poly {
 	p := NewPoly(baseRing)
 	p.SetCoeff(0, scales)
@@ -75,7 +75,7 @@ func (p *Poly) SetLevel(index, level int, value uint64) {
 	}
 }
 
-// SetLevelAll sets the coefficient of this polynomial at the given level to the given values.
+// SetAllLevel sets the coefficient of this polynomial at the given level to the given values.
 func (p *Poly) SetAllLevel(level int, values []uint64) {
 	for _, v := range values {
 		if v != 0 {

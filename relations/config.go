@@ -9,8 +9,8 @@ import (
 	"github.com/ldsec/codeBase/commitment/fastmath"
 )
 
-var mainRing = fastmath.BFVZeroLevelRingCustom(bfv.PN13QP218, 13)
-var rebaseRing = fastmath.BFVZeroLevelRingCustom(bfv.PN13QP218, 7)
+var mainRing = fastmath.BFVFullRingCustom(bfv.PN13QP218, 13)
+var rebaseRing = fastmath.BFVFullRingCustom(bfv.PN13QP218, 7)
 
 func GetDefaultAjtaiConfig() crypto.AjtaiConfig {
 	p := big.NewInt(int64(uint64(1<<20 - 3)))
