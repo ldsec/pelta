@@ -94,8 +94,7 @@ func (c ProtocolConfig) NumTernarySplits() int {
 
 // Beta returns the norm Gaussian limit.
 func (c ProtocolConfig) Beta() *big.Int {
-	// TODO add the -T term
-	return big.NewInt(int64(c.Delta1))
+	return big.NewInt(int64(c.Delta1) - int64(c.T))
 }
 
 // PublicParams contains the public parameters of the protocol.

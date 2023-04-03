@@ -56,6 +56,7 @@ func LmuSumOuter(k, numSplits int, invk uint64, f func(int, int, int) *fastmath.
 				gen := params.config.Cache.SigmaExpCache[int64(v)]
 				sigfs := fastmath.NewPolyVec(numSplits, params.config.BaseRing)
 				opPerBatch := numSplits / numBatches
+				// split batches across different goroutines
 				var wg sync.WaitGroup
 				wg.Add(numBatches + 1)
 				for b := 0; b < numBatches+1; b++ {

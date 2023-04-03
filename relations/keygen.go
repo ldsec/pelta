@@ -5,6 +5,7 @@ import (
 	"github.com/ldsec/codeBase/commitment/fastens20"
 	"github.com/ldsec/codeBase/commitment/fastmath"
 	"github.com/ldsec/codeBase/commitment/logging"
+	"math/big"
 )
 
 type KeyGenPublicParams struct {
@@ -75,10 +76,11 @@ func RunKeyGenRelation() {
 	e0 = logging.LogExecStart("Setup.Rebasing", "working")
 	rebasedRel := rel.Rebased(rebaseRing)
 	e0.LogExecEnd()
-
+	// abp bound is set to q/2p
+	abpBound := big.NewInt(0).Div(rlweConfig.Q, big.NewInt(0).Mul(ajtaiConfig.P, big.NewInt(2)))
 	e0 = logging.LogExecStart("Setup.ConfigCreation", "working")
 	protocolConfig := GetDefaultProtocolConfig(rebasedRel.A.Rows(), rebasedRel.A.Cols()).
-		WithABP(128, rlweConfig.Q, fastmath.NewSlice(rlweConfig.D*6, rlweConfig.D*7)).
+		WithABP(128, abpBound, fastmath.NewSlice(rlweConfig.D*6, rlweConfig.D*7)).
 		WithTernarySlice(fastmath.NewSlice(0, 2*rlweConfig.D))
 	e0.LogExecEnd()
 

@@ -136,8 +136,10 @@ func RunCollectiveBootstrappingRelation() {
 	e0.LogExecEnd()
 
 	e0 = logging.LogExecStart("Setup.ConfigCreation", "working")
+	// abp bound is set to q/2p
+	abpBound := big.NewInt(0).Div(rlweConfig.Q, big.NewInt(0).Mul(ajtaiConfig.P, big.NewInt(2)))
 	protocolConfig := GetDefaultProtocolConfig(rebasedRel.A.Rows(), rebasedRel.A.Cols()).
-		WithABP(128, rlweConfig.Q, fastmath.NewSlice(rlweConfig.D*10, rlweConfig.D*12)).
+		WithABP(128, abpBound, fastmath.NewSlice(rlweConfig.D*10, rlweConfig.D*12)).
 		WithTernarySlice(fastmath.NewSlice(0, 10*rlweConfig.D))
 	e0.LogExecEnd()
 
