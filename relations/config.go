@@ -9,7 +9,7 @@ import (
 	"github.com/ldsec/codeBase/commitment/fastmath"
 )
 
-var mainRing = fastmath.BFVFullRingCustom(bfv.PN13QP218, 13)
+var mainRing = fastmath.BFVFullRingCustom(bfv.PN15QP880, 15)
 var rebaseRing = fastmath.BFVFullRingCustom(bfv.PN13QP218, 7)
 
 func GetDefaultAjtaiConfig() crypto.AjtaiConfig {
@@ -24,7 +24,9 @@ func GetDefaultRLWEConfig() crypto.RLWEConfig {
 
 func GetDefaultProtocolConfig(m, n int) fastens20.ProtocolConfig {
 	delta1 := uint64(1 << 24)
-	return fastens20.NewProtocolConfig(rebaseRing, delta1, m, n).
+	conf := fastens20.NewProtocolConfig(rebaseRing, delta1, m, n).
 		WithReplication(4).
 		WithSecurityParameters(9, 10)
+	//conf.T = uint64(1 << 20)
+	return conf
 }
