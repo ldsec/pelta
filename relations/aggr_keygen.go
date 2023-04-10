@@ -45,7 +45,7 @@ func RunAggrKeyGenRelation() {
 	}
 
 	e0 = logging.LogExecStart("Setup.Rebasing", "working")
-	rebasedRel := rel.Rebased(rebaseRing)
+	rebasedRel := rel.Rebased(RebaseRing)
 	e0.LogExecEnd()
 
 	e0 = logging.LogExecStart("Setup.ConfigCreation", "working")

@@ -74,7 +74,7 @@ func RunKeyGenRelation() {
 	}
 
 	e0 = logging.LogExecStart("Setup.Rebasing", "working")
-	rebasedRel := rel.Rebased(rebaseRing)
+	rebasedRel := rel.Rebased(RebaseRing)
 	e0.LogExecEnd()
 	// abp bound is set to q/2p
 	abpBound := big.NewInt(0).Div(rlweConfig.Q, big.NewInt(0).Mul(ajtaiConfig.P, big.NewInt(2)))
