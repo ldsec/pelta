@@ -28,6 +28,7 @@ For every data point, we also report the timings of its subprocedures. All the p
 
 ## Example configurations
 Here we give the run configuration to be able to run the experiments we have performed for our paper.
+
 **Important:** Note that the files need to be regenerated for every ring. Please remove the cached files in the root
 folder by invoking `rm *.test` after switching the ring parameters.
 ### Table 1: Key generation
