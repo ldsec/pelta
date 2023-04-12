@@ -9,6 +9,7 @@ import (
 	"github.com/ldsec/codeBase/commitment/logging"
 )
 
+// Extends the public parameters to account for ABP update.
 func extendPublicParameters(params *PublicParams, tau int) {
 	e := logging.LogExecStart("extendPublicParameters", "working")
 	defer e.LogExecEnd()

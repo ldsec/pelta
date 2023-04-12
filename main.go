@@ -15,6 +15,7 @@ func main() {
 	var numExecutions int
 	var rlweDegree int
 	var commtDegree int
+	var levels int
 	var delta1 uint64
 	var lambda int
 	var kappa int
@@ -32,8 +33,9 @@ func main() {
 		relationExecutorNames = append(relationExecutorNames, k)
 	}
 	flag.IntVar(&numExecutions, "n", 1, "number of executions")
-	flag.IntVar(&rlweDegree, "rlwe", 13, "log rlwe ring degree")
+	flag.IntVar(&rlweDegree, "rlwe", 13, "log rlwe ring degree (10, 11, 12, 13, 14, or 15)")
 	flag.IntVar(&commtDegree, "commt", 7, "commitment ring degree")
+	flag.IntVar(&levels, "levels", 1, "number of levels for the ring (1, 2, or 3)")
 	flag.Uint64Var(&delta1, "delta1", 24, "log delta1")
 	flag.IntVar(&lambda, "lambda", 10, "lambda security parameter")
 	flag.IntVar(&kappa, "kappa", 9, "kappa security parameter")
@@ -57,10 +59,22 @@ func main() {
 	case 15:
 		paramLiteral = bfv.PN15QP880
 		break
+	default:
+		panic("invalid rlwe ring degree, use --help to get the degrees")
 	}
-	relations.MainRing = fastmath.BFVZeroLevelRingCustom(paramLiteral, rlweDegree)
-	relations.RebaseRing = fastmath.BFVZeroLevelRingCustom(paramLiteral, commtDegree)
-	relations.Delta1 = delta1
+	if levels == 1 {
+		relations.MainRing = fastmath.BFVZeroLevelRingCustom(paramLiteral, rlweDegree)
+		relations.RebaseRing = fastmath.BFVZeroLevelRingCustom(paramLiteral, commtDegree)
+	} else if levels == 2 {
+		relations.MainRing = fastmath.BFVTwoLevelsRingCustom(paramLiteral, rlweDegree)
+		relations.RebaseRing = fastmath.BFVTwoLevelsRingCustom(paramLiteral, commtDegree)
+	} else if levels == 3 {
+		relations.MainRing = fastmath.BFVFullRingCustom(paramLiteral, rlweDegree)
+		relations.RebaseRing = fastmath.BFVFullRingCustom(paramLiteral, commtDegree)
+	} else {
+		panic("invalid ring level, use --help to get the available levels")
+	}
+	relations.Delta1 = uint64(1 << delta1)
 	relations.Lambda = lambda
 	relations.Kappa = kappa
 	// get the executor

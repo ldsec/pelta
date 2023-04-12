@@ -6,6 +6,7 @@ import (
 	"math/big"
 )
 
+// RandomPoints returns a list of random points with the given mod of given size.
 func RandomPoints(numPoints int, mod *big.Int, baseRing *ring.Ring) []fastmath.Coeff {
 	points := make([]fastmath.Coeff, numPoints)
 	for i := 0; i < numPoints; i++ {
@@ -14,6 +15,7 @@ func RandomPoints(numPoints int, mod *big.Int, baseRing *ring.Ring) []fastmath.C
 	return points
 }
 
+// CreateEvalMatrix constructs the evaluation matrix E where E_{i, j} = p_i^j and p_i is the ith point.
 func CreateEvalMatrix(points []fastmath.Coeff, baseRing *ring.Ring) *fastmath.IntMatrix {
 	evalMatrix := fastmath.NewIntMatrix(len(points), baseRing.N, baseRing)
 	for j, p := range points {
@@ -32,6 +34,7 @@ func CreateEvalMatrix(points []fastmath.Coeff, baseRing *ring.Ring) *fastmath.In
 
 type Evaluator = func(p fastmath.Coeff) fastmath.Coeff
 
+// ExtendWithPolyEval extends this linear relation system with the evaluations of the given polynomials.
 func (lrbInner *LinearRelationBuilder) ExtendWithPolyEval(points []fastmath.Coeff, evaluators []Evaluator, baseRing *ring.Ring) {
 	E := CreateEvalMatrix(points, baseRing)
 	for i, ai := range points {

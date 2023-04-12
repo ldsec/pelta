@@ -6,6 +6,8 @@ import (
 	"strings"
 )
 
+// Contains the instrumentation code for experiment evaluations.
+
 type ProcTiming struct {
 	procName string
 	time     int64

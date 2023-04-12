@@ -39,7 +39,7 @@ func (m *CachedIntMatrix) RowView(i int) *IntVec {
 	return m.A.RowView(i)
 }
 
-// ColCopy returns a copy of the i-th col.
+// ColView returns view of the i-th col.
 func (m *CachedIntMatrix) ColView(i int) *IntVec {
 	return m.At.RowView(i)
 }
@@ -54,7 +54,7 @@ func (m *CachedIntMatrix) GetCoeff(row, col int) Coeff {
 	return m.A.GetCoeff(row, col)
 }
 
-// Get returns the element at the given coordinates.
+// GetLevel returns the element at the given coordinates and level.
 func (m *CachedIntMatrix) GetLevel(row, col, level int) uint64 {
 	return m.A.GetLevel(row, col, level)
 }
@@ -131,6 +131,7 @@ func (m *CachedIntMatrix) Scale(factor uint64) MutIntMatrix {
 	return m
 }
 
+// ScaleCoeff scales the coefficient by the given coefficient.
 func (m *CachedIntMatrix) ScaleCoeff(factors Coeff) MutIntMatrix {
 	m.A.ScaleCoeff(factors)
 	m.At.ScaleCoeff(factors)
@@ -183,6 +184,7 @@ func (m *CachedIntMatrix) AsIntMatrix() *IntMatrix {
 	return m.A.AsIntMatrix()
 }
 
+// -- Deprecated
 func (m *CachedIntMatrix) Cleanup() {
 	m.A.Cleanup()
 	m.At.Cleanup()

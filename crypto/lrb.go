@@ -83,7 +83,7 @@ func (eqn *LinearEquation) AppendVecTerm(b *fastmath.IntVec, baseRing *ring.Ring
 	return eqn
 }
 
-// AddDependentTerm adds a dependent term to this equation with the associated vector defined in another equation,
+// AppendDependentTerm adds a dependent term to this equation with the associated vector defined in another equation,
 // indicated by its position in the system by `vecIndex`.
 func (eqn *LinearEquation) AppendDependentTerm(A fastmath.ImmutIntMatrix, vecIndex int) *LinearEquation {
 	eqn.rhs = append(eqn.rhs, term{A, nil, A.Cols(), true, vecIndex, nil})
@@ -319,8 +319,7 @@ func (lrb *LinearRelationBuilder) String() string {
 	return strings.Join(strs, "\n")
 }
 
-// String returns a string representation this LRB, i.e., a listing of all the appended
-// equations up to now.
+// SizesString returns a string representation this LRB with only the size information.
 func (lrb *LinearRelationBuilder) SizesString() string {
 	strs := make([]string, 0, len(lrb.eqns))
 	for i, eqn := range lrb.eqns {

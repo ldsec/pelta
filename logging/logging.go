@@ -6,6 +6,8 @@ import (
 	"time"
 )
 
+// Contains the instrumentation code for experiment evaluations.
+
 var logging = true
 var indentation = 0
 

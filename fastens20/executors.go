@@ -44,7 +44,7 @@ func executeWithBoundProof(s *fastmath.IntVec, params PublicParams) bool {
 	return res
 }
 
-// Execute runs the augmented ENS20 protocol.
+// Execute runs the augmented ENS20 protocol either with ABP or without ABP, depending on the given configuration.
 func Execute(s *fastmath.IntVec, params PublicParams) bool {
 	// Either execute with or without bound proof.
 	var res bool

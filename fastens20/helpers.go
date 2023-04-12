@@ -81,7 +81,7 @@ func LmuSumOuter(k, numSplits int, invk uint64, f func(int, int, int) *fastmath.
 	}).(*fastmath.PolyNTT)
 }
 
-// LmuSumOuter computes the value of the function \sum_{mu=0}^{k-1} (1/k) * X^mu * \sum_{v=0}^{k-1} \sum_{j=0}^{numSplits-1} sig^v (f(mu, v, j))
+// LmuSumOuterDot computes the value of the function \sum_{mu=0}^{k-1} (1/k) * X^mu * \sum_{v=0}^{k-1} \sum_{j=0}^{numSplits-1} sig^v (f(mu, v, j))
 func LmuSumOuterDot(k, numSplits int, invk uint64, f1 func(int, int, int) *fastmath.PolyNTTVec, f2 func(int, int, int) *fastmath.PolyNTTVec, params PublicParams) *fastmath.PolyNTT {
 	return logging.LogShortExecution("LmuSumOuterDot", "calculating", func() interface{} {
 		out := fastmath.NewPolyVec(k, params.config.BaseRing).NTT()

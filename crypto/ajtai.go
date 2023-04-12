@@ -11,6 +11,7 @@ type AjtaiConfig struct {
 	P *big.Int // commitment modulo
 }
 
+// NewAjtaiConfig constructs a new Ajtai configuration on the given ring modulus given modulus p.
 func NewAjtaiConfig(p *big.Int, ringParams fastmath.RingParams) AjtaiConfig {
 	return AjtaiConfig{ringParams, p}
 }

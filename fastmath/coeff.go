@@ -10,10 +10,13 @@ import (
 // Coeff represents a coefficient of a polynomial over all levels.
 type Coeff []uint64
 
+// NewZeroCoeff creates a zero coefficient.
 func NewZeroCoeff(length int) Coeff {
 	return make([]uint64, length)
 }
 
+// NewCoeffFromUint64 creates a new coefficient from the given uint64 by taking its mod for every level mod
+// given in `mods`.
 func NewCoeffFromUint64(v uint64, mods []uint64) Coeff {
 	c := make([]uint64, len(mods))
 	var wg sync.WaitGroup
@@ -28,6 +31,8 @@ func NewCoeffFromUint64(v uint64, mods []uint64) Coeff {
 	return c
 }
 
+// NewCoeffFromBigInt creates a new coefficient from the given bigint by taking its mod for every level mod
+// given in `mods`.
 func NewCoeffFromBigInt(v *big.Int, mods []uint64) Coeff {
 	c := make([]uint64, len(mods))
 	var wg sync.WaitGroup
@@ -72,6 +77,7 @@ func (c Coeff) Neg(mods []uint64) Coeff {
 	return c
 }
 
+// Add adds two coefficients.
 func (c Coeff) Add(c2 Coeff, mods []uint64) Coeff {
 	var wg sync.WaitGroup
 	wg.Add(len(c))

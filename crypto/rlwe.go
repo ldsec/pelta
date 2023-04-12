@@ -16,6 +16,7 @@ type RLWEConfig struct {
 	ErrorSampler fastmath.PolySampler
 }
 
+// NewRLWEConfig returns an RLWE configuration with the given error width (for Gaussian sampling) on the given ring.
 func NewRLWEConfig(errorWidth int, ringParams fastmath.RingParams) RLWEConfig {
 	logBeta := int(math.Log2(float64(errorWidth)))
 	logD := int(math.Log2(float64(ringParams.D)))
@@ -57,7 +58,7 @@ func NewIndependentRLWE(p0 *fastmath.PolyNTT, p1, s, err *fastmath.Poly, T *fast
 	return eqn
 }
 
-// NewIndependentRLWE construct an independent RLWE equation p0 = A * s + err
+// NewIndependentRLWEWithMatrix construct an independent RLWE equation p0 = A * s + err
 func NewIndependentRLWEWithMatrix(p0 *fastmath.PolyNTT, A *fastmath.IntMatrix, s, err *fastmath.Poly, T *fastmath.IntMatrix, config RLWEConfig) *LinearEquation {
 	eqn := NewLinearEquation(p0.Coeffs(), T.Cols())
 	TA := T.Copy().Hadamard(A)

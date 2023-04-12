@@ -40,6 +40,7 @@ func (r *ImmutLinearRelation) IsValid() bool {
 	return true
 }
 
+// Copy copies the relation.
 func (r *ImmutLinearRelation) Copy() *ImmutLinearRelation {
 	return &ImmutLinearRelation{
 		A: r.A.Copy(),
