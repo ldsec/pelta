@@ -21,9 +21,6 @@ $ go run main.go [PARAMETERS]
 - `--kappa`: Kappa security parameter. Defaults to `9`.
 - `--rel`: The relation to run. Can be `keygen`, `aggr_keygen`, `collective_dec`, `keyswitch`, `bootstrapping`, or `relinkeygen`. Defaults to `keygen`.
 
-**Important:** Note that the files need to be regenerated for every ring. Please remove the cached files in the root 
-folder by invoking `rm *.test` after switching the ring parameters.
-
 ## Interpreting the output
 The program runs the protocol `n` many times where `n` is the number of executions supplied through the program arguments.
 The final output contains both the average and individual running times for `Setup`, `Prover`, and `Verifier` across the runs.
@@ -31,6 +28,8 @@ For every data point, we also report the timings of its subprocedures. All the p
 
 ## Example configurations
 Here we give the run configuration to be able to run the experiments we have performed for our paper.
+**Important:** Note that the files need to be regenerated for every ring. Please remove the cached files in the root
+folder by invoking `rm *.test` after switching the ring parameters.
 ### Table 1: Key generation
 ```shell
 $ go run main.go --n 10 --rel keygen
