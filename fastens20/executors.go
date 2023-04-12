@@ -32,7 +32,7 @@ func executeWithBoundProof(s *fastmath.IntVec, params PublicParams) bool {
 	// ABP exchange.
 	abpVerifierChal, vs := verifier.CreateABPChallenge()
 	abpMaskedOpening, ps, _ := prover.CreateABPMaskedOpening(abpVerifierChal, ps)
-	// Early return false if bound check fails.
+	// ABP bound check. Early return false if bound check fails.
 	if !verifier.VerifyBound(abpMaskedOpening) {
 		return false
 	}

@@ -32,7 +32,7 @@ func main() {
 	for k := range relationExecutors {
 		relationExecutorNames = append(relationExecutorNames, k)
 	}
-	flag.IntVar(&numExecutions, "n", 1, "number of executions")
+	flag.IntVar(&numExecutions, "n", 1, "number of runs/executions")
 	flag.IntVar(&rlweDegree, "rlwe", 13, "log rlwe ring degree (10, 11, 12, 13, 14, or 15)")
 	flag.IntVar(&commtDegree, "commt", 7, "commitment ring degree")
 	flag.IntVar(&levels, "levels", 1, "number of levels for the ring (1, 2, or 3)")
@@ -48,8 +48,14 @@ func main() {
 	var paramLiteral bfv.ParametersLiteral
 	switch rlweDegree {
 	case 10:
+		paramLiteral = bfv.PN13QP218
+		break
 	case 11:
+		paramLiteral = bfv.PN13QP218
+		break
 	case 12:
+		paramLiteral = bfv.PN13QP218
+		break
 	case 13:
 		paramLiteral = bfv.PN13QP218
 		break
@@ -82,6 +88,18 @@ func main() {
 	if !ok {
 		panic("invalid relation name, use --help to get the available relations")
 	}
+	// display the execution information
+	fmt.Println("**** Running the experiment with the following parameters:")
+	fmt.Printf(
+		"Number of runs = %d\n"+
+			"Log RLWE ring degree = %d\n"+
+			"Log commitment ring degree = %d\n"+
+			"Number of levels = %d\n"+
+			"Log delta1 = %d\n"+
+			"Lambda = %d\n"+
+			"Kappa = %d\n"+
+			"Relation = %s\n\n",
+		numExecutions, rlweDegree, commtDegree, levels, delta1, lambda, kappa, relation)
 	for i := 0; i < numExecutions; i++ {
 		fmt.Println("**** RUN", i+1, "START")
 		executor()
