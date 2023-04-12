@@ -11,7 +11,7 @@ import (
 
 var MainRing = fastmath.BFVFullRingCustom(bfv.PN13QP218, 13)
 var RebaseRing = fastmath.BFVFullRingCustom(bfv.PN13QP218, 7)
-var Delta1 = uint64(1 << 24)
+var Delta1 = uint64(1 << 25)
 var Kappa = 9
 var Lambda = 10
 

@@ -36,7 +36,7 @@ func main() {
 	flag.IntVar(&rlweDegree, "rlwe", 13, "log rlwe ring degree (10, 11, 12, 13, 14, or 15)")
 	flag.IntVar(&commtDegree, "commt", 7, "commitment ring degree")
 	flag.IntVar(&levels, "levels", 1, "number of levels for the ring (1, 2, or 3)")
-	flag.Uint64Var(&delta1, "delta1", 24, "log delta1")
+	flag.Uint64Var(&delta1, "delta1", 25, "log delta1")
 	flag.IntVar(&lambda, "lambda", 10, "lambda security parameter")
 	flag.IntVar(&kappa, "kappa", 9, "kappa security parameter")
 	flag.StringVar(&relation, "rel", "keygen", strings.Join(relationExecutorNames, ","))
