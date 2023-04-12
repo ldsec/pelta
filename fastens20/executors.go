@@ -32,6 +32,10 @@ func executeWithBoundProof(s *fastmath.IntVec, params PublicParams) bool {
 	// ABP exchange.
 	abpVerifierChal, vs := verifier.CreateABPChallenge()
 	abpMaskedOpening, ps, _ := prover.CreateABPMaskedOpening(abpVerifierChal, ps)
+	// Early return false if bound check fails.
+	if !verifier.VerifyBound(abpMaskedOpening) {
+		return false
+	}
 	// Update the relation to embed the approximate bound proof.
 	updateProtocol(&prover, &verifier, &ps, &vs)
 	// Resume the normal execution.
