@@ -2,11 +2,11 @@ package fastmath
 
 import (
 	"fmt"
+	"github.com/ldsec/codeBase/commitment/misc"
+	"github.com/ldsec/codeBase/commitment/relations"
+	"github.com/tuneinsight/lattigo/v4/ring"
 	"math/big"
 	"strings"
-	"sync"
-
-	"github.com/tuneinsight/lattigo/v4/ring"
 )
 
 // Poly represents a polynomial.
@@ -311,29 +311,14 @@ func (p *Poly) SumCoeffs() Coeff {
 		return sum
 	}
 	numLvl := len(p.ref.Coeffs)
-	var wg sync.WaitGroup
-	wg.Add(numLvl)
-	for lvl := 0; lvl < numLvl; lvl++ {
-		go func(lvl int) {
-			defer wg.Done()
-			qi := p.baseRing.Modulus[lvl]
-			// qiHalf := qi >> 1
-			lvlSum := uint64(0)
-			for _, v := range p.ref.Coeffs[lvl] {
-				//j := big.NewInt(0).Add(big.NewInt(int64(lvlSum)), big.NewInt(int64(v)))
-				//j.Mod(j, big.NewInt(int64(qi)))
-				//lvlSum = j.Uint64()
-				lvlSum = (lvlSum + v) % qi
-				// if v >= qiHalf {
-				// 	lvlSum = ring.CRed(lvlSum+qi-v, qi)
-				// } else {
-				// 	lvlSum = ring.CRed(lvlSum+v, qi)
-				// }
-			}
-			sum[lvl] = lvlSum
-		}(lvl)
-	}
-	wg.Wait()
+	misc.ExecuteInParallel(numLvl, func(lvl int) {
+		qi := p.baseRing.Modulus[lvl]
+		lvlSum := uint64(0)
+		for _, v := range p.ref.Coeffs[lvl] {
+			lvlSum = (lvlSum + v) % qi
+		}
+		sum[lvl] = lvlSum
+	}, relations.Threads)
 	return sum
 }
 

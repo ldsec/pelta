@@ -14,6 +14,7 @@ var RebaseRing = fastmath.BFVFullRingCustom(bfv.PN13QP218, 7)
 var Delta1 = uint64(1 << 25)
 var Kappa = 9
 var Lambda = 10
+var Threads = 16
 
 func GetDefaultAjtaiConfig() crypto.AjtaiConfig {
 	p := big.NewInt(int64(uint64(1<<20 - 3)))
@@ -28,7 +29,8 @@ func GetDefaultRLWEConfig() crypto.RLWEConfig {
 func GetDefaultProtocolConfig(m, n int) fastens20.ProtocolConfig {
 	conf := fastens20.NewProtocolConfig(RebaseRing, Delta1, m, n).
 		WithReplication(4).
-		WithSecurityParameters(Kappa, Lambda)
+		WithSecurityParameters(Kappa, Lambda).
+		WithThreads(Threads)
 	//conf.T = uint64(1 << 20)
 	return conf
 }

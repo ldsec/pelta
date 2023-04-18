@@ -19,6 +19,7 @@ func main() {
 	var delta1 uint64
 	var lambda int
 	var kappa int
+	var threads int
 	var relation string
 	relationExecutors := map[string]func(){
 		"keygen":         relations.RunKeyGenRelation,
@@ -39,12 +40,16 @@ func main() {
 	flag.Uint64Var(&delta1, "delta1", 25, "log delta1")
 	flag.IntVar(&lambda, "lambda", 10, "lambda security parameter")
 	flag.IntVar(&kappa, "kappa", 9, "kappa security parameter")
+	flag.IntVar(&threads, "threads", 16, "number of threads to use (> 0)")
 	flag.StringVar(&relation, "rel", "keygen", strings.Join(relationExecutorNames, ","))
 	flag.Parse()
 	logging.RegisterTimingCollection("Setup")
 	logging.RegisterTimingCollection("ABPProver")
 	logging.RegisterTimingCollection("ABPVerifier")
 	// set the parameters
+	if threads < 1 {
+		panic("number of threads must be greater than 1")
+	}
 	var paramLiteral bfv.ParametersLiteral
 	switch rlweDegree {
 	case 10:
@@ -83,6 +88,7 @@ func main() {
 	relations.Delta1 = uint64(1 << delta1)
 	relations.Lambda = lambda
 	relations.Kappa = kappa
+	relations.Threads = threads
 	// get the executor
 	executor, ok := relationExecutors[relation]
 	if !ok {
@@ -98,8 +104,9 @@ func main() {
 			"Log delta1 = %d\n"+
 			"Lambda = %d\n"+
 			"Kappa = %d\n"+
-			"Relation = %s\n\n",
-		numExecutions, rlweDegree, commtDegree, levels, delta1, lambda, kappa, relation)
+			"Relation = %s\n"+
+			"Num threads = %d\n\n",
+		numExecutions, rlweDegree, commtDegree, levels, delta1, lambda, kappa, relation, threads)
 	for i := 0; i < numExecutions; i++ {
 		fmt.Println("**** RUN", i+1, "START")
 		executor()

@@ -1,8 +1,9 @@
 package fastmath
 
 import (
+	"github.com/ldsec/codeBase/commitment/misc"
+	"github.com/ldsec/codeBase/commitment/relations"
 	"math/bits"
-	"sync"
 	"unsafe"
 
 	"github.com/tuneinsight/lattigo/v4/ring"
@@ -15,14 +16,11 @@ func MulVecTransposeBlazingFast(A *IntMatrix, b *IntVec, baseRing *ring.Ring) *I
 	for _, p := range out.UnderlyingPolys() {
 		p.unset = false
 	}
-	var wg sync.WaitGroup
-	wg.Add(len(baseRing.Modulus))
-	for lvl, qi := range baseRing.Modulus {
-		// parallelize the multiplication across the levels
-		go func(lvl int, qi uint64) {
+	misc.ExecuteInParallel(len(baseRing.Modulus),
+		func(lvl int) {
+			qi := baseRing.Modulus[lvl]
 			ACoeffs := make([][]uint64, A.Rows())
 			for i := 0; i < len(ACoeffs); i++ {
-				//ACoeffs[i] = A.RowView(i).GetWholeLevel(lvl)
 				if A.RowView(i).IsUnset() {
 					ACoeffs[i] = nil
 				} else {
@@ -33,10 +31,7 @@ func MulVecTransposeBlazingFast(A *IntMatrix, b *IntVec, baseRing *ring.Ring) *I
 			outCoeffs := make([]uint64, A.Cols())
 			MulVecTransposeBlazingFastLevel(ACoeffs, bCoeffs, outCoeffs, qi)
 			out.SetWholeLevel(lvl, outCoeffs)
-			wg.Done()
-		}(lvl, qi)
-	}
-	wg.Wait()
+		}, relations.Threads)
 	return out
 }
 
@@ -48,33 +43,22 @@ func MulVecBlazingFast(A *IntMatrix, b *IntVec, baseRing *ring.Ring) *IntVec {
 		for i := 0; i < len(ACoeffs); i++ {
 			ACoeffs[i] = A.RowView(i).GetWholeLevel(lvl)
 		}
-		var wg sync.WaitGroup
-		wg.Add(A.Rows())
-		for i := 0; i < A.Rows(); i++ {
-			go func(i, lvl int, ACoeffs [][]uint64, bCoeffs []uint64) {
-				dotResult := DotBlazingFastLevel(ACoeffs[i], bCoeffs, qi)
-				out.SetLevel(i, lvl, dotResult)
-				wg.Done()
-			}(i, lvl, ACoeffs, bCoeffs)
-		}
-		wg.Wait()
+		misc.ExecuteInParallel(A.Rows(), func(i int) {
+			dotResult := DotBlazingFastLevel(ACoeffs[i], bCoeffs, qi)
+			out.SetLevel(i, lvl, dotResult)
+		}, relations.Threads)
 	}
 	return out
 }
 
 func DotBlazingFast(V1, V2 *IntVec, baseRing *ring.Ring) Coeff {
 	out := NewZeroCoeff(len(baseRing.Modulus))
-	var wg sync.WaitGroup
-	wg.Add(len(baseRing.Modulus))
-	for lvl, qi := range baseRing.Modulus {
+	misc.ExecuteInParallel(len(baseRing.Modulus), func(lvl int) {
 		V1Coeffs := V1.GetWholeLevel(lvl)
 		V2Coeffs := V2.GetWholeLevel(lvl)
-		go func(lvl int, qi uint64) {
-			out[lvl] = DotBlazingFastLevel(V1Coeffs, V2Coeffs, qi)
-			wg.Done()
-		}(lvl, qi)
-	}
-	wg.Wait()
+		qi := baseRing.Modulus[lvl]
+		out[lvl] = DotBlazingFastLevel(V1Coeffs, V2Coeffs, qi)
+	}, relations.Threads)
 	return out
 }
 

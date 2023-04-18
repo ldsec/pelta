@@ -45,9 +45,7 @@ func LmuSum(k int, invk uint64, f func(int, int) *fastmath.PolyNTT, params Publi
 
 // LmuSumOuter computes the value of the function \sum_{mu=0}^{k-1} (1/k) * X^mu * \sum_{v=0}^{k-1} \sum_{j=0}^{numSplits-1} sig^v (f(mu, v, j))
 func LmuSumOuter(k, numSplits int, invk uint64, f func(int, int, int) *fastmath.PolyNTT, params PublicParams) *fastmath.PolyNTT {
-	// set the number of batches for the operation
-	// should ideally correspond to the # of cores
-	numBatches := 16
+	numBatches := params.config.Threads
 	return logging.LogShortExecution("LmuSumOuter", "calculating", func() interface{} {
 		out := fastmath.NewPolyVec(k, params.config.BaseRing).NTT()
 		for mu := 0; mu < k; mu++ {

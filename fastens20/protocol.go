@@ -28,6 +28,8 @@ type ProtocolConfig struct {
 	GaussianSampler fastmath.PolySampler
 	// Cache
 	Cache *Cache
+	// Threads
+	Threads int
 }
 
 func NewProtocolConfig(ringParams fastmath.RingParams, delta1 uint64, numRows, numCols int) ProtocolConfig {
@@ -49,6 +51,7 @@ func NewProtocolConfig(ringParams fastmath.RingParams, delta1 uint64, numRows, n
 		TernarySampler:  ter,
 		GaussianSampler: gau,
 		Cache:           NewEmptyCache(),
+		Threads:         16,
 	}
 }
 
@@ -68,6 +71,11 @@ func (c ProtocolConfig) WithReplication(k int) ProtocolConfig {
 func (c ProtocolConfig) WithSecurityParameters(kappa, lambda int) ProtocolConfig {
 	c.Kappa = kappa
 	c.Lambda = lambda
+	return c
+}
+
+func (c ProtocolConfig) WithThreads(threads int) ProtocolConfig {
+	c.Threads = threads
 	return c
 }
 
