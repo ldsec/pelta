@@ -2,6 +2,8 @@ package misc
 
 import "sync"
 
+var MaxRoutinesDefault = 16
+
 // ExecuteInParallel executes the given `job` with the arguments 0, 1, ..., numCalls - 1
 // in parallel and uses at most `maxRoutines` many goroutines
 func ExecuteInParallel(numCalls int, job func(int), maxRoutines int) {

@@ -2,7 +2,6 @@ package fastmath
 
 import (
 	"github.com/ldsec/codeBase/commitment/misc"
-	"github.com/ldsec/codeBase/commitment/relations"
 	"math/bits"
 	"unsafe"
 
@@ -16,6 +15,7 @@ func MulVecTransposeBlazingFast(A *IntMatrix, b *IntVec, baseRing *ring.Ring) *I
 	for _, p := range out.UnderlyingPolys() {
 		p.unset = false
 	}
+	// perform the multiplication in parallel across levels
 	misc.ExecuteInParallel(len(baseRing.Modulus),
 		func(lvl int) {
 			qi := baseRing.Modulus[lvl]
@@ -31,7 +31,7 @@ func MulVecTransposeBlazingFast(A *IntMatrix, b *IntVec, baseRing *ring.Ring) *I
 			outCoeffs := make([]uint64, A.Cols())
 			MulVecTransposeBlazingFastLevel(ACoeffs, bCoeffs, outCoeffs, qi)
 			out.SetWholeLevel(lvl, outCoeffs)
-		}, relations.Threads)
+		}, misc.MaxRoutinesDefault)
 	return out
 }
 
@@ -43,22 +43,24 @@ func MulVecBlazingFast(A *IntMatrix, b *IntVec, baseRing *ring.Ring) *IntVec {
 		for i := 0; i < len(ACoeffs); i++ {
 			ACoeffs[i] = A.RowView(i).GetWholeLevel(lvl)
 		}
+		// perform the multiplication in parallel across dot products
 		misc.ExecuteInParallel(A.Rows(), func(i int) {
 			dotResult := DotBlazingFastLevel(ACoeffs[i], bCoeffs, qi)
 			out.SetLevel(i, lvl, dotResult)
-		}, relations.Threads)
+		}, misc.MaxRoutinesDefault)
 	}
 	return out
 }
 
 func DotBlazingFast(V1, V2 *IntVec, baseRing *ring.Ring) Coeff {
 	out := NewZeroCoeff(len(baseRing.Modulus))
+	// perform the multiplication in parallel across levels
 	misc.ExecuteInParallel(len(baseRing.Modulus), func(lvl int) {
 		V1Coeffs := V1.GetWholeLevel(lvl)
 		V2Coeffs := V2.GetWholeLevel(lvl)
 		qi := baseRing.Modulus[lvl]
 		out[lvl] = DotBlazingFastLevel(V1Coeffs, V2Coeffs, qi)
-	}, relations.Threads)
+	}, misc.MaxRoutinesDefault)
 	return out
 }
 

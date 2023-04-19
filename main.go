@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/ldsec/codeBase/commitment/fastmath"
 	"github.com/ldsec/codeBase/commitment/logging"
+	"github.com/ldsec/codeBase/commitment/misc"
 	"github.com/ldsec/codeBase/commitment/relations"
 	"github.com/tuneinsight/lattigo/v4/bfv"
 	"strings"
@@ -88,7 +89,7 @@ func main() {
 	relations.Delta1 = uint64(1 << delta1)
 	relations.Lambda = lambda
 	relations.Kappa = kappa
-	relations.Threads = threads
+	misc.MaxRoutinesDefault = threads
 	// get the executor
 	executor, ok := relationExecutors[relation]
 	if !ok {

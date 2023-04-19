@@ -3,7 +3,6 @@ package fastmath
 import (
 	"fmt"
 	"github.com/ldsec/codeBase/commitment/misc"
-	"github.com/ldsec/codeBase/commitment/relations"
 	"github.com/tuneinsight/lattigo/v4/ring"
 	"math/big"
 	"strings"
@@ -318,7 +317,7 @@ func (p *Poly) SumCoeffs() Coeff {
 			lvlSum = (lvlSum + v) % qi
 		}
 		sum[lvl] = lvlSum
-	}, relations.Threads)
+	}, misc.MaxRoutinesDefault)
 	return sum
 }
 
