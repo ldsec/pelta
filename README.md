@@ -19,8 +19,8 @@ $ go run main.go [PARAMETERS]
 - `--commt`: Log commitment ring degree. Defaults to `7`.
 - `--levels`: Number of levels for the ring. This can be `1`, `2`, or `3`. Defaults to `1`.
 - `--delta1`: Log2 delta1. Defaults to `25`.
-- `--lambda`: Lambda security parameter. Defaults to `10`.
-- `--kappa`: Kappa security parameter. Defaults to `9`.
+- `--lambda`: Lambda security parameter. Defaults to `17`.
+- `--kappa`: Kappa security parameter. Defaults to `8`.
 - `--rel`: The relation to run. Can be `keygen`, `aggr_keygen`, `collective_dec`, `keyswitch`, `bootstrapping`, or `relinkeygen`. Defaults to `keygen`.
 
 ## Interpreting the output
