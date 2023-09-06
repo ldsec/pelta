@@ -1,8 +1,6 @@
 # LattiCom
 An experimental library for lattice-based commitments
 
-## License
-This software and its source code are provided solely for the peer-review process of the paper #759 titled "PELTA -- Shielding Multiparty-FHE against Malicious Adversaries" submitted to ACM CCS 2023 B. All other uses are forbidden.
 
 ## Installation
 The only requirement is Golang. The dependencies are pulled automatically. The following shows how to run the code on an Ubuntu based distribution.
@@ -87,3 +85,11 @@ $ go run main.go --n 10 --commt 10 --lambda 1 --kappa 2 --delta1 29
 ```shell
 $ go run main.go --n 10 --commt 13 --lambda 1 --kappa 1 --delta1 32
 ```
+
+## License
+This software and its source code are licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+   http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
