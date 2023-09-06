@@ -1,11 +1,11 @@
-# LattiCom
+# PELTA
 An experimental library for lattice-based commitments
 
 
 ## Installation
 The only requirement is Golang. The dependencies are pulled automatically. The following shows how to run the code on an Ubuntu based distribution.
 ```shell
-$ cd LattiCom
+$ cd pelta
 $ sudo apt install -y golang
 $ go run main.go [PARAMETERS]
 ```
