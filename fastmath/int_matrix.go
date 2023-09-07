@@ -349,7 +349,7 @@ func (m *IntMatrix) Eq(b ImmutIntMatrix) bool {
 	return true
 }
 
-// MulVecSlow performs a matrix-vector multiplication.
+// MulVecSlow performs a matrix-vector multiplication using an unoptimized multiplication procedure. Use `MulVec` instead!
 func (m *IntMatrix) MulVecSlow(v *IntVec) *IntVec {
 	if m.Cols() != v.Size() {
 		panic("IntMatrix.MulVec sizes incorrect")

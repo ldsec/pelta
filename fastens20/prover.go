@@ -182,17 +182,6 @@ func (p Prover) MaskedOpening(c *fastmath.Poly, state ProverState) (*fastmath.Po
 		tmp := state.R.Copy().MulAll(sigc)
 		return tmp.Add(state.Y.Row(i))
 	})
-	// TODO add rejection sampling
-	//normInBounds := z.AllRows(
-	//	func(zi math.Vector, i int) bool {
-	//		infNorm := zi.NewPolyVec().InfNorm(p.params.config.Q)
-	//		fmt.Println(infNorm)
-	//		return float64(infNorm) < p.params.config.Beta
-	//	})
-	//if !normInBounds {
-	//	return math.Matrix{}, state, errors.New("infinity norm exceeds the requested bound")
-	//}
-	// Update the state.
 	state.Z = z
 	return z.Copy(), state, nil
 }

@@ -101,7 +101,6 @@ func (p ABPProver) CommitToMessage(s *fastmath.IntVec) (*fastmath.PolyNTTVec, *f
 func (p ABPProver) CreateABPMaskedOpening(abpVerifierChal *fastmath.IntMatrix, state ABPProverState) (*fastmath.IntVec, ABPProverState, error) {
 	e := logging.LogExecStart("ABPProver.CreateABPMaskedOpening", "working")
 	defer e.LogExecEnd()
-	// TODO rejection sampling
 	abpMaskedOpening := crypto.CreateABPMaskedOpening(abpVerifierChal, state.ABPProverMask, state.S, p.params.config.BaseRing)
 	state.ABPMaskedOpening = abpMaskedOpening
 	return abpMaskedOpening, state, nil

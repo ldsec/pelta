@@ -26,7 +26,6 @@ func executeWithBoundProof(s *fastmath.IntVec, params PublicParams) bool {
 	extendPublicParameters(&params, params.config.Tau)
 	prover := NewABPProver(params, params.config.BoundSlice, params.config.Tau)
 	verifier := NewABPVerifier(params, params.config.BoundSlice, params.config.Tau, params.config.Bound)
-	// fmt.Println("abp exchange initiated")
 	// Commit to the message.
 	t0, t, w, ps := prover.CommitToMessage(s)
 	// ABP exchange.

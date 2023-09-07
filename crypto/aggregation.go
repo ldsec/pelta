@@ -35,6 +35,7 @@ func CreateEvalMatrix(points []fastmath.Coeff, baseRing *ring.Ring) *fastmath.In
 type Evaluator = func(p fastmath.Coeff) fastmath.Coeff
 
 // ExtendWithPolyEval extends this linear relation system with the evaluations of the given polynomials.
+// Works only for `KeyGen` at the moment.
 func (lrbInner *LinearRelationBuilder) ExtendWithPolyEval(points []fastmath.Coeff, evaluators []Evaluator, baseRing *ring.Ring) {
 	E := CreateEvalMatrix(points, baseRing)
 	for i, ai := range points {
@@ -42,7 +43,7 @@ func (lrbInner *LinearRelationBuilder) ExtendWithPolyEval(points []fastmath.Coef
 		for j, evaluator := range evaluators {
 			mult := evaluator(ai)
 			m := fastmath.NewIntMatrixFromRows([]*fastmath.IntVec{E.RowView(i).Copy().ScaleCoeff(mult)}, baseRing)
-			// TODO works ONLY for KeyGen! Fix!!
+			// TODO works ONLY for KeyGen. 
 			v := lrbInner.eqns[0].rhs[j].b
 			eqnEval.AppendTerm(m, v)
 		}

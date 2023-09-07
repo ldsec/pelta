@@ -13,13 +13,14 @@ import (
 type term struct {
 	A            fastmath.ImmutIntMatrix
 	b            *fastmath.IntVec
-	OriginalCols int // # of cols that are originally in this term (We maintain this to not copy A in Linearize method)
+	OriginalCols int // # of cols that are originally in this term (we maintain this to not copy A in the `Linearize`` method)
 	dependent    bool
 	depVecIndex  int
 
 	cachedResult *fastmath.IntVec
 }
 
+// Compute evaluates the term A times b and caches it.
 func (t *term) Compute() *fastmath.IntVec {
 	if t.cachedResult == nil {
 		t.cachedResult = t.A.MulVec(t.b)
@@ -35,8 +36,8 @@ type LinearEquation struct {
 	dependent bool // denotes whether the equation contains a dependent term.
 }
 
-// NewLinearEquation constructs an empty equation from the given lhs.
-// TODO: remove the `cols` parameter
+// NewLinearEquation constructs an empty equation from the given lhs. 
+// Note that the `cols` parameter is unused at the moment.
 func NewLinearEquation(lhs *fastmath.IntVec, cols int) *LinearEquation {
 	return &LinearEquation{lhs, []term{}, lhs.Size(), false}
 }
@@ -57,10 +58,12 @@ func (eqn *LinearEquation) UpdateLHS() *fastmath.IntVec {
 	return out
 }
 
+// GetLHS returns the left hand side of the equation.
 func (eqn *LinearEquation) GetLHS() *fastmath.IntVec {
 	return eqn.lhs
 }
 
+// AppendEquation adds the lhs of `other` to the lhs of this equation, and it appends the rhs terms from `other` to the rhs terms of this equation.
 func (eqn *LinearEquation) AppendEquation(other *LinearEquation) *LinearEquation {
 	eqn.lhs.Add(other.lhs)
 	eqn.rhs = append(eqn.rhs, other.rhs...)
@@ -93,7 +96,7 @@ func (eqn *LinearEquation) AppendDependentTerm(A fastmath.ImmutIntMatrix, vecInd
 
 // AppendDependentVecTerm adds a dependent vector term to this equation with the vecrtor defined in another equation,
 // indicated by its position in the system by `vecIndex`.
-// Note: The referenced vector must have the correct size (i.e., m) !!
+// Note: The referenced vector must have the correct size (i.e., m) !
 func (eqn *LinearEquation) AppendDependentVecTerm(vecIndex int, baseRing *ring.Ring) *LinearEquation {
 	id := fastmath.NewIdIntMatrix(eqn.m, baseRing)
 	eqn.rhs = append(eqn.rhs, term{fastmath.NewCachedIntMatrix(id), nil, id.Cols(), true, vecIndex, nil})
@@ -162,6 +165,7 @@ func (eqn *LinearEquation) Linearize() *LinearRelation {
 	return linRel
 }
 
+// SizesString returns a representation of this equation that contains the sizes of the included terms.
 func (eqn *LinearEquation) SizesString() string {
 	termStrs := make([]string, 0)
 	for _, term := range eqn.rhs {
@@ -177,11 +181,12 @@ func (eqn *LinearEquation) SizesString() string {
 }
 
 // String returns a string representation of this equation.
-// TODO: fix
+// TODO: implement
 func (eqn *LinearEquation) String() string {
 	return "eqn"
 }
 
+// LinearRelationBuilder maintains a system of linear equations from which a linear relation can be built.
 type LinearRelationBuilder struct {
 	eqns []*LinearEquation
 }

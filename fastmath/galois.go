@@ -56,6 +56,4 @@ func (sig Automorphism) Exponent(exp int64) uint64 {
 		posExp = big.NewInt(0).Mod(big.NewInt(exp), big.NewInt(int64(sig.D))).Int64()
 	}
 	return big.NewInt(0).Exp(big.NewInt(int64(sig.G)), big.NewInt(posExp), nil).Uint64()
-	// NOTE: 2d works up to some degree. May need to tune a bit.
-	// return ring.ModExp(sig.G, posExp, 2*sig.D)
 }

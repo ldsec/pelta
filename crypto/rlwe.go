@@ -8,6 +8,7 @@ import (
 	"github.com/tuneinsight/lattigo/v4/utils"
 )
 
+// RLWEConfig contains the RLWE configuration parameters.
 type RLWEConfig struct {
 	fastmath.RingParams
 	LogD         int
